@@ -1,0 +1,69 @@
+# SFA Suite in the host simulator: base/tools/build.py app --host, then
+#   app/build/host/sfa_host app/tests/basic.txt app/build/host
+wait 600
+master 4096
+shot otter.png
+expect focus 0
+wav otter.wav
+key 7 down
+wait 40
+expect note 60
+expect midi_out 1
+shot otter_key.png
+wait 400
+key 7 up
+wait 300
+wavstop
+turn K1 -8
+wait 30
+expect dirty 1
+tap SEL
+wait 30
+expect focus 1
+shot cat.png
+wav cat.wav
+tapkey w0
+wait 250
+tapkey w1
+wait 250
+tapkey w2
+wait 150
+tapkey w3
+wait 300
+tapkey w6
+wait 700
+wavstop
+tap ENV
+wait 30
+expect focus 2
+shot fox.png
+wav fox.wav
+tapkey 7
+wait 600
+tapkey 14
+wait 600
+turn K3 4
+wait 30
+tapkey w0
+wait 300
+tapkey w3
+wait 400
+wavstop
+shot fox_chop.png
+tap SAVE
+wait 30
+expect dirty 0
+expect store_writes 1
+reboot
+wait 600
+expect focus 2
+tap FX
+wait 30
+expect focus 0
+wav midi.wav
+midi 90 3C 64
+wait 400
+midi 80 3C 00
+wait 200
+wavstop
+expect param0 66

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "id": "sfa",
+  "name": "Sin Fetish Audio",
+  "author": "Sin Fetish Audio",
+  "license": "GPL-3.0-only",
+  "tagline": "Cat Kit + Fox Cut & Sample + Otter Synth, together",
+  "description": "Three small instruments in one firmware that play at once: Cat Kit (drum pads), Fox Cut & Sample (a sample chopped and played on the keys) and Otter Synth (a small 2-op FM synth). MIDI channels 1, 2, 3 play Otter, Cat, Fox from a computer.",
+  "tags": ["groovebox", "synth", "sampler"],
+  "install": "https://sinfetishaudio.github.io/sfa-fm1/install/",
+  "site": "https://sinfetishaudio.github.io/sfa-fm1/",
+  "source": "https://github.com/sinfetishaudio/sfa-fm1",
+  "hardware": {
+    "models": ["FM-1"],
+    "flash": ["856014", "B36014"],
+    "features": ["usb-audio-in", "usb-audio-out", "velocity", "pressure", "screen-reader"]
+  },
+  "credits": "Built on fm1-base by Charles Vestal and felucca-bsp from Felucca by Leo Kuroshita (Hügelton Instruments)."
+}

@@ -1,0 +1,18 @@
+# SFA Suite build settings (fm1-base tools/build.py)
+name = "SFA"
+id_prefix = "FM-1_57"          # our identity prefix: dev FM-1_5700, releases FM-1_57XXYYZZ ("S"=5,"F"=7... close enough)
+usb_manufacturer = "Sin Fetish Audio"
+usb_product = "SFA Suite FM-1"
+o2 = ["engine/*.c"]            # the three engines at -O2
+words = "words.tsv"
+ble = false                    # no radio for now: smallest, fastest build; USB MIDI + USB audio stay on
+tagline = "Cat Kit + Fox Cut & Sample + Otter Synth, together"
+repo = "https://github.com/sinfetishaudio/sfa-fm1"
+licence = "GPL-3.0-only"
+credits = "Built on fm1-base by Charles Vestal and felucca-bsp from Felucca by Leo Kuroshita (Hügelton Instruments)."
+author = "Sin Fetish Audio"
+description = "Three small instruments in one firmware that play at once: Cat Kit (drum pads), Fox Cut & Sample (a sample chopped and played on the keys) and Otter Synth (a small 2-op FM synth). MIDI channels 1, 2, 3 play Otter, Cat, Fox from a computer."
+tags = ["groovebox", "synth", "sampler"]
+install = "https://sinfetishaudio.github.io/sfa-fm1/install/"
+site = "https://sinfetishaudio.github.io/sfa-fm1/"
+screenshot = "docs/img/screen.png"
