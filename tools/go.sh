@@ -8,6 +8,9 @@
 set -e
 cd "$(dirname "$0")/.."
 PORT=8577
+# the toolchain and SDK, wherever the README put them (a non-interactive shell skips ~/.bashrc)
+[ -n "$JIELI_TOOLCHAIN" ] || { [ -d "$HOME/.jieli/toolchain" ] && export JIELI_TOOLCHAIN="$HOME/.jieli/toolchain"; }
+[ -n "$AC79_SDK" ] || { [ -d "$HOME/fw-AC79_AIoT_SDK" ] && export AC79_SDK="$HOME/fw-AC79_AIoT_SDK"; }
 for a in "$@"; do case "$a" in --pull) git pull --recurse-submodules;; --no-flash) NOFLASH=1;; esac; done
 
 echo "== build"
