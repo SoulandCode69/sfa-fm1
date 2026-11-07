@@ -15,8 +15,7 @@ for a in "$@"; do case "$a" in --pull) git pull --recurse-submodules;; --no-flas
 
 echo "== build"
 python3 base/tools/build.py app
-python3 base/tools/make_site.py app app/build/sfa.fwsc dev app/build/site >/dev/null
-cp app/build/sfa.fwsc app/build/sfa-res.bin app/build/site/ 2>/dev/null || true
+python3 tools/make_pages.py app/build/site >/dev/null
 
 if [ -z "$NOFLASH" ]; then
     echo "== install (Windows Python; the FM-1 on USB; close the hub / mirror tabs first)"
