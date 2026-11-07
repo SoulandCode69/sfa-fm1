@@ -4,18 +4,21 @@
  * against each other, a sub an octave down, into a driven 2-pole resonant lowpass (Chamberlin SVF, run twice a sample)
  * that tracks the keys and follows the envelope; ADSR on the amp, the same shape on the filter.
  *   page 1: K1 TONE   cutoff        K2 RES    resonance    K3 WAVE   SAW PULSE SQUARE FM    K4 DETUNE  unison spread
- *   page 2: K1 ATTACK               K2 DECAY               K3 SUSTAIN                       K4 RELEASE */
+ *   page 2: K1 ATTACK               K2 DECAY               K3 SUSTAIN                       K4 RELEASE
+ *   page 3: K1 LFO    rate          K2 VIBRATO lfo->pitch  K3 WOBBLE lfo->filter            K4 GLIDE   portamento */
 #include "fastmath.h"
 #include "engine.h"
 
-static const char *const NAMES[2][NPARAM] = {{"TONE", "RES", "WAVE", "DETUNE"}, {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"}};
-static uint8_t par[2][NPARAM] = {{70, 35, 0, 40}, {3, 55, 70, 30}};
+static const char *const NAMES[3][NPARAM] = {{"TONE", "RES", "WAVE", "DETUNE"}, {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"},
+                                             {"LFO", "VIBRATO", "WOBBLE", "GLIDE"}};
+static uint8_t par[3][NPARAM] = {{70, 35, 0, 40}, {3, 55, 70, 30}, {40, 10, 0, 0}};
+static float lfo_ph, last_hz = 220.0f;
 static const char *const WAVES[4] = {"SAW", "PULSE", "SQUARE", "FM"};
 
 #define NV 4
 typedef struct {
     int32_t note;
-    float vel, hz, ph1, ph2, phs, env, fenv, lp, bp;
+    float vel, hz, hz_target, ph1, ph2, phs, env, fenv, lp, bp;
     uint8_t stage;                        /* 0 off, 1 attack, 2 decay, 3 sustain, 4 release */
     uint32_t age;
 } voice_t;
@@ -47,7 +50,9 @@ static void voice_on(int32_t note, uint32_t vel)
     }
     v[pick].note = note;
     v[pick].vel = 0.3f + 0.7f * (float)vel * (1.0f / 127.0f);
-    v[pick].hz = note_hz(note);
+    v[pick].hz_target = note_hz(note);
+    v[pick].hz = par[2][3] ? last_hz : v[pick].hz_target;        /* GLIDE: start from the last note played */
+    last_hz = v[pick].hz_target;
     v[pick].stage = 1;
     v[pick].age = ++clock_;
     if (v[pick].env < 0.01f) { v[pick].ph1 = 0; v[pick].ph2 = 0.37f; v[pick].phs = 0; v[pick].env = 0; v[pick].fenv = 0; }
@@ -72,6 +77,12 @@ static void o_render(float *out, uint32_t n)
     float drive = 1.0f + res * 1.5f;
     float spread = fm_exp2f(det * det * 0.25f / 12.0f);
     float fmidx = det * 4.0f;
+    float lfo_inc = (0.1f + p01(par[2][0]) * p01(par[2][0]) * 12.0f) / SR;
+    float vib = p01(par[2][1]) * p01(par[2][1]) * 0.06f;        /* up to about a semitone */
+    float wob = p01(par[2][2]);
+    float glide = par[2][3] ? 0.02f * fm_exp2f(-p01(par[2][3]) * 7.0f) : 1.0f;
+    float lfo = fm_sinf(lfo_ph * 6.2831853f);                    /* one LFO for all voices, per block */
+    lfo_ph += lfo_inc * (float)n; if (lfo_ph >= 1.0f) lfo_ph -= 1.0f;
     while (pend_n) {
         pend_n--;
         if (pend_on[pend_n]) voice_on(pend_note[pend_n], pend_vel[pend_n]); else voice_off(pend_note[pend_n]);
@@ -80,10 +91,15 @@ static void o_render(float *out, uint32_t n)
         voice_t *w = &v[k];
         float dt1, dt2, dts, fbase, tilt;
         if (!w->stage) continue;
-        dt1 = w->hz * spread * (1.0f / SR);
-        dt2 = w->hz / spread * (1.0f / SR);
-        dts = w->hz * (0.5f / SR);
-        fbase = w->hz * (0.5f + cut * cut * 20.0f);
+        w->hz += (w->hz_target - w->hz) * glide * (float)n * 0.1f;   /* glide, per block */
+        if (glide >= 1.0f) w->hz = w->hz_target;
+        {
+            float hz = w->hz * (1.0f + lfo * vib);
+            dt1 = hz * spread * (1.0f / SR);
+            dt2 = hz / spread * (1.0f / SR);
+            dts = hz * (0.5f / SR);
+        }
+        fbase = w->hz * (0.5f + cut * cut * 20.0f) * (1.0f + lfo * wob * 0.8f);
         tilt = fm_exp2f((60.0f - (float)w->note) * 0.15f / 12.0f);
         if (tilt > 1.6f) tilt = 1.6f;
         for (i = 0; i < n; i++) {
@@ -129,4 +145,4 @@ static const char *o_text(uint8_t page, uint32_t p, char *buf)
     return page == 0u && p == 2u ? WAVES[par[0][2] >> 5] : 0;
 }
 
-const engine_t otter = {"OTTER", NAMES[0], par[0], o_init, o_note, o_render, o_panic, 2, NAMES[1], par[1], o_text};
+const engine_t otter = {"OTTER", o_init, o_note, o_render, o_panic, 3, {NAMES[0], NAMES[1], NAMES[2]}, {par[0], par[1], par[2]}, o_text};

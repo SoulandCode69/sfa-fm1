@@ -5,6 +5,7 @@
  *   LFO = the mix page (OTTER CAT FOX DELAY)                       PRESET knob: page     SELECT knob: focus
  *   keys        play the focused engine (Cat: 16 white keys = pads; Fox CHOP: white keys = slices)
  *   PLAY        run / stop    REC  record what you play onto the steps (hold 1 s: clear the focused lane)
+ *   ARP         SAMPLE: Fox records the groovebox's own output (up to 2 s) until ARP again; SAVE keeps it in flash
  *   OCT-/OCT+   octave        SAVE keep everything (settings + pattern)    HOME  stop, back to the engine
  *   MIDI in: ch 1 Otter, ch 2 Cat (36..51 = pads), ch 3 Fox; recorded too while REC is lit
  * Part of fm1-base's unity build (device/unity.c, host/plat_host.c), after the platform. */
@@ -12,8 +13,18 @@
 #include "engine/engine.h"
 
 extern const engine_t otter, cat, fox;
+const char *cat_pad_name(int pad);
+const char *cat_kit_name(void);
+int cat_last_pad(void);
 int fox_chop_mode(void);
 int fox_chops(void);
+int fox_recording(void);
+void fox_record_start(void);
+void fox_record_stop(void);
+void fox_record_feed(const float *mix, uint32_t n);
+int fox_save_needed(void);
+int fox_save(void);
+uint32_t fox_bank_seconds_x10(void);
 static const engine_t *const ENG[3] = {&otter, &cat, &fox};
 enum { E_OTTER, E_CAT, E_FOX };
 enum { PG_ENGINE, PG_SEQ, PG_MIX };
@@ -22,7 +33,7 @@ static const uint16_t ENG_RGB[3] = {RGB(90, 200, 255), RGB(255, 170, 40), RGB(25
 
 #include "icons.c"
 
-#define SET_MAGIC 0x53464133u            /* "SFA3" */
+#define SET_MAGIC 0x53464134u            /* "SFA4" */
 typedef struct {
     uint32_t magic;
     int8_t octave;
@@ -30,7 +41,7 @@ typedef struct {
     uint8_t page[3];
     uint8_t level[3];
     uint8_t delay_mix, delay_time, delay_fb, rsv;
-    uint8_t param[3][2][NPARAM];
+    uint8_t param[3][NPAGES][NPARAM];
     uint8_t pat[256];                     /* pattern_t */
 } settings_t;
 static settings_t set;
@@ -44,9 +55,10 @@ static uint8_t body;
 #define DLY_LEN 11025u                    /* 0.5 s at half rate (22.05 kHz), 22 KB in the pool */
 PLAT_POOL static int16_t dly[DLY_LEN];
 static uint32_t dly_w;
-static float dly_lp, dly_prev, dc_x, dc_y;
+static float dly_lp, dly_prev, dc_x, dc_y, lim_env = 1.0f;
 static uint8_t dly_tick;
 static float mix[3][APP_BLOCK];
+static float mixout[APP_BLOCK];
 static float gain_now;
 
 static void note_in(uint8_t e, int32_t note, uint32_t vel, int on)
@@ -97,27 +109,36 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         s = dry + dly_lp * dmix;
         y = s - dc_x + 0.995f * dc_y;                    /* DC block */
         dc_x = s; dc_y = y;
+        /* the limiter: a fast peak follower, slow release, 0.9 ceiling */
+        {
+            float a = fm_fabsf(y);
+            if (a > lim_env) lim_env += (a - lim_env) * 0.5f; else lim_env += (a - lim_env) * 0.0005f;
+            if (lim_env < 0.9f) lim_env = lim_env < 0.0f ? 0.0f : lim_env;
+            y = lim_env > 0.9f ? y * (0.9f / lim_env) : y;
+        }
+        mixout[i] = y;
         gain_now += (gain - gain_now) * 0.004f;
-        s = fm_tanhf(y * 0.8f) * 1.1f * gain_now;        /* a soft ceiling */
+        s = fm_tanhf(y * 0.9f) * 1.05f * gain_now;       /* a soft ceiling on top */
         lr[2 * i] = (int32_t)s;
         lr[2 * i + 1] = (int32_t)s;
     }
+    fox_record_feed(mixout, n);
 }
 
 void app_panic(void) { seq_stop(); otter.panic(); cat.panic(); fox.panic(); }
 
 /* --------------------------------------------------------------- settings --- */
-static uint8_t *page_param(uint8_t e, uint8_t pg) { return pg && ENG[e]->param2 ? ENG[e]->param2 : ENG[e]->param; }
-static const char *const *page_names(uint8_t e, uint8_t pg) { return pg && ENG[e]->param2 ? ENG[e]->param_name2 : ENG[e]->param_name; }
+static uint8_t *page_param(uint8_t e, uint8_t pg) { return pg < ENG[e]->npages ? ENG[e]->params[pg] : ENG[e]->params[0]; }
+static const char *const *page_names(uint8_t e, uint8_t pg) { return pg < ENG[e]->npages ? ENG[e]->names[pg] : ENG[e]->names[0]; }
 static void params_to_set(void)
 {
     uint32_t e, g, p;
-    for (e = 0; e < 3u; e++) for (g = 0; g < 2u; g++) for (p = 0; p < NPARAM; p++) set.param[e][g][p] = page_param((uint8_t)e, (uint8_t)g)[p];
+    for (e = 0; e < 3u; e++) for (g = 0; g < ENG[e]->npages; g++) for (p = 0; p < NPARAM; p++) set.param[e][g][p] = ENG[e]->params[g][p];
 }
 static void params_from_set(void)
 {
     uint32_t e, g, p;
-    for (e = 0; e < 3u; e++) for (g = 0; g < 2u; g++) for (p = 0; p < NPARAM; p++) page_param((uint8_t)e, (uint8_t)g)[p] = set.param[e][g][p];
+    for (e = 0; e < 3u; e++) for (g = 0; g < ENG[e]->npages; g++) for (p = 0; p < NPARAM; p++) ENG[e]->params[g][p] = set.param[e][g][p];
 }
 
 void app_init(void)
@@ -125,7 +146,7 @@ void app_init(void)
     _Static_assert(sizeof(pattern_t) <= 256u, "the pattern fits");
     otter.init(); cat.init(); fox.init();
     if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) == (int)sizeof set && set.magic == SET_MAGIC
-        && set.octave >= -2 && set.octave <= 2 && set.focus < 3u && set.page[0] < 2u && set.page[1] < 2u && set.page[2] < 2u
+        && set.octave >= -2 && set.octave <= 2 && set.focus < 3u && set.page[0] < NPAGES && set.page[1] < NPAGES && set.page[2] < NPAGES
         && PAT->bpm >= 40u && PAT->steps >= 1u && PAT->steps <= NSTEP) {
         params_from_set();
     } else {
@@ -210,15 +231,17 @@ static int32_t key_to_note(uint32_t k, uint8_t e)
 
 static void page_set(uint8_t pg)
 {
-    if (ENG[set.focus]->npages < 2u) pg = 0;
+    char t[8] = "PAGE 1";
+    pg %= ENG[set.focus]->npages;
     set.page[set.focus] = pg;
     set_dirty = 1;
     ui.redraw = 1;
-    app_say(ENG[set.focus]->name, pg ? "PAGE 2" : "PAGE 1");
+    t[5] = (char)('1' + pg);
+    app_say(ENG[set.focus]->name, t);
 }
 static void focus(uint8_t e)
 {
-    if (body == PG_ENGINE && e == set.focus) { page_set((uint8_t)!set.page[e]); return; }
+    if (body == PG_ENGINE && e == set.focus) { page_set((uint8_t)(set.page[e] + 1u)); return; }
     body = PG_ENGINE;
     set.focus = e;
     set_dirty = 1;
@@ -293,15 +316,22 @@ static void input(void)
         else if (k == B_LFO) { body = body == PG_MIX ? PG_ENGINE : PG_MIX; ui.redraw = 1; app_say(body == PG_MIX ? "MIX" : ENG[set.focus]->name, ""); }
         else if (k == B_PLAY) { if (seq.playing) seq_stop(); else seq_start(); ui.redraw = 1; app_say(seq.playing ? "PLAY" : "STOP", ""); }
         else if (k == B_REC) ui.rec_t = plat_ms();
+        else if (k == B_ARP) {                                   /* SAMPLE: Fox records the output */
+            if (fox_recording()) { fox_record_stop(); app_say("SAMPLED", ""); set_dirty = 1; }
+            else { fox_record_start(); body = PG_ENGINE; set.focus = E_FOX; app_say("SAMPLING", "ARP STOPS"); }
+            ui.redraw = 1;
+        }
         else if (k == B_HOME) { seq_stop(); body = PG_ENGINE; ui.redraw = 1; app_say("HOME", ""); }
         else if (k == B_OCTDN || k == B_OCTUP) {
             int32_t o = clamp(set.octave + (k == B_OCTUP ? 1 : -1), -2, 2);
             char t[4] = {o < 0 ? '-' : '+', (char)('0' + (o < 0 ? -o : o)), 0};
             if (o != set.octave) { otter.panic(); set.octave = (int8_t)o; set_dirty = 1; app_say("OCTAVE", t); }
         } else if (k == B_SAVE) {
+            int rc;
             params_to_set();
-            if (plat_store_save(OBJ_SETTINGS, &set, sizeof set) == 0) { set_dirty = 0; app_say("SAVED", ""); }
-            else app_say("SAVE", "FAILED");
+            rc = plat_store_save(OBJ_SETTINGS, &set, sizeof set);
+            if (rc == 0 && fox_save_needed()) { app_panic(); rc = fox_save(); }
+            if (rc == 0) { set_dirty = 0; app_say("SAVED", ""); } else app_say("SAVE", "FAILED");
         }
     }
     if (ui.rec_t) {
@@ -322,7 +352,7 @@ static void input(void)
     for (k = 0; k < NE; k++) {
         if ((e = plat_enc((int)k)) == 0) continue;
         if (k >= EN_K1 && k < EN_K1 + NPARAM) knob(k - EN_K1, e);
-        else if (k == EN_PRESET) { body = PG_ENGINE; page_set((uint8_t)!set.page[set.focus]); }
+        else if (k == EN_PRESET) { body = PG_ENGINE; page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u))); }
         else if (k == EN_SELECT) { body = PG_ENGINE; set.focus = (uint8_t)((set.focus + 3 + (e > 0 ? 1 : 2)) % 3u); set_dirty = 1; app_say(ENG[set.focus]->name, ""); }
     }
     if (keys != ui.keys || btn != ui.btn) ui.redraw = 1;
@@ -330,7 +360,8 @@ static void input(void)
     ui.btn = btn;
     plat_glow(1);
     plat_leds((1u << (B_FX + set.focus)) | (set_dirty ? 1u << B_SAVE : 0u) | (seq.playing ? 1u << B_PLAY : 0u)
-              | (seq.rec ? 1u << B_REC : 0u) | (body == PG_SEQ ? 1u << B_SEQ : 0u) | (body == PG_MIX ? 1u << B_LFO : 0u), keys);
+              | (seq.rec ? 1u << B_REC : 0u) | (body == PG_SEQ ? 1u << B_SEQ : 0u) | (body == PG_MIX ? 1u << B_LFO : 0u)
+              | (fox_recording() ? 1u << B_ARP : 0u), keys);
 }
 
 void app_input_only(void) { input(); }
@@ -383,18 +414,23 @@ static void draw(void)
     if (body == PG_ENGINE) {
         icon(8, 2, ICONS[set.focus], accent, 2);
         cv_text(36, 8, &FONT_B, cur->name, accent);
-        if (cur->npages > 1u) {
-            cv_rect(36, 26, 6, 4, set.page[set.focus] == 0 ? accent : C_LINE);
-            cv_rect(46, 26, 6, 4, set.page[set.focus] == 1 ? accent : C_LINE);
-        }
-        if (set.focus == E_OTTER || (set.focus == E_FOX && !fox_chop_mode())) {
+        for (i = 0; i < cur->npages; i++)
+            cv_rect(36 + (int32_t)i * 10, 26, 6, 4, set.page[set.focus] == i ? accent : C_LINE);
+        if (set.focus == E_FOX) {
+            const char *m = fox_recording() ? "SAMPLING" : fox_chop_mode() ? "CHOP" : "KEYS";
+            int32_t x = 232 - text_w(&FONT_XS, m);
+            cv_text(x, 10, &FONT_XS, m, fox_recording() ? RGB(255, 40, 40) : C_HI);
+            int_text((int32_t)fox_bank_seconds_x10() / 10, t); text_cat(t, "."); int_text((int32_t)fox_bank_seconds_x10() % 10, t + 2); text_cat(t, "S");
+            cv_text(x - 8 - text_w(&FONT_XS, t), 10, &FONT_XS, t, C_GRAY);
+        } else if (set.focus == E_CAT) {
+            const char *pn = cat_pad_name(cat_last_pad());
+            int32_t x = 232 - text_w(&FONT_XS, pn);
+            cv_text(x, 10, &FONT_XS, pn, C_HI);
+            cv_text(x - 8 - text_w(&FONT_XS, cat_kit_name()), 10, &FONT_XS, cat_kit_name(), C_GRAY);
+        } else if (set.focus == E_OTTER) {
             t[0] = set.octave < 0 ? '-' : '+'; t[1] = (char)('0' + (set.octave < 0 ? -set.octave : set.octave)); t[2] = 0;
             cv_text(190, 10, &FONT_XS, "OCT", C_GRAY);
             cv_text(214, 10, &FONT_XS, t, C_HI);
-        } else if (set.focus == E_FOX) {
-            cv_text(170, 10, &FONT_XS, "CHOP", C_HI);
-        } else {
-            cv_text(166, 10, &FONT_XS, "16 PADS", C_HI);
         }
         for (i = 0; i < NPARAM; i++) {
             const char *nm, *txt = 0;
@@ -439,13 +475,12 @@ static void draw(void)
     for (i = 0; i < 16u; i++) {
         int held = ui.keys >> WK[i] & 1u;
         int pad = set.focus == E_CAT ? 1 : set.focus == E_FOX && fox_chop_mode() && i < (uint32_t)fox_chops();
-        int smp = set.focus == E_CAT && i >= 8u;
-        cv_rect(4 + (int32_t)i * 14, 26, 13, 30, held ? ENG_RGB[set.focus] : smp ? ENG_RGB[E_FOX] : pad ? C_GRAY : C_DIM);
+        cv_rect(4 + (int32_t)i * 14, 26, 13, 30, held ? ENG_RGB[set.focus] : pad ? C_GRAY : C_DIM);
         if (pad) { int_text((int32_t)i + 1, t); cv_text(5 + (int32_t)i * 14 + (i < 9u ? 2 : 0), 44, &FONT_XS, t, held ? C_BLACK : C_WHITE); }
     }
     for (i = 0; i < 11u; i++)
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 12, 11, 18, ui.keys >> BK[i] & 1u ? C_WHITE : C_LINE);
-    cv_text(4, 61, &FONT_XS, "SEQ  LFO=MIX  PLAY  REC  2x=PAGE", C_GRAY);
+    cv_text(4, 61, &FONT_XS, "SEQ LFO=MIX ARP=SAMPLE PLAY REC", C_GRAY);
     int_text((int32_t)(plat_master() * 100u / 4096u), t);
     text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_HI);
@@ -471,6 +506,7 @@ void app_frame(void)
         ui.redraw = 1;
     }
     if (seq.step != ui.shown_step) { ui.shown_step = seq.step; ui.redraw = 1; }
+    { static int last_pad = -2; if (cat_last_pad() != last_pad) { last_pad = cat_last_pad(); ui.redraw = 1; } }
     if (ui.redraw) { ui.redraw = 0; draw(); }
 }
 
@@ -487,6 +523,8 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "rec")) *got = seq.rec;
     else if (!strcmp(what, "step")) *got = seq.step;
     else if (!strcmp(what, "bpm")) *got = PAT->bpm;
+    else if (!strcmp(what, "fox_rec")) *got = fox_recording();
+    else if (!strcmp(what, "fox_secs")) *got = (int)fox_bank_seconds_x10();
     else if (!strcmp(what, "cat_steps")) { uint32_t i, n = 0; for (i = 0; i < NSTEP; i++) n += PAT->cat_mask[i] != 0; *got = (int)n; }
     else if (!strcmp(what, "otter_steps")) { uint32_t i, n = 0; for (i = 0; i < NSTEP; i++) n += PAT->otter_note[i] != 0; *got = (int)n; }
     else if (!strncmp(what, "param", 5)) { const char *nm; *got = *knob_target((uint32_t)atoi(what + 5) % NPARAM, &nm); }

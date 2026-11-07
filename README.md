@@ -4,21 +4,23 @@ Three engines in one firmware, playing together. Built on [fm1-base](https://git
 
 | Button | Does |
 |---|---|
-| FX / SEL / ENV | focus OTTER / CAT / FOX; press again for page 2 (PRESET knob too) |
+| FX / SEL / ENV | focus OTTER / CAT / FOX; press again for the next page (PRESET knob too) |
 | SEQ | sequencer page: TEMPO SWING STEPS GATE; the three lanes shown |
 | LFO | mix page: OTTER CAT FOX DELAY |
+| ARP | SAMPLE: Fox records the groovebox's own output (up to 2 s) until ARP again |
 | PLAY / REC | run the 16-step pattern / record what you play onto it (hold REC 1 s: clear the focused lane) |
 | HOME | stop, back to the engine page |
-| SAVE | keep settings + pattern |
+| SAVE | keep settings, pattern and the sampled bank |
 
-| Engine | Keys | Page 1 | Page 2 |
-|---|---|---|---|
-| OTTER 4-voice polysynth (PolyBLEP saw/pulse/square or 2-op FM, unison detune, sub, driven SVF, ADSR) | chromatic, OCT-/OCT+ | TONE RES WAVE DETUNE | ATTACK DECAY SUSTAIN RELEASE |
-| CAT kit (808/909-style kick snare hats clap toms rim + 8 sample slices) | 16 white keys = pads | TUNE DECAY SNAP DRIVE | HATS SNARE TONE SMPLVL |
-| FOX cut & sample | chromatic (C4 = as recorded) or slices on the white keys | START END CHOPS PITCH | REV LOOP GAIN |
+| Engine | Keys | Pages |
+|---|---|---|
+| OTTER 4-voice polysynth: PolyBLEP saw/pulse/square or 2-op FM, unison detune, sub, driven SVF, ADSR, LFO | chromatic, OCT-/OCT+ | TONE RES WAVE DETUNE · ATTACK DECAY SUSTAIN RELEASE · LFO VIBRATO WOBBLE GLIDE |
+| CAT kit: 4 kits x 16 parametric drums (808, 909, LOFI, FX) | 16 white keys = pads | TUNE DECAY SNAP DRIVE · KIT HATS TONE LEVEL |
+| FOX cut & sample: a 4 s bank, chromatic or chopped, 4 voices | chromatic (C4 = as recorded) or slices on the white keys | START END CHOPS PITCH · REV LOOP FILTER DECAY |
 
-USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit. Master delay on the mix page.
-Fox's bank: `tools/sfa_sample.py x.wav` (any WAV; up to 4 s at 22.05 kHz), written by the installer after the firmware.
+USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit. Master: delay, DC block, limiter.
+Fox's bank, in order: the sample you SAMPLEd and SAVEd (flash), else `tools/sfa_sample.py x.wav` (the resource region),
+else four built-in sounds (growl, vowel, noise hit, pluck), a second each.
 
 ## Everyday loop (WSL/Ubuntu)
 ```

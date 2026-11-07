@@ -26,7 +26,7 @@ tap FX
 wait 30
 expect page 1
 expect param0 3
-turn PRESET 1
+turn PRESET -1
 wait 30
 expect page 0
 turn K3 30
@@ -39,33 +39,35 @@ wavstop
 shot otter_fm.png
 turn K3 -30
 wait 30
-# Cat: 16 pads
+# Cat: 16 pads, four kits
 tap SEL
 wait 30
 expect focus 1
 shot cat.png
 wav cat.wav
-tapkey w0
-wait 300
-tapkey w1
-wait 300
-tapkey w2
-wait 150
-tapkey w3
-wait 300
-tapkey w4
-wait 300
-tapkey w5
-wait 200
-tapkey w6
-wait 200
-tapkey w7
-wait 300
-tapkey w8
-wait 300
-tapkey w15
-wait 500
+strum 0 15 180
+wait 600
+tap SEL
+wait 30
+expect page 1
+turn K1 11
+wait 30
+strum 0 15 180
+wait 600
+turn K1 11
+wait 30
+strum 0 15 180
+wait 600
+turn K1 11
+wait 30
+shot cat_fx.png
+strum 0 15 180
+wait 800
 wavstop
+turn K1 -33
+tap SEL
+wait 30
+expect page 0
 # Fox: chromatic, then chop, then reverse + loop on page 2
 tap ENV
 wait 30
@@ -122,6 +124,19 @@ expect rec 0
 wait 2200
 wavstop
 shot playing.png
+tap ARP
+wait 30
+expect fox_rec 1
+wait 1200
+tap ARP
+wait 30
+expect fox_rec 0
+expect fox_secs >9
+shot fox_sampled.png
+wav fox_resampled.wav
+tapkey 7
+wait 1300
+wavstop
 tap LFO
 wait 30
 expect body 2

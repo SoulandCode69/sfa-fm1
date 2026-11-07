@@ -7,20 +7,22 @@
 #define SR 44100.0f
 #define NPARAM 4                          /* one page: K1..K4 */
 
+#define NPAGES 3
 typedef struct engine engine_t;
 struct engine {
     const char *name;                     /* "OTTER" */
-    const char *const *param_name;        /* NPARAM short labels */
-    uint8_t *param;                       /* NPARAM values 0..127, live in the app's settings */
     void (*init)(void);
     void (*note)(int32_t note, uint32_t vel, int on);   /* main loop or audio irq; must be cheap */
     void (*render)(float *mono, uint32_t n);            /* add n frames into mono (nominal full scale 1.0) */
     void (*panic)(void);
-    uint8_t npages;                       /* 1 or 2 */
-    const char *const *param_name2;       /* page 2 (or 0) */
-    uint8_t *param2;
+    uint8_t npages;                       /* 1..NPAGES */
+    const char *const *names[NPAGES];     /* each page's NPARAM short labels */
+    uint8_t *params[NPAGES];              /* each page's NPARAM values 0..127 (the app saves them) */
     const char *(*param_text)(uint8_t page, uint32_t p, char *buf);   /* a value shown as words, or 0 */
 };
+
+/* seconds -> a per-sample multiplier that decays to 1/e in that time */
+static inline float decay_coef(float sec) { return fm_exp2f(-1.4427f / (sec * SR)); }
 
 /* PolyBLEP: the step of a band-limited saw / pulse (t = phase 0..1, dt = phase per sample) */
 static inline float polyblep(float t, float dt)
