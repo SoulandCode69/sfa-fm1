@@ -1,38 +1,72 @@
 # SFA Suite in the host simulator: base/tools/build.py app --host, then
-#   app/build/host/sfa_host app/tests/basic.txt app/build/host
+#   app/build/host/sfa_host app/tests/basic.txt app/build/host/out
 wait 600
 master 4096
 shot otter.png
 expect focus 0
+expect body 0
+# Otter: a chord (4 voices), saw
 wav otter.wav
 key 7 down
-wait 40
+wait 30
 expect note 60
 expect midi_out 1
-shot otter_key.png
-wait 400
+key 11 down
+key 14 down
+wait 40
+shot otter_keys.png
+wait 500
 key 7 up
-wait 300
+key 11 up
+key 14 up
+wait 500
 wavstop
-turn K1 -8
+# page 2 (FX again), then WAVE to FM on page 1 via PRESET
+tap FX
 wait 30
-expect dirty 1
+expect page 1
+expect param0 3
+turn PRESET 1
+wait 30
+expect page 0
+turn K3 30
+wait 30
+expect param2 90
+wav otter_fm.wav
+tapkey 7
+wait 600
+wavstop
+shot otter_fm.png
+turn K3 -30
+wait 30
+# Cat: 16 pads
 tap SEL
 wait 30
 expect focus 1
 shot cat.png
 wav cat.wav
 tapkey w0
-wait 250
+wait 300
 tapkey w1
-wait 250
+wait 300
 tapkey w2
 wait 150
 tapkey w3
 wait 300
+tapkey w4
+wait 300
+tapkey w5
+wait 200
 tapkey w6
-wait 700
+wait 200
+tapkey w7
+wait 300
+tapkey w8
+wait 300
+tapkey w15
+wait 500
 wavstop
+# Fox: chromatic, then chop, then reverse + loop on page 2
 tap ENV
 wait 30
 expect focus 2
@@ -50,43 +84,6 @@ tapkey w3
 wait 400
 wavstop
 shot fox_chop.png
-tap SAVE
-wait 30
-expect dirty 0
-expect store_writes 1
-reboot
-wait 600
-expect focus 2
-tap FX
-wait 30
-expect focus 0
-wav midi.wav
-midi 90 3C 64
-wait 400
-midi 80 3C 00
-wait 200
-wavstop
-expect param0 56
-# pages: FX again = page 2 of Otter; PRESET knob flips back
-tap FX
-wait 30
-expect page 1
-expect param0 30
-turn PRESET 1
-wait 30
-expect page 0
-# Cat: all 16 white keys are pads (pad 16 = sample slice 8)
-tap SEL
-wait 30
-wav cat16.wav
-tapkey w8
-wait 200
-tapkey w15
-wait 400
-wavstop
-# Fox page 2: REV on, LOOP on
-tap ENV
-wait 30
 tap ENV
 wait 30
 expect page 1
@@ -95,7 +92,55 @@ turn K2 30
 wait 30
 expect param0 90
 shot fox2.png
-wav fox_rev.wav
+# the sequencer: the starter beat plays; record an Otter line; mix page
+tap SEQ
+wait 30
+expect body 1
+shot seq.png
+tap PLAY
+wait 30
+expect playing 1
+wav beat.wav
+wait 700
+expect step >3
+wait 1400
+tap FX
+wait 30
+tap REC
+wait 30
+expect rec 1
 tapkey 7
 wait 500
+tapkey 11
+wait 500
+tapkey 14
+wait 1200
+expect otter_steps >2
+tap REC
+wait 30
+expect rec 0
+wait 2200
 wavstop
+shot playing.png
+tap LFO
+wait 30
+expect body 2
+shot mix.png
+turn K4 20
+wait 30
+tap PLAY
+wait 30
+expect playing 0
+# save, reboot, everything back
+tap SAVE
+wait 30
+expect dirty 0
+expect store_writes 1
+reboot
+wait 600
+expect bpm 120
+expect otter_steps >2
+expect cat_steps 8
+# MIDI in on channel 2 plays the kit
+midi 91 24 64
+wait 100

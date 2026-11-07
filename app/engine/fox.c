@@ -13,9 +13,9 @@
 #include "engine.h"
 #include "plat.h"
 
-#define BANK_MAX 28000u               /* samples: 1.27 s at 22050; 56 KB of .bss */
+#define BANK_MAX 46000u               /* samples: 2.08 s at 22050; 92 KB in the pool */
 #define BANK_SR 22050.0f
-static int16_t bank[BANK_MAX];
+PLAT_POOL static int16_t bank[BANK_MAX];
 static uint32_t bank_len;
 
 static const char *const NAMES[NPARAM] = {"START", "END", "CHOPS", "PITCH"};
@@ -182,4 +182,4 @@ void fox_slices_render(float *out, uint32_t n)
     }
 }
 
-const engine_t fox = {"FOX", NAMES, par, f_init, f_note, f_render, f_panic, 2, NAMES2, par2};
+const engine_t fox = {"FOX", NAMES, par, f_init, f_note, f_render, f_panic, 2, NAMES2, par2, 0};

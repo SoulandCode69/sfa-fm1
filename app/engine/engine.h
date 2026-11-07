@@ -19,7 +19,16 @@ struct engine {
     uint8_t npages;                       /* 1 or 2 */
     const char *const *param_name2;       /* page 2 (or 0) */
     uint8_t *param2;
+    const char *(*param_text)(uint8_t page, uint32_t p, char *buf);   /* a value shown as words, or 0 */
 };
+
+/* PolyBLEP: the step of a band-limited saw / pulse (t = phase 0..1, dt = phase per sample) */
+static inline float polyblep(float t, float dt)
+{
+    if (t < dt) { t /= dt; return t + t - t * t - 1.0f; }
+    if (t > 1.0f - dt) { t = (t - 1.0f) / dt; return t * t + t + t + 1.0f; }
+    return 0.0f;
+}
 
 /* a tiny shared helper: MIDI note -> phase increment per sample */
 static inline float note_hz(int32_t note) { return 440.0f * fm_exp2f((float)(note - 69) * (1.0f / 12.0f)); }

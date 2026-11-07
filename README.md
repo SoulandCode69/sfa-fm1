@@ -2,14 +2,23 @@
 
 Three engines in one firmware, playing together. Built on [fm1-base](https://github.com/charlesvestal/fm1-base) (MPL-2.0).
 
-| Engine | Focus button | Keys | K1 K2 K3 K4 |
-|---|---|---|---|
-| OTTER synth (2-op FM, 1 voice) | FX | chromatic, OCT-/OCT+ | TONE DECAY RATIO FM |
-| CAT kit (8 pads: kick snare chat ohat clap tom + 2 sample pads) | SEL | first 8 white keys | TUNE DECAY SNAP DRIVE |
-| FOX cut & sample | ENV | chromatic (C4 = as recorded) or, with CHOPS > 1, slices on the white keys | START END CHOPS PITCH |
+| Button | Does |
+|---|---|
+| FX / SEL / ENV | focus OTTER / CAT / FOX; press again for page 2 (PRESET knob too) |
+| SEQ | sequencer page: TEMPO SWING STEPS GATE; the three lanes shown |
+| LFO | mix page: OTTER CAT FOX DELAY |
+| PLAY / REC | run the 16-step pattern / record what you play onto it (hold REC 1 s: clear the focused lane) |
+| HOME | stop, back to the engine page |
+| SAVE | keep settings + pattern |
 
-SELECT knob also cycles focus. SAVE keeps settings. USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36–43), ch 3 Fox — all three at once from a DAW.
-Fox ships with a built-in "mrrp" growl; a sample bank at flash `PLAT_XDATA1` with header `SFA1` + 24-bit length + 16-bit mono 22.05 kHz replaces it (loader tool: todo).
+| Engine | Keys | Page 1 | Page 2 |
+|---|---|---|---|
+| OTTER 4-voice polysynth (PolyBLEP saw/pulse/square or 2-op FM, unison detune, sub, driven SVF, ADSR) | chromatic, OCT-/OCT+ | TONE RES WAVE DETUNE | ATTACK DECAY SUSTAIN RELEASE |
+| CAT kit (808/909-style kick snare hats clap toms rim + 8 sample slices) | 16 white keys = pads | TUNE DECAY SNAP DRIVE | HATS SNARE TONE SMPLVL |
+| FOX cut & sample | chromatic (C4 = as recorded) or slices on the white keys | START END CHOPS PITCH | REV LOOP GAIN |
+
+USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit. Master delay on the mix page.
+Fox's bank: `tools/sfa_sample.py x.wav` (any WAV; up to 2 s at 22.05 kHz), written by the installer after the firmware.
 
 ## Everyday loop (WSL/Ubuntu)
 ```
