@@ -11,7 +11,18 @@ Three engines in one firmware, playing together. Built on [fm1-base](https://git
 SELECT knob also cycles focus. SAVE keeps settings. USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36–43), ch 3 Fox — all three at once from a DAW.
 Fox ships with a built-in "mrrp" growl; a sample bank at flash `PLAT_XDATA1` with header `SFA1` + 24-bit length + 16-bit mono 22.05 kHz replaces it (loader tool: todo).
 
-## Build
+## Everyday loop (WSL/Ubuntu)
+```
+tools/go.sh            # build -> flash Unit A -> write the sample bank -> open the laptop UI in Chrome
+tools/go.sh --pull     # same, after pulling the latest code
+tools/go.sh --no-flash # just rebuild and reopen the laptop UI
+```
+Laptop UI = fm1-base's screen mirror at http://localhost:8577/mirror/ : the FM-1's screen live, its buttons, knobs
+and keys clickable. Press Connect; nothing else may have the FM-1's MIDI port open (close the hub tab).
+
+Your own sample: `python3 tools/sfa_sample.py /mnt/c/Users/<you>/Downloads/x.wav` then `tools/go.sh`.
+
+## Build (by hand)
 ```
 git clone --recursive <this repo>           # base/ = fm1-base + felucca-bsp
 python3 base/tools/build.py app --host      # host simulator, needs only cc
