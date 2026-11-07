@@ -66,4 +66,36 @@ wait 400
 midi 80 3C 00
 wait 200
 wavstop
-expect param0 66
+expect param0 56
+# pages: FX again = page 2 of Otter; PRESET knob flips back
+tap FX
+wait 30
+expect page 1
+expect param0 30
+turn PRESET 1
+wait 30
+expect page 0
+# Cat: all 16 white keys are pads (pad 16 = sample slice 8)
+tap SEL
+wait 30
+wav cat16.wav
+tapkey w8
+wait 200
+tapkey w15
+wait 400
+wavstop
+# Fox page 2: REV on, LOOP on
+tap ENV
+wait 30
+tap ENV
+wait 30
+expect page 1
+turn K1 30
+turn K2 30
+wait 30
+expect param0 90
+shot fox2.png
+wav fox_rev.wav
+tapkey 7
+wait 500
+wavstop

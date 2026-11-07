@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Sin Fetish Audio
  * SFA Suite: three engines rendered together, one in focus on the keys.
- *   FX = OTTER   SEL = CAT   ENV = FOX      (focus; the LED shows which)
- *   keys        play the focused engine (Cat: first 8 white keys = pads; Fox CHOP: white keys = slices)
- *   K1..K4      the focused engine's four parameters      OCT-/OCT+  octave (Otter, Fox chromatic)
- *   SAVE        keep settings       MIDI in: ch 1 Otter, ch 2 Cat (36..43 = pads), ch 3 Fox
+ *   FX = OTTER   SEL = CAT   ENV = FOX      (focus; the LED shows which; press again = next page)
+ *   keys        play the focused engine (Cat: the 16 white keys = pads; Fox CHOP: white keys = slices)
+ *   K1..K4      the page's four parameters   PRESET knob  page   OCT-/OCT+  octave (Otter, Fox chromatic)
+ *   SAVE        keep settings       MIDI in: ch 1 Otter, ch 2 Cat (36..51 = pads), ch 3 Fox
  * Part of fm1-base's unity build (device/unity.c, host/plat_host.c), after the platform. */
 #include "fastmath.h"
 #include "engine/engine.h"
@@ -16,13 +16,14 @@ static const engine_t *const ENG[3] = {&otter, &cat, &fox};
 enum { E_OTTER, E_CAT, E_FOX };
 static const uint16_t ENG_RGB[3] = {RGB(90, 200, 255), RGB(255, 170, 40), RGB(255, 90, 60)};
 
-#define SET_MAGIC 0x53464131u            /* "SFA1" */
+#define SET_MAGIC 0x53464132u            /* "SFA2" */
 typedef struct {
     uint32_t magic;
     int8_t octave;
     uint8_t focus;
-    uint8_t rsv[2];
-    uint8_t param[3][NPARAM];
+    uint8_t page[3];
+    uint8_t rsv[3];
+    uint8_t param[3][2][NPARAM];
 } settings_t;
 static settings_t set;
 static uint8_t set_dirty;
@@ -70,27 +71,30 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
 void app_panic(void) { otter.panic(); cat.panic(); fox.panic(); }
 
 /* --------------------------------------------------------------- settings --- */
+static uint8_t *page_param(uint8_t e, uint8_t pg) { return pg && ENG[e]->param2 ? ENG[e]->param2 : ENG[e]->param; }
+static const char *const *page_names(uint8_t e, uint8_t pg) { return pg && ENG[e]->param2 ? ENG[e]->param_name2 : ENG[e]->param_name; }
 static void params_to_set(void)
 {
-    uint32_t e, p;
-    for (e = 0; e < 3u; e++) for (p = 0; p < NPARAM; p++) set.param[e][p] = ENG[e]->param[p];
+    uint32_t e, g, p;
+    for (e = 0; e < 3u; e++) for (g = 0; g < 2u; g++) for (p = 0; p < NPARAM; p++) set.param[e][g][p] = page_param((uint8_t)e, (uint8_t)g)[p];
 }
 static void params_from_set(void)
 {
-    uint32_t e, p;
-    for (e = 0; e < 3u; e++) for (p = 0; p < NPARAM; p++) ENG[e]->param[p] = set.param[e][p];
+    uint32_t e, g, p;
+    for (e = 0; e < 3u; e++) for (g = 0; g < 2u; g++) for (p = 0; p < NPARAM; p++) page_param((uint8_t)e, (uint8_t)g)[p] = set.param[e][g][p];
 }
 
 void app_init(void)
 {
     otter.init(); cat.init(); fox.init();
     if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) == (int)sizeof set && set.magic == SET_MAGIC
-        && set.octave >= -2 && set.octave <= 2 && set.focus < 3u) {
+        && set.octave >= -2 && set.octave <= 2 && set.focus < 3u && set.page[0] < 2u && set.page[1] < 2u && set.page[2] < 2u) {
         params_from_set();
     } else {
         set.magic = SET_MAGIC;
         set.octave = 0;
         set.focus = E_OTTER;
+        set.page[0] = set.page[1] = set.page[2] = 0;
         params_to_set();
     }
 }
@@ -163,9 +167,17 @@ static int32_t key_to_note(uint32_t k, uint8_t e)
     return 53 + (int32_t)k + 12 * set.octave;                /* key 0 is F3 (MIDI 53) */
 }
 
+static void page_set(uint8_t pg)
+{
+    if (ENG[set.focus]->npages < 2u) pg = 0;
+    set.page[set.focus] = pg;
+    set_dirty = 1;
+    ui.redraw = 1;
+    app_say(ENG[set.focus]->name, pg ? "PAGE 2" : "PAGE 1");
+}
 static void focus(uint8_t e)
 {
-    if (e == set.focus) return;
+    if (e == set.focus) { page_set((uint8_t)!set.page[e]); return; }   /* pressed again: the other page */
     set.focus = e;
     set_dirty = 1;
     app_say(ENG[e]->name, "");
@@ -220,11 +232,14 @@ static void input(void)
         if ((e = plat_enc((int)k)) == 0) continue;
         if (k >= EN_K1 && k < EN_K1 + NPARAM) {
             uint32_t p = k - EN_K1;
+            uint8_t *pp = page_param(set.focus, set.page[set.focus]);
             char t[8];
-            cur->param[p] = (uint8_t)clamp((int32_t)cur->param[p] + e * 3, 0, 127);
+            pp[p] = (uint8_t)clamp((int32_t)pp[p] + e * 3, 0, 127);
             set_dirty = 1;
-            int_text(cur->param[p], t);
-            app_say(cur->param_name[p], t);
+            int_text(pp[p], t);
+            app_say(page_names(set.focus, set.page[set.focus])[p], t);
+        } else if (k == EN_PRESET) {
+            page_set((uint8_t)!set.page[set.focus]);
         } else if (k == EN_SELECT) {
             focus((uint8_t)((set.focus + 3 + (e > 0 ? 1 : 2)) % 3u));
         }
@@ -264,6 +279,10 @@ static void draw(void)
     /* the page: the engine's name big, four parameters as bars */
     cv_begin(240, 140, C_BLACK);
     cv_text(10, 4, &FONT_B, cur->name, accent);
+    if (cur->npages > 1u) {                           /* page dots */
+        cv_rect(70, 10, 6, 6, set.page[set.focus] == 0 ? accent : C_LINE);
+        cv_rect(80, 10, 6, 6, set.page[set.focus] == 1 ? accent : C_LINE);
+    }
     if (set.focus == E_OTTER || (set.focus == E_FOX && !fox_chop_mode())) {
         t[0] = set.octave < 0 ? '-' : '+'; t[1] = (char)('0' + (set.octave < 0 ? -set.octave : set.octave)); t[2] = 0;
         cv_text(190, 8, &FONT_XS, "OCT", C_GRAY);
@@ -271,15 +290,20 @@ static void draw(void)
     } else if (set.focus == E_FOX) {
         cv_text(170, 8, &FONT_XS, "CHOP", C_HI);
     } else {
-        cv_text(170, 8, &FONT_XS, "8 PADS", C_HI);
+        cv_text(166, 8, &FONT_XS, "16 PADS", C_HI);
     }
     for (i = 0; i < NPARAM; i++) {
-        int32_t x = 10 + (int32_t)i * 57, v = (int32_t)cur->param[i];
+        const uint8_t *pp = page_param(set.focus, set.page[set.focus]);
+        const char *nm = page_names(set.focus, set.page[set.focus])[i];
+        int32_t x = 10 + (int32_t)i * 57, v = (int32_t)pp[i];
         int32_t h = (v * 70 + 63) / 127;
+        int sw = set.focus == E_FOX && set.page[E_FOX] == 1u && i < 2u;   /* REV, LOOP: on / off */
         cv_rect(x, 36, 50, 72, C_LINE);
-        cv_rect(x + 1, 36 + 71 - h, 48, h, accent);
-        cv_text(x + (50 - text_w(&FONT_XS, cur->param_name[i])) / 2, 112, &FONT_XS, cur->param_name[i], C_GRAY);
-        int_text(set.focus == E_FOX && i == 2u ? fox_chops() : v, t);
+        if (sw) cv_rect(x + 1, 37, 48, 70, v >= 64 ? accent : C_LINE);
+        else cv_rect(x + 1, 36 + 71 - h, 48, h, accent);
+        cv_text(x + (50 - text_w(&FONT_XS, nm)) / 2, 112, &FONT_XS, nm, C_GRAY);
+        if (sw) { t[0] = 0; text_cat(t, v >= 64 ? "ON" : "OFF"); }
+        else int_text(set.focus == E_FOX && set.page[E_FOX] == 0u && i == 2u ? fox_chops() : v, t);
         cv_text(x + (50 - text_w(&FONT_XS, t)) / 2, 124, &FONT_XS, t, C_HI);
     }
     cv_blit(0, 36);
@@ -287,13 +311,14 @@ static void draw(void)
     cv_begin(240, 64, C_BLACK);
     for (i = 0; i < 16u; i++) {
         int held = ui.keys >> WK[i] & 1u;
-        int pad = set.focus == E_CAT ? i < 8u : set.focus == E_FOX && fox_chop_mode() && i < (uint32_t)fox_chops();
-        cv_rect(4 + (int32_t)i * 14, 16, 13, 30, held ? accent : pad ? C_GRAY : C_DIM);
-        if (pad) { int_text((int32_t)i + 1, t); cv_text(7 + (int32_t)i * 14, 34, &FONT_XS, t, held ? C_BLACK : C_WHITE); }
+        int pad = set.focus == E_CAT ? 1 : set.focus == E_FOX && fox_chop_mode() && i < (uint32_t)fox_chops();
+        int smp = set.focus == E_CAT && i >= 8u;             /* the sample pads, in Fox's colour */
+        cv_rect(4 + (int32_t)i * 14, 16, 13, 30, held ? accent : smp ? ENG_RGB[E_FOX] : pad ? C_GRAY : C_DIM);
+        if (pad) { int_text((int32_t)i + 1, t); cv_text(5 + (int32_t)i * 14 + (i < 9u ? 2 : 0), 34, &FONT_XS, t, held ? C_BLACK : C_WHITE); }
     }
     for (i = 0; i < 11u; i++)
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 2, 11, 18, ui.keys >> BK[i] & 1u ? C_WHITE : C_LINE);
-    cv_text(4, 50, &FONT_XS, "FX OTTER  SEL CAT  ENV FOX", C_GRAY);
+    cv_text(4, 50, &FONT_XS, "FX OTTER SEL CAT ENV FOX  2x=PAGE", C_GRAY);
     int_text((int32_t)(plat_master() * 100u / 4096u), t);
     text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 50, &FONT_XS, t, C_HI);
@@ -328,7 +353,8 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "octave")) *got = set.octave;
     else if (!strcmp(what, "dirty")) *got = set_dirty;
     else if (!strcmp(what, "note")) *got = ui.last_note;
-    else if (!strncmp(what, "param", 5)) *got = ENG[set.focus]->param[atoi(what + 5) % NPARAM];
+    else if (!strcmp(what, "page")) *got = set.page[set.focus];
+    else if (!strncmp(what, "param", 5)) *got = page_param(set.focus, set.page[set.focus])[atoi(what + 5) % NPARAM];
     else return 0;
     return 1;
 }

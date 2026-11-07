@@ -16,6 +16,9 @@ struct engine {
     void (*note)(int32_t note, uint32_t vel, int on);   /* main loop or audio irq; must be cheap */
     void (*render)(float *mono, uint32_t n);            /* add n frames into mono (nominal full scale 1.0) */
     void (*panic)(void);
+    uint8_t npages;                       /* 1 or 2 */
+    const char *const *param_name2;       /* page 2 (or 0) */
+    uint8_t *param2;
 };
 
 /* a tiny shared helper: MIDI note -> phase increment per sample */
