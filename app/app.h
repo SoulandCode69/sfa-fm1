@@ -24,9 +24,10 @@ void app_backup_flush(void);
 void app_backup_hold(int on);
 void app_backup_restored(void);
 
-/* the resource region: Fox's sample bank, in PLAT_XDATA1 (0xE5000..0xFC000: 23 sectors, 92 KiB) */
-#define APP_RES_BASE PLAT_XDATA1_LO
-#define APP_RES_SECTORS 23u
+/* the resource region: Fox's sample bank, at the bottom of the data area (0x97000..0xC5000: 46 sectors, 184 KiB;
+ * the store's objects sit at the top, 0xDC000) */
+#define APP_RES_BASE PLAT_DATA_LO
+#define APP_RES_SECTORS 46u
 
 /* the contract: the platform calls these */
 void app_init(void);

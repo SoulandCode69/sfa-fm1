@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Sin Fetish Audio
-"""Make Fox's sample bank (app/samples.bin) from a WAV: mono 16-bit 22.05 kHz, at most 1.27 s, header SFA1.
+"""Make Fox's sample bank (app/samples.bin) from a WAV: mono 16-bit 22.05 kHz, at most 4.1 s, header SFA1.
     python3 tools/sfa_sample.py IN.wav [--out app/samples.bin] [--gain 1.0]
 Then: python3 base/tools/build.py app  and  python3 base/tools/fm1_install.py app/build/sfa.fwsc
 (the installer writes the bank after the firmware). Any WAV (mono/stereo, 8/16/24/32-bit, any rate) goes in;
 it is mixed to mono, resampled, trimmed to the limit and normalised to -1 dB."""
 import argparse, struct, sys, wave
 from pathlib import Path
-RATE, MAXN = 22050, 28000
+RATE, MAXN = 22050, 92000
 
 def read_wav(path):
     w = wave.open(str(path))

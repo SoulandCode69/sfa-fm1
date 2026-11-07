@@ -13,7 +13,7 @@
 #include "engine.h"
 #include "plat.h"
 
-#define BANK_MAX 46000u               /* samples: 2.08 s at 22050; 92 KB in the pool */
+#define BANK_MAX 92000u               /* samples: 4.17 s at 22050; 184 KB in the pool */
 #define BANK_SR 22050.0f
 PLAT_POOL static int16_t bank[BANK_MAX];
 static uint32_t bank_len;

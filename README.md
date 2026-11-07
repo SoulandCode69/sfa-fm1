@@ -18,7 +18,7 @@ Three engines in one firmware, playing together. Built on [fm1-base](https://git
 | FOX cut & sample | chromatic (C4 = as recorded) or slices on the white keys | START END CHOPS PITCH | REV LOOP GAIN |
 
 USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit. Master delay on the mix page.
-Fox's bank: `tools/sfa_sample.py x.wav` (any WAV; up to 2 s at 22.05 kHz), written by the installer after the firmware.
+Fox's bank: `tools/sfa_sample.py x.wav` (any WAV; up to 4 s at 22.05 kHz), written by the installer after the firmware.
 
 ## Everyday loop (WSL/Ubuntu)
 ```
