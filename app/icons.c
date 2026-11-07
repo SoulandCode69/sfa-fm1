@@ -1,19 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Sin Fetish Audio
- * Three little animals, 12 x 12, one bit a pixel. Part of app.c. */
-static const uint16_t ICON_OTTER[12] = {   /* round head, small ears, whiskers */
-    0x0000, 0x0330, 0x07F8, 0x0FFC, 0x1FFE, 0x1B6E, 0x1FFE, 0x7CBE, 0x1FFE, 0x0FFC, 0x07F8, 0x0000};
-static const uint16_t ICON_CAT[12] = {     /* pointed ears, wide face */
-    0x0000, 0x0C0C, 0x0E1C, 0x0F3C, 0x0FFC, 0x1FFE, 0x1B6E, 0x1FFE, 0x1E7E, 0x0FFC, 0x03C0, 0x0000};
-static const uint16_t ICON_FOX[12] = {     /* tall ears, narrow muzzle */
-    0x0000, 0x180C, 0x1C1C, 0x1E3C, 0x1FFC, 0x1FFC, 0x1B6C, 0x0FF8, 0x07F0, 0x03E0, 0x01C0, 0x0000};
-static const uint16_t *const ICONS[3] = {ICON_OTTER, ICON_CAT, ICON_FOX};
+ * Three little animals, 16 x 16, two tones: the body in the engine's colour, the muzzle light. Part of app.c. */
+typedef struct { uint16_t body[16], light[16]; } icon_t;
+static const icon_t ICON_OTTER = {
+    {0x0000, 0x300C, 0x781E, 0x7FFE, 0xFFFF, 0xFFFF, 0xE7E7, 0xE7E7, 0xFFFF, 0xF81F, 0xF18F, 0x700E, 0x781E, 0x3FFC, 0x1FF8, 0x0000},
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x07E0, 0x0E70, 0x0FF0, 0x07E0, 0x0000, 0x0000, 0x0000}};
+static const icon_t ICON_CAT = {
+    {0x0000, 0x4002, 0x6006, 0x700E, 0x7FFE, 0x7FFE, 0x7FFE, 0x67E6, 0x67E6, 0x7FFE, 0xBE7D, 0x7E7E, 0xBDBD, 0x3FFC, 0x1FF8, 0x0000},
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0180, 0x0240, 0x0000, 0x0000, 0x0000}};
+static const icon_t ICON_FOX = {
+    {0x0000, 0x8001, 0xC003, 0xE007, 0xF00F, 0xFFFF, 0xFFFF, 0xE7E7, 0xE7E7, 0x7FFE, 0x3FFC, 0x0FF0, 0x03C0, 0x03C0, 0x0000, 0x0000},
+    {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x8001, 0xC003, 0x700E, 0x3C3C, 0x1C38, 0x0F3C, 0x0330}};
+static const icon_t *const ICONS[3] = {&ICON_OTTER, &ICON_CAT, &ICON_FOX};
 
-static void icon(int32_t x, int32_t y, const uint16_t *bits, uint16_t col, int32_t scale)
+static void icon(int32_t x, int32_t y, const icon_t *ic, uint16_t col, int32_t scale)
 {
     int32_t r, c;
-    for (r = 0; r < 12; r++)
-        for (c = 0; c < 12; c++)
-            if (bits[r] >> (12 - c) & 1u)
-                cv_rect(x + c * scale, y + r * scale, scale, scale, col);
+    uint16_t light = RGB(255, 240, 225);
+    for (r = 0; r < 16; r++)
+        for (c = 0; c < 16; c++) {
+            if (ic->body[r] >> (15 - c) & 1u) cv_rect(x + c * scale, y + r * scale, scale, scale, col);
+            else if (ic->light[r] >> (15 - c) & 1u) cv_rect(x + c * scale, y + r * scale, scale, scale, light);
+        }
 }

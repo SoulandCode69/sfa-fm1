@@ -5,7 +5,8 @@
  *   CHOP (CHOPS 2..16):    the window cut into equal slices; white key n plays slice n.
  *   SAMPLE (the app's ARP button): records the groovebox's own output into the bank, up to 2 s, until ARP again.
  *   page 1: K1 START  K2 END  K3 CHOPS  K4 PITCH (semitones -24..+24)
- *   page 2: K1 REV    K2 LOOP  K3 FILTER (lowpass)  K4 DECAY (one-shot length; 127 = whole)
+ *   page 2: K1 REV    K2 LOOP  K3 FILTER (resonant lowpass)  K4 RES
+ *   page 3: K1 ATTACK K2 DECAY (127 = whole)  K3 GATE (key release stops the sound)  K4 ROLL (retrigger 1/16 .. 1/64)
  * The bank comes from, in order: the app's own flash sample (saved with SAVE after a SAMPLE), the firmware's
  * resource region (tools/sfa_sample.py WAV -> samples.bin), or four built-in sounds spread across the bank. */
 #include "fastmath.h"
@@ -18,11 +19,13 @@ PLAT_POOL static int16_t bank[BANK_MAX];
 static uint32_t bank_len;
 
 static const char *const NAMES1[NPARAM] = {"START", "END", "CHOPS", "PITCH"};
-static const char *const NAMES2[NPARAM] = {"REV", "LOOP", "FILTER", "DECAY"};
+static const char *const NAMES2[NPARAM] = {"REV", "LOOP", "FILTER", "RES"};
+static const char *const NAMES3[NPARAM] = {"ATTACK", "DECAY", "GATE", "ROLL"};
 static uint8_t par1[NPARAM] = {0, 127, 0, 64};
-static uint8_t par2[NPARAM] = {0, 0, 127, 127};
+static uint8_t par2[NPARAM] = {0, 0, 127, 0};
+static uint8_t par3[NPARAM] = {0, 127, 0, 0};
 
-typedef struct { float pos, inc, env, dcoef, lp; uint32_t start, end; uint8_t on, loop; float vel; } voice_t;
+typedef struct { float pos, inc, env, dcoef, att, aenv; svf_t flt; uint32_t start, end, roll, roll_n; int32_t note; uint8_t on, loop, gate; float vel; } voice_t;
 #define NV 4
 static voice_t v[NV];
 static volatile int32_t pend_note = -1;
@@ -36,45 +39,66 @@ static float rec_acc;
 static uint8_t rec_tick;
 #define REC_MAX 44100u                 /* 2 s of bank */
 
-/* ---- the built-in bank: four sounds, a second each: mrrp growl, "ah" vowel, a noise hit, a sine pluck */
+/* ---- the built-in bank: eight sounds, half a second each: growl, "ah", "oo", noise hit, pluck, bell, bass hit, chord */
 static void gen_builtin(void)
 {
-    uint32_t i, n = 11025u, s;
-    float ph = 0, lp = 0, bp = 0, f1 = 0, f2 = 0;
-    for (s = 0; s < 4u; s++) {
-        int16_t *o = bank + s * n * 2u;
-        for (i = 0; i < n * 2u; i++) o[i] = 0;
+    uint32_t i, n = 11025u, k;
+    float ph = 0, ph2 = 0, lp = 0, bp = 0, f1 = 0, f2 = 0;
+    for (k = 0; k < 8u; k++) {
+        int16_t *o = bank + k * n;
+        ph = ph2 = lp = bp = f1 = f2 = 0;
         for (i = 0; i < n; i++) {
             float t = (float)i / (float)n, x = 0.0f, env;
-            if (s == 0u) {                                               /* mrrp */
-                float hz = 70.0f + 90.0f * fm_sinf(t * 3.1415926f) + 25.0f * fm_sinf(t * 90.0f);
+            switch (k) {
+            case 0:                                                      /* mrrp growl */
+                { float hz = 70.0f + 90.0f * fm_sinf(t * 3.1415926f) + 25.0f * fm_sinf(t * 90.0f);
                 env = t < 0.05f ? t / 0.05f : (1.0f - t) * (1.0f - t) * 1.1f;
                 ph += hz / BANK_SR; if (ph >= 1.0f) ph -= 1.0f;
                 x = (ph < 0.3f ? 1.0f : -0.4f) + noise(&rng) * 0.15f;
                 lp += (x - lp) * (0.08f + 0.5f * fm_sinf(t * 3.1415926f)); bp += (lp - bp) * 0.3f;
-                x = fm_tanhf((lp - bp * 0.5f) * 2.5f) * env * 0.9f;
-            } else if (s == 1u) {                                        /* "ah": a saw through two formants */
-                float hz = 110.0f * (1.0f + 0.01f * fm_sinf(t * 40.0f));
+                x = fm_tanhf((lp - bp * 0.5f) * 2.5f) * env * 0.9f; } break;
+            case 1: case 2:                                              /* "ah" / "oo": a saw through two formants */
+                { float hz = 110.0f * (1.0f + 0.008f * fm_sinf(t * 40.0f));
+                float c1 = k == 1u ? 0.11f : 0.05f, c2 = k == 1u ? 0.3f : 0.12f;
                 env = t < 0.1f ? t / 0.1f : t > 0.7f ? (1.0f - t) / 0.3f : 1.0f;
                 ph += hz / BANK_SR; if (ph >= 1.0f) ph -= 1.0f;
                 x = 2.0f * ph - 1.0f;
-                f1 += (x - f1) * 0.11f; f2 += (f1 - f2) * 0.11f;         /* ~700 Hz */
-                lp += (x - lp) * 0.3f; bp += (lp - bp) * 0.3f;            /* ~1.2 kHz */
-                x = (f2 * 1.2f + bp * 0.8f) * env * 0.8f;
-            } else if (s == 2u) {                                        /* noise hit */
+                f1 += (x - f1) * c1; f2 += (f1 - f2) * c1;
+                lp += (x - lp) * c2; bp += (lp - bp) * c2;
+                x = (f2 * 1.2f + bp * 0.8f) * env * 0.8f; } break;
+            case 3:                                                      /* noise hit */
                 env = fm_exp2f(-t * 12.0f);
                 x = noise(&rng);
                 lp += (x - lp) * (0.1f + 0.6f * env);
-                x = fm_tanhf(lp * 3.0f * env) * 0.9f;
-            } else {                                                     /* sine pluck with a bit of 2nd harmonic */
+                x = fm_tanhf(lp * 3.0f * env) * 0.9f; break;
+            case 4:                                                      /* pluck */
                 env = fm_exp2f(-t * 6.0f);
                 ph += 220.0f / BANK_SR; if (ph >= 1.0f) ph -= 1.0f;
-                x = (fm_sinf(ph * 6.2831853f) + 0.3f * fm_sinf(ph * 2.0f * 6.2831853f) * env) * env * 0.8f;
+                x = (fm_sinf(ph * 6.2831853f) + 0.3f * fm_sinf(ph * 2.0f * 6.2831853f) * env) * env * 0.8f; break;
+            case 5:                                                      /* FM bell */
+                env = fm_exp2f(-t * 4.0f);
+                ph += 440.0f / BANK_SR; if (ph >= 1.0f) ph -= 1.0f;
+                ph2 += 440.0f * 1.41f / BANK_SR; if (ph2 >= 1.0f) ph2 -= 1.0f;
+                x = fm_sinf(ph * 6.2831853f + fm_sinf(ph2 * 6.2831853f) * 2.5f * env) * env * 0.8f; break;
+            case 6:                                                      /* bass hit: saw into a closing filter */
+                env = fm_exp2f(-t * 5.0f);
+                ph += 55.0f / BANK_SR; if (ph >= 1.0f) ph -= 1.0f;
+                x = 2.0f * ph - 1.0f;
+                lp += (x - lp) * (0.05f + 0.4f * env); bp += (lp - bp) * (0.05f + 0.4f * env);
+                x = fm_tanhf(bp * 2.0f) * env * 0.9f; break;
+            default:                                                     /* a minor chord of pulses */
+                env = t < 0.05f ? t / 0.05f : fm_exp2f(-(t - 0.05f) * 3.0f);
+                ph += 220.0f / BANK_SR; if (ph >= 1.0f) ph -= 1.0f;
+                ph2 += 261.6f / BANK_SR; if (ph2 >= 1.0f) ph2 -= 1.0f;
+                f1 += 329.6f / BANK_SR; if (f1 >= 1.0f) f1 -= 1.0f;
+                x = ((ph < 0.3f ? 1.0f : -0.43f) + (ph2 < 0.3f ? 1.0f : -0.43f) + (f1 < 0.3f ? 1.0f : -0.43f)) * 0.3f;
+                lp += (x - lp) * 0.25f;
+                x = lp * env * 0.8f; break;
             }
             o[i] = (int16_t)(x * 30000.0f);
         }
     }
-    bank_len = n * 8u;                                                   /* 4 s: four sounds, a second each, a second of room */
+    bank_len = n * 8u;
 }
 
 /* ---- the app's own flash sample: data area 0xC5000..0xDC000 (92 KiB), header "SFAS" + len24 */
@@ -133,12 +157,41 @@ static void f_init(void)
     for (i = 0; i < NV; i++) v[i].on = 0;
     rec_on = 0;
     if (!load_own() && !load_res()) gen_builtin();
+    {   /* a silent bank (a bad transfer, an empty region) is no use: the built-in one instead */
+        int32_t pk = 0;
+        for (i = 0; i < bank_len; i += 7u) { int32_t a = bank[i] < 0 ? -bank[i] : bank[i]; if (a > pk) pk = a; }
+        if (pk < 200) gen_builtin();
+    }
+}
+/* for the app's waveform: the bank's peak in a window */
+uint32_t fox_bank_len(void) { return bank_len; }
+int32_t fox_peak(uint32_t from, uint32_t to)
+{
+    int32_t pk = 0; uint32_t i, step = (to - from) / 24u + 1u;
+    if (to > bank_len) to = bank_len;
+    for (i = from; i < to; i += step) { int32_t a = bank[i] < 0 ? -bank[i] : bank[i]; if (a > pk) pk = a; }
+    return pk;
+}
+uint32_t fox_window(uint32_t *a, uint32_t *b)
+{
+    float s0 = p01(par1[0]), s1 = p01(par1[1]);
+    if (s1 < s0 + 0.02f) s1 = s0 + 0.02f;
+    if (s1 > 1.0f) s1 = 1.0f;
+    *a = (uint32_t)(s0 * (float)bank_len); *b = (uint32_t)(s1 * (float)bank_len);
+    return (par1[2] >> 3) + 1u;
+}
+float fox_playhead(void)                  /* 0..1 of the bank, the loudest voice; -1 none */
+{
+    uint32_t i; int best = -1;
+    for (i = 0; i < NV; i++) if (v[i].on && (best < 0 || v[i].env > v[best].env)) best = (int)i;
+    return best < 0 ? -1.0f : v[best].pos / (float)bank_len;
 }
 static void f_panic(void) { uint32_t i; for (i = 0; i < NV; i++) v[i].on = 0; rec_on = 0; }
 
+static volatile int32_t pend_off = -1;
 static void f_note(int32_t note, uint32_t vel, int on)
 {
-    if (!on) return;
+    if (!on) { pend_off = note; return; }
     pend_vel = vel;
     pend_note = note;
 }
@@ -165,7 +218,7 @@ void fox_record_feed(const float *mix, uint32_t n)                    /* audio i
         if (rec_tick ^= 1u) {
             float x = rec_acc * 0.5f;
             if (x > 1.0f) x = 1.0f; else if (x < -1.0f) x = -1.0f;
-            bank[rec_pos++] = (int16_t)(x * 32000.0f);
+            bank[rec_pos++] = (int16_t)(x * 24000.0f);
             rec_acc = 0;
         }
     }
@@ -177,7 +230,7 @@ static void start_voice(voice_t *w, int32_t note, float vel)
     uint32_t chops = par1[2] >> 3;
     float s0 = p01(par1[0]), s1 = p01(par1[1]);
     float semi = ((float)par1[3] - 64.0f) * (48.0f / 127.0f);
-    float dec = p01(par2[3]);
+    float dec = p01(par3[1]), att = p01(par3[0]);
     uint32_t a, b, len;
     if (s1 < s0 + 0.02f) s1 = s0 + 0.02f;
     if (s1 > 1.0f) s1 = 1.0f;
@@ -197,7 +250,13 @@ static void start_voice(voice_t *w, int32_t note, float vel)
     if (par2[0] >= 64u) { w->inc = -w->inc; w->pos = (float)b - 2.0f; } else w->pos = (float)a;
     w->env = 1.0f;
     w->dcoef = dec > 0.99f ? 1.0f : decay_coef(0.02f + dec * dec * 2.0f);
-    w->lp = 0;
+    w->aenv = att > 0.0f ? 0.0f : 1.0f;
+    w->att = att > 0.0f ? 1.0f / (0.002f + att * att * 1.5f) / SR : 1.0f;
+    w->flt.ic1 = w->flt.ic2 = 0;
+    w->note = note;
+    w->gate = par3[2] >= 64u;
+    w->roll_n = par3[3] >> 5;                                       /* 0 off, 1 = 1/16, 2 = 1/32, 3 = 1/64 of 120 bpm */
+    w->roll = w->roll_n ? (uint32_t)(SR * 0.125f / (float)(1u << (w->roll_n - 1u))) : 0;
     w->vel = vel * 1.3f;
     w->on = 1;
 }
@@ -210,14 +269,18 @@ static inline float read_bank(float pos)
     return (a + (b - a) * f) * (1.0f / 32768.0f);
 }
 
-static void run_voice(voice_t *w, float *out, uint32_t n, float fcoef)
+static void run_voice(voice_t *w, float *out, uint32_t n, const svfc_t *fc)
 {
     uint32_t i;
     for (i = 0; i < n && w->on; i++) {
-        float s = read_bank(w->pos) * w->env * w->vel;
-        w->lp += (s - w->lp) * fcoef;
-        out[i] += w->lp;
+        float s = read_bank(w->pos) * w->env * w->vel * w->aenv;
+        out[i] += svf_lp(&w->flt, fc, s);
         w->env *= w->dcoef;
+        if (w->aenv < 1.0f) { w->aenv += w->att; if (w->aenv > 1.0f) w->aenv = 1.0f; }
+        if (w->roll && --w->roll == 0u) {                                  /* ROLL: back to the start */
+            w->roll = (uint32_t)(SR * 0.125f / (float)(1u << (w->roll_n - 1u)));
+            w->pos = w->inc > 0 ? (float)w->start : (float)w->end - 2.0f; w->env = 1.0f;
+        }
         w->pos += w->inc;
         if (w->pos + 1.0f >= (float)w->end || w->pos < (float)w->start) {
             if (w->loop) w->pos = w->inc > 0 ? (float)w->start : (float)w->end - 2.0f;
@@ -230,9 +293,14 @@ static void run_voice(voice_t *w, float *out, uint32_t n, float fcoef)
 static void f_render(float *out, uint32_t n)
 {
     uint32_t i;
-    int32_t note = pend_note;
-    float fl = p01(par2[2]);
-    float fcoef = 0.02f + fl * fl * 0.98f;
+    int32_t note = pend_note, off = pend_off;
+    float fl = p01(par2[2]), fhz = 60.0f * fm_exp2f(fl * 8.0f);     /* 60 Hz .. 15 kHz */
+    svfc_t fc;
+    svf_coef(&fc, fhz, p01(par2[3]) * 0.95f);
+    if (off >= 0) {
+        pend_off = -1;
+        for (i = 0; i < NV; i++) if (v[i].on && v[i].gate && v[i].note == off) v[i].dcoef = 0.9992f;   /* a 15 ms release */
+    }
     if (note >= 0) {
         uint32_t pick = 0;
         pend_note = -1;
@@ -240,7 +308,15 @@ static void f_render(float *out, uint32_t n)
         if (i == NV) { for (i = 1; i < NV; i++) if (v[i].env < v[pick].env) pick = i; }
         start_voice(&v[pick], note, (float)pend_vel * (1.0f / 127.0f));
     }
-    for (i = 0; i < NV; i++) run_voice(&v[i], out, n, fcoef);
+    for (i = 0; i < NV; i++) run_voice(&v[i], out, n, &fc);
 }
 
-const engine_t fox = {"FOX", f_init, f_note, f_render, f_panic, 2, {NAMES1, NAMES2, 0}, {par1, par2, 0}, 0};
+static const char *f_text(uint8_t page, uint32_t p, char *buf)
+{
+    static const char *const ROLLS[4] = {"OFF", "1/16", "1/32", "1/64"};
+    (void)buf;
+    if (page == 2u && p == 2u) return par3[2] >= 64u ? "GATE" : "1-SHOT";
+    if (page == 2u && p == 3u) return ROLLS[par3[3] >> 5];
+    return 0;
+}
+const engine_t fox = {"FOX", f_init, f_note, f_render, f_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, f_text};

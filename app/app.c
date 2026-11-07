@@ -13,6 +13,16 @@
 #include "engine/engine.h"
 
 extern const engine_t otter, cat, fox;
+void otter_preset(int32_t step);
+const char *otter_preset_name(void);
+int otter_arp_on(void);
+int otter_arp_rate(void);
+void otter_arp_tick(void);
+void cat_kit(int32_t step);
+uint32_t fox_bank_len(void);
+int32_t fox_peak(uint32_t from, uint32_t to);
+uint32_t fox_window(uint32_t *a, uint32_t *b);
+float fox_playhead(void);
 const char *cat_pad_name(int pad);
 const char *cat_kit_name(void);
 int cat_last_pad(void);
@@ -33,14 +43,15 @@ static const uint16_t ENG_RGB[3] = {RGB(90, 200, 255), RGB(255, 170, 40), RGB(25
 
 #include "icons.c"
 
-#define SET_MAGIC 0x53464134u            /* "SFA4" */
+#define SET_MAGIC 0x53464135u            /* "SFA5" */
 typedef struct {
     uint32_t magic;
     int8_t octave;
     uint8_t focus;
     uint8_t page[3];
     uint8_t level[3];
-    uint8_t delay_mix, delay_time, delay_fb, rsv;
+    uint8_t delay_mix, delay_time, delay_fb, crush;
+    uint8_t drive, mixpage, rsv[2];
     uint8_t param[3][NPAGES][NPARAM];
     uint8_t pat[256];                     /* pattern_t */
 } settings_t;
@@ -60,6 +71,8 @@ static uint8_t dly_tick;
 static float mix[3][APP_BLOCK];
 static float mixout[APP_BLOCK];
 static float gain_now;
+static uint32_t arp_phase;
+static float crush_hold; static uint32_t crush_cnt;
 
 static void note_in(uint8_t e, int32_t note, uint32_t vel, int on)
 {
@@ -86,9 +99,18 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
     uint32_t i, e;
     float gain = (float)master_q12 / 4096.0f * 8300000.0f;
     float lvl[3], dmix = p01(set.delay_mix) * 0.8f, dfb = p01(set.delay_fb) * 0.8f;
+    float mdrive = 1.0f + p01(set.drive) * p01(set.drive) * 6.0f, dnorm = 1.0f / fm_tanhf(mdrive * 0.7f);
+    uint32_t crush_div = 1u + (uint32_t)(p01(set.crush) * p01(set.crush) * 24.0f);
+    float crush_q = set.crush ? fm_exp2f(2.0f + p01(set.crush) * 9.0f) : 0.0f;   /* 512 .. 2 levels */
     uint32_t dtime = 1100u + (uint32_t)(p01(set.delay_time) * (float)(DLY_LEN - 1200u));
     midi_in();
     seq_tick(PAT, n);
+    if (otter_arp_on()) {                                /* the arpeggiator's clock, from the tempo */
+        static const uint8_t NUM[4] = {2, 1, 4, 1}, DEN[4] = {1, 1, 3, 2};
+        uint32_t r = (uint32_t)otter_arp_rate(), len = seq_step_samples(PAT) * NUM[r] / DEN[r];
+        arp_phase += n;
+        if (arp_phase >= len) { arp_phase -= len; otter_arp_tick(); }
+    } else arp_phase = 0;
     for (e = 0; e < 3u; e++) {
         lvl[e] = p01(set.level[e]) * 1.27f;
         for (i = 0; i < n; i++) mix[e][i] = 0.0f;
@@ -107,6 +129,11 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         }
         dly_prev = dry;
         s = dry + dly_lp * dmix;
+        if (set.drive) s = fm_tanhf(s * 0.7f * mdrive) * dnorm;             /* master drive */
+        if (set.crush) {                                                     /* bitcrusher: rate and depth */
+            if (++crush_cnt >= crush_div) { crush_cnt = 0; crush_hold = (float)(int32_t)(s * crush_q) / crush_q; }
+            s = crush_hold;
+        }
         y = s - dc_x + 0.995f * dc_y;                    /* DC block */
         dc_x = s; dc_y = y;
         /* the limiter: a fast peak follower, slow release, 0.9 ceiling */
@@ -115,6 +142,10 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
             if (a > lim_env) lim_env += (a - lim_env) * 0.5f; else lim_env += (a - lim_env) * 0.0005f;
             if (lim_env < 0.9f) lim_env = lim_env < 0.0f ? 0.0f : lim_env;
             y = lim_env > 0.9f ? y * (0.9f / lim_env) : y;
+        }
+        if (!(y == y)) {                                 /* a NaN anywhere would silence everything for good: reset */
+            otter.init(); cat.init(); fox.init();
+            dc_x = dc_y = dly_lp = dly_prev = 0.0f; lim_env = 1.0f; y = 0.0f;
         }
         mixout[i] = y;
         gain_now += (gain - gain_now) * 0.004f;
@@ -155,7 +186,7 @@ void app_init(void)
         set.focus = E_OTTER;
         set.page[0] = set.page[1] = set.page[2] = 0;
         set.level[0] = 100; set.level[1] = 110; set.level[2] = 100;
-        set.delay_mix = 30; set.delay_time = 60; set.delay_fb = 50;
+        set.delay_mix = 0; set.delay_time = 60; set.delay_fb = 50; set.crush = 0; set.drive = 0; set.mixpage = 0;
         pattern_defaults(PAT);
         params_to_set();
     }
@@ -258,6 +289,8 @@ static uint8_t *knob_target(uint32_t p, const char **name)
         return p == 0 ? &PAT->bpm : p == 1 ? &PAT->swing : p == 2 ? &PAT->steps : &PAT->gate;
     }
     if (body == PG_MIX) {
+        static const char *const MIX2[4] = {"DTIME", "DFEEDB", "CRUSH", "DRIVE"};
+        if (set.mixpage) { *name = MIX2[p]; return p == 0 ? &set.delay_time : p == 1 ? &set.delay_fb : p == 2 ? &set.crush : &set.drive; }
         *name = MIXN[p];
         return p < 3u ? &set.level[p] : &set.delay_mix;
     }
@@ -352,7 +385,15 @@ static void input(void)
     for (k = 0; k < NE; k++) {
         if ((e = plat_enc((int)k)) == 0) continue;
         if (k >= EN_K1 && k < EN_K1 + NPARAM) knob(k - EN_K1, e);
-        else if (k == EN_PRESET) { body = PG_ENGINE; page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u))); }
+        else if (k == EN_PRESET) {
+            if (body == PG_MIX) { set.mixpage ^= 1u; ui.redraw = 1; app_say("MIX", set.mixpage ? "FX" : "LEVELS"); }
+            else { body = PG_ENGINE; page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u))); }
+        } else if (k == EN_ALGO) {                                /* presets and kits */
+            body = PG_ENGINE;
+            if (set.focus == E_OTTER) { otter.panic(); otter_preset(e > 0 ? 1 : -1); app_say("PRESET", otter_preset_name()); }
+            else if (set.focus == E_CAT) { cat_kit(e > 0 ? 1 : -1); app_say("KIT", cat_kit_name()); }
+            set_dirty = 1; ui.redraw = 1;
+        }
         else if (k == EN_SELECT) { body = PG_ENGINE; set.focus = (uint8_t)((set.focus + 3 + (e > 0 ? 1 : 2)) % 3u); set_dirty = 1; app_say(ENG[set.focus]->name, ""); }
     }
     if (keys != ui.keys || btn != ui.btn) ui.redraw = 1;
@@ -400,8 +441,8 @@ static void draw(void)
             int32_t x = 44 + (int32_t)i * 52;
             int on = body == PG_ENGINE && i == set.focus;
             cv_rect(x, 4, 49, 28, on ? ENG_RGB[i] : C_LINE);
-            icon(x + 3, 12, ICONS[i], on ? C_BLACK : ENG_RGB[i], 1);
-            cv_text(x + 17, 11, &FONT_XS, ENG[i]->name, on ? C_BLACK : C_GRAY);
+            icon(x + 2, 10, ICONS[i], on ? C_BLACK : ENG_RGB[i], 1);
+            cv_text(x + 19, 11, &FONT_XS, ENG[i]->name, on ? C_BLACK : C_GRAY);
         }
         int_text(PAT->bpm, t);
         cv_text(234 - text_w(&FONT_XS, t), 3, &FONT_XS, t, seq.playing ? C_SFA : C_GRAY);
@@ -412,10 +453,10 @@ static void draw(void)
     /* body */
     cv_begin(240, 128, C_BLACK);
     if (body == PG_ENGINE) {
-        icon(8, 2, ICONS[set.focus], accent, 2);
-        cv_text(36, 8, &FONT_B, cur->name, accent);
+        icon(6, 0, ICONS[set.focus], accent, 2);
+        cv_text(42, 6, &FONT_B, cur->name, accent);
         for (i = 0; i < cur->npages; i++)
-            cv_rect(36 + (int32_t)i * 10, 26, 6, 4, set.page[set.focus] == i ? accent : C_LINE);
+            cv_rect(42 + (int32_t)i * 10, 24, 6, 4, set.page[set.focus] == i ? accent : C_LINE);
         if (set.focus == E_FOX) {
             const char *m = fox_recording() ? "SAMPLING" : fox_chop_mode() ? "CHOP" : "KEYS";
             int32_t x = 232 - text_w(&FONT_XS, m);
@@ -428,9 +469,26 @@ static void draw(void)
             cv_text(x, 10, &FONT_XS, pn, C_HI);
             cv_text(x - 8 - text_w(&FONT_XS, cat_kit_name()), 10, &FONT_XS, cat_kit_name(), C_GRAY);
         } else if (set.focus == E_OTTER) {
+            const char *pn = otter_preset_name();
             t[0] = set.octave < 0 ? '-' : '+'; t[1] = (char)('0' + (set.octave < 0 ? -set.octave : set.octave)); t[2] = 0;
-            cv_text(190, 10, &FONT_XS, "OCT", C_GRAY);
-            cv_text(214, 10, &FONT_XS, t, C_HI);
+            cv_text(232 - text_w(&FONT_XS, t), 10, &FONT_XS, t, C_HI);
+            cv_text(232 - text_w(&FONT_XS, t) - 8 - text_w(&FONT_XS, pn), 10, &FONT_XS, pn, C_GRAY);
+        }
+        if (set.focus == E_FOX) {                                 /* the bank as a waveform, the window and slices on it */
+            uint32_t a, b, nc = fox_window(&a, &b), len = fox_bank_len(), c;
+            float ph = fox_playhead();
+            cv_rect(10, 30, 220, 26, C_LINE);
+            for (c = 0; c < 110u; c++) {
+                uint32_t f0 = len * c / 110u, f1 = len * (c + 1u) / 110u;
+                int32_t h = fox_peak(f0, f1) * 12 / 32768, in = f0 >= a && f1 <= b;
+                if (h < 1) h = 1;
+                cv_rect(10 + (int32_t)c * 2, 43 - h, 2, h * 2, in ? accent : C_GRAY);
+            }
+            for (c = 1; c < nc; c++) {
+                int32_t x = 10 + (int32_t)((a + (b - a) * c / nc) * 220u / (len ? len : 1u));
+                cv_rect(x, 30, 1, 26, C_WHITE);
+            }
+            if (ph >= 0.0f) cv_rect(10 + (int32_t)(ph * 219.0f), 30, 1, 26, C_WHITE);
         }
         for (i = 0; i < NPARAM; i++) {
             const char *nm, *txt = 0;
@@ -440,28 +498,38 @@ static void draw(void)
             if (sw) { txt = v >= 64 ? "ON" : "OFF"; v = v >= 64 ? 127 : 0; }
             else if (set.focus == E_FOX && set.page[E_FOX] == 0u && i == 2u) { int_text(fox_chops(), t); txt = t; }
             else if (ENG[set.focus]->param_text) txt = ENG[set.focus]->param_text(set.page[set.focus], i, t);
-            bar(10 + (int32_t)i * 57, 36, nm, v, 0, 127, accent, txt);
+            if (set.focus == E_FOX) bar_h(10 + (int32_t)i * 57, 60, 36, nm, v, 0, 127, accent, txt);
+            else bar(10 + (int32_t)i * 57, 36, nm, v, 0, 127, accent, txt);
         }
     } else if (body == PG_SEQ) {
         uint32_t e, s;
         cv_text(8, 4, &FONT_B, "SEQUENCER", accent);
         cv_text(104, 8, &FONT_XS, "REC+KEYS WRITES. HOLD REC CLEARS", C_GRAY);
         for (e = 0; e < 3u; e++) {
-            int32_t y = 24 + (int32_t)e * 10;
-            icon(8, y - 2, ICONS[e], ENG_RGB[e], 1);
+            int32_t y = 22 + (int32_t)e * 15;
+            icon(6, y - 3, ICONS[e], ENG_RGB[e], 1);
             for (s = 0; s < NSTEP; s++) {
                 int has = seq_lane_has(PAT, (uint8_t)e, s), in = s < PAT->steps;
-                cv_rect(26 + (int32_t)s * 13, y, 11, 8, !in ? C_BLACK : has ? ENG_RGB[e] : (s & 3u) ? C_LINE : C_DIM);
+                int on = seq.playing && (int32_t)s == st;
+                cv_rect(26 + (int32_t)s * 13, y + 2, 11, 9, on && has ? C_WHITE : !in ? C_BLACK : has ? ENG_RGB[e] : (s & 3u) ? C_LINE : C_DIM);
             }
         }
-        bar_h(10, 58, 40, "TEMPO", PAT->bpm, 40, 240, accent, 0);
-        bar_h(67, 58, 40, "SWING", PAT->swing, 0, 127, accent, 0);
-        bar_h(124, 58, 40, "STEPS", PAT->steps, 0, 16, accent, 0);
-        bar_h(181, 58, 40, "GATE", PAT->gate, 0, 127, accent, 0);
+        bar_h(10, 68, 32, "TEMPO", PAT->bpm, 40, 240, accent, 0);
+        bar_h(67, 68, 32, "SWING", PAT->swing, 0, 127, accent, 0);
+        bar_h(124, 68, 32, "STEPS", PAT->steps, 0, 16, accent, 0);
+        bar_h(181, 68, 32, "GATE", PAT->gate, 0, 127, accent, 0);
     } else {
-        cv_text(8, 4, &FONT_B, "MIX", accent);
-        for (i = 0; i < 3u; i++) bar(10 + (int32_t)i * 57, 36, ENG[i]->name, set.level[i], 0, 127, ENG_RGB[i], 0);
-        bar(181, 36, "DELAY", set.delay_mix, 0, 127, C_WHITE, 0);
+        cv_text(8, 4, &FONT_B, set.mixpage ? "FX" : "MIX", accent);
+        cv_text(120, 8, &FONT_XS, "PRESET KNOB: LEVELS / FX", C_GRAY);
+        if (set.mixpage) {
+            bar(10, 36, "DTIME", set.delay_time, 0, 127, C_WHITE, 0);
+            bar(67, 36, "DFEEDB", set.delay_fb, 0, 127, C_WHITE, 0);
+            bar(124, 36, "CRUSH", set.crush, 0, 127, C_WHITE, set.crush ? 0 : "OFF");
+            bar(181, 36, "DRIVE", set.drive, 0, 127, C_WHITE, set.drive ? 0 : "OFF");
+        } else {
+            for (i = 0; i < 3u; i++) bar(10 + (int32_t)i * 57, 36, ENG[i]->name, set.level[i], 0, 127, ENG_RGB[i], 0);
+            bar(181, 36, "DELAY", set.delay_mix, 0, 127, C_WHITE, set.delay_mix ? 0 : "DRY");
+        }
     }
     cv_blit(0, 36);
 
@@ -480,7 +548,7 @@ static void draw(void)
     }
     for (i = 0; i < 11u; i++)
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 12, 11, 18, ui.keys >> BK[i] & 1u ? C_WHITE : C_LINE);
-    cv_text(4, 61, &FONT_XS, "SEQ LFO=MIX ARP=SAMPLE PLAY REC", C_GRAY);
+    cv_text(4, 61, &FONT_XS, "ALGO=PRESET  SEQ  LFO=MIX  ARP=SAMPLE", C_GRAY);
     int_text((int32_t)(plat_master() * 100u / 4096u), t);
     text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_HI);
@@ -525,6 +593,7 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "bpm")) *got = PAT->bpm;
     else if (!strcmp(what, "fox_rec")) *got = fox_recording();
     else if (!strcmp(what, "fox_secs")) *got = (int)fox_bank_seconds_x10();
+    else if (!strcmp(what, "fox_peak")) *got = (int)fox_peak(0, fox_bank_len());
     else if (!strcmp(what, "cat_steps")) { uint32_t i, n = 0; for (i = 0; i < NSTEP; i++) n += PAT->cat_mask[i] != 0; *got = (int)n; }
     else if (!strcmp(what, "otter_steps")) { uint32_t i, n = 0; for (i = 0; i < NSTEP; i++) n += PAT->otter_note[i] != 0; *got = (int)n; }
     else if (!strncmp(what, "param", 5)) { const char *nm; *got = *knob_target((uint32_t)atoi(what + 5) % NPARAM, &nm); }

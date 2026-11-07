@@ -8,271 +8,407 @@ wav kit0.wav
 key w0 down
 wait 30
 key w0 up
-wait 370
+wait 970
 key w1 down
 wait 30
 key w1 up
-wait 370
+wait 970
 key w2 down
 wait 30
 key w2 up
-wait 370
+wait 970
 key w3 down
 wait 30
 key w3 up
-wait 370
+wait 970
 key w4 down
 wait 30
 key w4 up
-wait 370
+wait 970
 key w5 down
 wait 30
 key w5 up
-wait 370
+wait 970
 key w6 down
 wait 30
 key w6 up
-wait 370
+wait 970
 key w7 down
 wait 30
 key w7 up
-wait 370
+wait 970
 key w8 down
 wait 30
 key w8 up
-wait 370
+wait 970
 key w9 down
 wait 30
 key w9 up
-wait 370
+wait 970
 key w10 down
 wait 30
 key w10 up
-wait 370
+wait 970
 key w11 down
 wait 30
 key w11 up
-wait 370
+wait 970
 key w12 down
 wait 30
 key w12 up
-wait 370
+wait 970
 key w13 down
 wait 30
 key w13 up
-wait 370
+wait 970
 key w14 down
 wait 30
 key w14 up
-wait 370
+wait 970
 key w15 down
 wait 30
 key w15 up
-wait 370
+wait 970
 wavstop
-turn K1 11
+turn K1 8
 wait 30
 wav kit1.wav
 key w0 down
 wait 30
 key w0 up
-wait 370
+wait 970
 key w1 down
 wait 30
 key w1 up
-wait 370
+wait 970
 key w2 down
 wait 30
 key w2 up
-wait 370
+wait 970
 key w3 down
 wait 30
 key w3 up
-wait 370
+wait 970
 key w4 down
 wait 30
 key w4 up
-wait 370
+wait 970
 key w5 down
 wait 30
 key w5 up
-wait 370
+wait 970
 key w6 down
 wait 30
 key w6 up
-wait 370
+wait 970
 key w7 down
 wait 30
 key w7 up
-wait 370
+wait 970
 key w8 down
 wait 30
 key w8 up
-wait 370
+wait 970
 key w9 down
 wait 30
 key w9 up
-wait 370
+wait 970
 key w10 down
 wait 30
 key w10 up
-wait 370
+wait 970
 key w11 down
 wait 30
 key w11 up
-wait 370
+wait 970
 key w12 down
 wait 30
 key w12 up
-wait 370
+wait 970
 key w13 down
 wait 30
 key w13 up
-wait 370
+wait 970
 key w14 down
 wait 30
 key w14 up
-wait 370
+wait 970
 key w15 down
 wait 30
 key w15 up
-wait 370
+wait 970
 wavstop
-turn K1 11
+turn K1 8
 wait 30
 wav kit2.wav
 key w0 down
 wait 30
 key w0 up
-wait 370
+wait 970
 key w1 down
 wait 30
 key w1 up
-wait 370
+wait 970
 key w2 down
 wait 30
 key w2 up
-wait 370
+wait 970
 key w3 down
 wait 30
 key w3 up
-wait 370
+wait 970
 key w4 down
 wait 30
 key w4 up
-wait 370
+wait 970
 key w5 down
 wait 30
 key w5 up
-wait 370
+wait 970
 key w6 down
 wait 30
 key w6 up
-wait 370
+wait 970
 key w7 down
 wait 30
 key w7 up
-wait 370
+wait 970
 key w8 down
 wait 30
 key w8 up
-wait 370
+wait 970
 key w9 down
 wait 30
 key w9 up
-wait 370
+wait 970
 key w10 down
 wait 30
 key w10 up
-wait 370
+wait 970
 key w11 down
 wait 30
 key w11 up
-wait 370
+wait 970
 key w12 down
 wait 30
 key w12 up
-wait 370
+wait 970
 key w13 down
 wait 30
 key w13 up
-wait 370
+wait 970
 key w14 down
 wait 30
 key w14 up
-wait 370
+wait 970
 key w15 down
 wait 30
 key w15 up
-wait 370
+wait 970
 wavstop
-turn K1 11
+turn K1 8
 wait 30
 wav kit3.wav
 key w0 down
 wait 30
 key w0 up
-wait 370
+wait 970
 key w1 down
 wait 30
 key w1 up
-wait 370
+wait 970
 key w2 down
 wait 30
 key w2 up
-wait 370
+wait 970
 key w3 down
 wait 30
 key w3 up
-wait 370
+wait 970
 key w4 down
 wait 30
 key w4 up
-wait 370
+wait 970
 key w5 down
 wait 30
 key w5 up
-wait 370
+wait 970
 key w6 down
 wait 30
 key w6 up
-wait 370
+wait 970
 key w7 down
 wait 30
 key w7 up
-wait 370
+wait 970
 key w8 down
 wait 30
 key w8 up
-wait 370
+wait 970
 key w9 down
 wait 30
 key w9 up
-wait 370
+wait 970
 key w10 down
 wait 30
 key w10 up
-wait 370
+wait 970
 key w11 down
 wait 30
 key w11 up
-wait 370
+wait 970
 key w12 down
 wait 30
 key w12 up
-wait 370
+wait 970
 key w13 down
 wait 30
 key w13 up
-wait 370
+wait 970
 key w14 down
 wait 30
 key w14 up
-wait 370
+wait 970
 key w15 down
 wait 30
 key w15 up
-wait 370
+wait 970
 wavstop
-turn K1 11
+turn K1 8
+wait 30
+wav kit4.wav
+key w0 down
+wait 30
+key w0 up
+wait 970
+key w1 down
+wait 30
+key w1 up
+wait 970
+key w2 down
+wait 30
+key w2 up
+wait 970
+key w3 down
+wait 30
+key w3 up
+wait 970
+key w4 down
+wait 30
+key w4 up
+wait 970
+key w5 down
+wait 30
+key w5 up
+wait 970
+key w6 down
+wait 30
+key w6 up
+wait 970
+key w7 down
+wait 30
+key w7 up
+wait 970
+key w8 down
+wait 30
+key w8 up
+wait 970
+key w9 down
+wait 30
+key w9 up
+wait 970
+key w10 down
+wait 30
+key w10 up
+wait 970
+key w11 down
+wait 30
+key w11 up
+wait 970
+key w12 down
+wait 30
+key w12 up
+wait 970
+key w13 down
+wait 30
+key w13 up
+wait 970
+key w14 down
+wait 30
+key w14 up
+wait 970
+key w15 down
+wait 30
+key w15 up
+wait 970
+wavstop
+turn K1 8
+wait 30
+wav kit5.wav
+key w0 down
+wait 30
+key w0 up
+wait 970
+key w1 down
+wait 30
+key w1 up
+wait 970
+key w2 down
+wait 30
+key w2 up
+wait 970
+key w3 down
+wait 30
+key w3 up
+wait 970
+key w4 down
+wait 30
+key w4 up
+wait 970
+key w5 down
+wait 30
+key w5 up
+wait 970
+key w6 down
+wait 30
+key w6 up
+wait 970
+key w7 down
+wait 30
+key w7 up
+wait 970
+key w8 down
+wait 30
+key w8 up
+wait 970
+key w9 down
+wait 30
+key w9 up
+wait 970
+key w10 down
+wait 30
+key w10 up
+wait 970
+key w11 down
+wait 30
+key w11 up
+wait 970
+key w12 down
+wait 30
+key w12 up
+wait 970
+key w13 down
+wait 30
+key w13 up
+wait 970
+key w14 down
+wait 30
+key w14 up
+wait 970
+key w15 down
+wait 30
+key w15 up
+wait 970
+wavstop
+turn K1 8
 wait 30

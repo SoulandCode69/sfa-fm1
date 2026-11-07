@@ -65,7 +65,7 @@ strum 0 15 180
 wait 800
 wavstop
 turn K1 -33
-tap SEL
+turn PRESET -1
 wait 30
 expect page 0
 # Fox: chromatic, then chop, then reverse + loop on page 2
@@ -132,6 +132,7 @@ tap ARP
 wait 30
 expect fox_rec 0
 expect fox_secs >9
+expect fox_peak >3000
 shot fox_sampled.png
 wav fox_resampled.wav
 tapkey 7

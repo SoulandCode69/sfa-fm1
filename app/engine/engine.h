@@ -7,7 +7,7 @@
 #define SR 44100.0f
 #define NPARAM 4                          /* one page: K1..K4 */
 
-#define NPAGES 3
+#define NPAGES 5
 typedef struct engine engine_t;
 struct engine {
     const char *name;                     /* "OTTER" */
@@ -20,6 +20,37 @@ struct engine {
     uint8_t *params[NPAGES];              /* each page's NPARAM values 0..127 (the app saves them) */
     const char *(*param_text)(uint8_t page, uint32_t p, char *buf);   /* a value shown as words, or 0 */
 };
+
+/* a trapezoidal state-variable filter (Simper): stable at any cutoff and resonance. Coefficients per block,
+ * svf_run per sample; lp / bp / hp outputs. res 0..1 (1 = self-oscillation's edge). */
+typedef struct { float ic1, ic2; } svf_t;
+typedef struct { float a1, a2, a3, k; } svfc_t;
+static inline void svf_coef(svfc_t *c, float hz, float res)
+{
+    float g, s, co;
+    if (hz > 18000.0f) hz = 18000.0f;
+    if (hz < 10.0f) hz = 10.0f;
+    s = fm_sinf(3.1415926f * hz / SR); co = fm_cosf(3.1415926f * hz / SR);
+    g = s / (co < 0.05f ? 0.05f : co);
+    c->k = 2.0f - 1.96f * res;
+    c->a1 = 1.0f / (1.0f + g * (g + c->k));
+    c->a2 = g * c->a1;
+    c->a3 = g * c->a2;
+}
+static inline float svf_lp(svf_t *f, const svfc_t *c, float in)
+{
+    float v3 = in - f->ic2, v1 = c->a1 * f->ic1 + c->a2 * v3, v2 = f->ic2 + c->a2 * f->ic1 + c->a3 * v3;
+    f->ic1 = 2.0f * v1 - f->ic1;
+    f->ic2 = 2.0f * v2 - f->ic2;
+    return v2;
+}
+static inline float svf_bp(svf_t *f, const svfc_t *c, float in)
+{
+    float v3 = in - f->ic2, v1 = c->a1 * f->ic1 + c->a2 * v3, v2 = f->ic2 + c->a2 * f->ic1 + c->a3 * v3;
+    f->ic1 = 2.0f * v1 - f->ic1;
+    f->ic2 = 2.0f * v2 - f->ic2;
+    return v1;
+}
 
 /* seconds -> a per-sample multiplier that decays to 1/e in that time */
 static inline float decay_coef(float sec) { return fm_exp2f(-1.4427f / (sec * SR)); }

@@ -6,17 +6,21 @@
  *   Pads, every kit: 1 KICK 2 KICK2 3 SNARE 4 RIM/SNARE2 5 CLAP 6 CHAT 7 OHAT 8 CRASH/RIDE
  *                    9 LOW TOM 10 MID TOM 11 HI TOM 12 PERC 13 PERC 14 PERC 15 FX 16 FX
  *   page 1: K1 TUNE   kicks / toms / perc pitch   K2 DECAY  every drum's length   K3 SNAP  noise & click   K4 DRIVE
- *   page 2: K1 KIT    808 909 LOFI FX             K2 HATS   hat decay            K3 TONE  noise colour    K4 LEVEL */
+ *   page 2: K1 KIT    808 909 LOFI FX ROOM GLITCH K2 HATS   hat decay            K3 TONE  noise colour    K4 LEVEL
+ *   page 3: K1 PENV   pitch sweep length          K2 NDECAY noise decay          K3 PUNCH transient       K4 BODY  tail */
 #include "fastmath.h"
 #include "engine.h"
 
 static const char *const NAMES1[NPARAM] = {"TUNE", "DECAY", "SNAP", "DRIVE"};
 static const char *const NAMES2[NPARAM] = {"KIT", "HATS", "TONE", "LEVEL"};
+static const char *const NAMES3[NPARAM] = {"PENV", "NDECAY", "PUNCH", "BODY"};
 static uint8_t par1[NPARAM] = {64, 64, 64, 30};
 static uint8_t par2[NPARAM] = {0, 50, 64, 100};
-static const char *const KITS[4] = {"808", "909", "LOFI", "FX"};
+static uint8_t par3[NPARAM] = {64, 64, 40, 64};
+static const char *const KITS[6] = {"808", "909", "LOFI", "FX", "ROOM", "GLITCH"};
 #define NPADS 16
-#define NKITS 4
+#define NKITS 6
+#define KIT_I (par2[0] / 22u > 5u ? 5u : par2[0] / 22u)
 
 enum { SINE, TRI, SQR, METAL, NOISE, FM };
 typedef struct {
@@ -102,6 +106,42 @@ static const drum_t KIT[NKITS][NPADS] = {
         D(TRI, 3, 150, 1500, 0.4f, 0.5f, 0.0f, 0.01f, 0, 0, 0.0f, 1.5f, 0.8f),       /* riser */
         D(NOISE, 0, 0, 0, 0.0f, 0.4f, 1.0f, 0.4f, 90, 0.8f, 0.5f, 2.0f, 1.0f),       /* boom */
     },
+    {   /* ROOM: softer, more acoustic shapes */
+        D(TRI, 1, 140, 58, 0.025f, 0.35f, 0.25f, 0.02f, 300, 0.9f, 0.4f, 1.3f, 1.1f), /* kick */
+        D(SINE, 1, 110, 50, 0.05f, 0.7f, 0.1f, 0.03f, 200, 0.9f, 0.1f, 1.2f, 1.1f),  /* floor kick */
+        D(TRI, 0, 200, 190, 0.012f, 0.22f, 0.8f, 0.3f, 2200, 1.0f, 0.3f, 1.2f, 0.95f),/* snare */
+        D(TRI, 0, 240, 230, 0.01f, 0.15f, 0.5f, 0.15f, 3000, 0.9f, 0.6f, 1.3f, 0.8f),/* side stick snare */
+        D(NOISE, 0, 0, 0, 0.0f, 0.25f, 1.0f, 0.25f, 1500, 0.9f, 0.0f, 1.2f, 0.8f),   /* clap */
+        D(NOISE, 2, 0, 0, 0.0f, 0.07f, 1.0f, 0.07f, 9000, 0.5f, 0.0f, 1.1f, 0.3f),   /* closed hat */
+        D(NOISE, 2, 0, 0, 0.0f, 0.5f, 1.0f, 0.5f, 8000, 0.4f, 0.0f, 1.1f, 0.28f),    /* open hat */
+        D(NOISE, 0, 0, 0, 0.0f, 2.0f, 1.0f, 2.0f, 6000, 0.3f, 0.0f, 1.0f, 0.3f),     /* crash */
+        D(SINE, 1, 130, 80, 0.06f, 0.6f, 0.15f, 0.06f, 400, 0.9f, 0.2f, 1.2f, 1.0f), /* floor tom */
+        D(SINE, 1, 180, 115, 0.05f, 0.5f, 0.15f, 0.05f, 500, 0.9f, 0.2f, 1.2f, 1.0f),/* mid tom */
+        D(SINE, 1, 250, 165, 0.04f, 0.4f, 0.15f, 0.04f, 600, 0.9f, 0.2f, 1.2f, 1.0f),/* rack tom */
+        D(SINE, 3, 1100, 1000, 0.01f, 0.08f, 0.1f, 0.02f, 0, 0, 0.5f, 1.2f, 0.7f),   /* stick */
+        D(NOISE, 0, 0, 0, 0.0f, 0.1f, 1.0f, 0.1f, 7000, 0.6f, 0.0f, 1.0f, 0.4f),     /* brush */
+        D(SINE, 3, 2800, 2700, 0.0f, 0.4f, 0.0f, 0.01f, 0, 0, 0.3f, 1.1f, 0.6f),     /* triangle */
+        D(FM, 3, 900, 900, 0.0f, 0.8f, 0.0f, 0.01f, 0, 0, 0.0f, 1.1f, 0.55f),        /* chime */
+        D(SINE, 1, 70, 45, 0.3f, 1.5f, 0.0f, 0.01f, 0, 0, 0.0f, 1.3f, 1.0f),         /* big floor */
+    },
+    {   /* GLITCH: digital, short, odd */
+        D(SQR, 1, 300, 50, 0.01f, 0.12f, 0.3f, 0.005f, 0, 0, 1.0f, 4.0f, 1.0f),      /* kick */
+        D(SINE, 1, 900, 40, 0.005f, 0.2f, 0.0f, 0.01f, 0, 0, 1.0f, 2.0f, 1.1f),      /* thump */
+        D(NOISE, 0, 0, 0, 0.0f, 0.04f, 1.0f, 0.04f, 4000, 1.5f, 1.0f, 3.0f, 0.9f),   /* snare bit */
+        D(SQR, 0, 2200, 2200, 0.0f, 0.01f, 0.5f, 0.01f, 0, 0, 1.0f, 2.0f, 0.7f),     /* click */
+        D(NOISE, 0, 0, 0, 0.0f, 0.06f, 1.0f, 0.06f, 1200, 1.4f, 0.0f, 3.0f, 0.9f),   /* clap bits */
+        D(SQR, 2, 6000, 6000, 0.0f, 0.015f, 0.5f, 0.01f, 0, 0, 0.0f, 1.5f, 0.3f),    /* tick hat */
+        D(SQR, 2, 4000, 4000, 0.0f, 0.12f, 0.7f, 0.1f, 0, 0, 0.0f, 1.5f, 0.28f),     /* buzz hat */
+        D(NOISE, 0, 0, 0, 0.0f, 0.3f, 1.0f, 0.3f, 12000, 0.2f, 0.0f, 1.5f, 0.3f),    /* hiss */
+        D(SQR, 1, 120, 60, 0.02f, 0.15f, 0.0f, 0.01f, 0, 0, 0.5f, 3.0f, 0.9f),       /* sq tom lo */
+        D(SQR, 1, 200, 100, 0.02f, 0.12f, 0.0f, 0.01f, 0, 0, 0.5f, 3.0f, 0.9f),      /* sq tom mid */
+        D(SQR, 1, 320, 160, 0.02f, 0.1f, 0.0f, 0.01f, 0, 0, 0.5f, 3.0f, 0.9f),       /* sq tom hi */
+        D(FM, 3, 1500, 300, 0.03f, 0.1f, 0.0f, 0.01f, 0, 0, 0.0f, 1.5f, 0.7f),       /* fm blip */
+        D(FM, 3, 200, 3000, 0.02f, 0.06f, 0.0f, 0.01f, 0, 0, 0.0f, 1.5f, 0.7f),      /* fm chirp */
+        D(SINE, 3, 5000, 100, 0.004f, 0.05f, 0.0f, 0.01f, 0, 0, 0.0f, 2.0f, 0.8f),   /* zip */
+        D(NOISE, 0, 0, 0, 0.0f, 0.008f, 1.0f, 0.008f, 2000, 0.5f, 1.0f, 4.0f, 0.9f), /* crackle */
+        D(SQR, 1, 40, 40, 0.0f, 0.25f, 0.0f, 0.01f, 0, 0, 0.0f, 6.0f, 1.0f),         /* bit bass */
+    },
 };
 
 static const char *const PAD_NAMES[NKITS][NPADS] = {
@@ -109,15 +149,18 @@ static const char *const PAD_NAMES[NKITS][NPADS] = {
     {"KICK", "TIGHT KICK", "SNARE", "DRY SNARE", "CLAP", "CHAT", "OHAT", "RIDE", "LO TOM", "MID TOM", "HI TOM", "RIM", "BELL", "SHAKER", "ZAP", "SWELL"},
     {"KICK", "CRUSHED", "SNARE", "SNAP", "CLAP", "CHAT", "OHAT", "WASH", "CONGA LO", "CONGA HI", "BONGO", "COWBELL", "WOODBLOCK", "TEK", "TABLA", "TICK"},
     {"ZAP DOWN", "ZAP UP", "LASER", "BLIP", "GONG", "TICK", "RING", "WIND", "SUB DROP", "SUB HOLD", "BUZZ", "GLASS", "STEAM", "PING", "RISER", "BOOM"},
+    {"KICK", "FLOOR KICK", "SNARE", "SIDESTICK", "CLAP", "CHAT", "OHAT", "CRASH", "FLOOR TOM", "MID TOM", "RACK TOM", "STICK", "BRUSH", "TRIANGLE", "CHIME", "BIG FLOOR"},
+    {"KICK", "THUMP", "SNARE BIT", "CLICK", "CLAP BITS", "TICK", "BUZZ HAT", "HISS", "SQ TOM LO", "SQ TOM MID", "SQ TOM HI", "FM BLIP", "FM CHIRP", "ZIP", "CRACKLE", "BIT BASS"},
 };
-const char *cat_pad_name(int pad) { return pad >= 0 && pad < NPADS ? PAD_NAMES[par2[0] >> 5][pad] : ""; }
-const char *cat_kit_name(void) { return KITS[par2[0] >> 5]; }
+const char *cat_pad_name(int pad) { return pad >= 0 && pad < NPADS ? PAD_NAMES[KIT_I][pad] : ""; }
+const char *cat_kit_name(void) { return KITS[KIT_I]; }
 static volatile int8_t last_pad = -1;
 int cat_last_pad(void) { return last_pad; }
 
 typedef struct {
     const drum_t *d;
-    float env, nenv, penv, ph, ph2, hz, lp, bp, hp, t, vel, acoef, ncoef, pcoef, f0, f1;
+    float env, nenv, penv, ph, ph2, hz, hp, t, vel, acoef, ncoef, pcoef, f0, f1;
+    svf_t flt; svfc_t fc;
     uint8_t on;
 } voice_t;
 static voice_t v[NPADS];
@@ -138,22 +181,24 @@ static void c_note(int32_t note, uint32_t vl, int on)
 
 static void start(uint32_t p, float vel)
 {
-    const drum_t *d = &KIT[par2[0] >> 5][p];
+    const drum_t *d = &KIT[KIT_I][p];
     voice_t *w = &v[p];
     float tune = fm_exp2f((p01(par1[0]) - 0.5f) * (d->grp == 1u ? 1.6f : d->grp == 3u ? 0.8f : 0.0f));
     float dec = fm_exp2f((p01(par1[1]) - 0.5f) * 3.0f);           /* 0.35 .. 2.8 x */
     float hats = fm_exp2f((p01(par2[1]) - 0.5f) * 3.0f);
-    float len = d->amp * (d->grp == 2u ? hats : dec);
+    float body = fm_exp2f((p01(par3[3]) - 0.5f) * 2.0f);
+    float len = d->amp * (d->grp == 2u ? hats : dec) * (d->grp == 1u ? body : 1.0f);
     uint32_t i;
     if (d->grp == 2u)                                               /* a hat chokes the other hats */
         for (i = 0; i < NPADS; i++) if (i != p && v[i].on && v[i].d->grp == 2u && v[i].d->amp > d->amp) v[i].on = 0;
     w->d = d;
-    w->on = 1; w->vel = vel; w->t = 0; w->ph = 0; w->ph2 = 0.25f; w->lp = w->bp = w->hp = 0;
+    w->on = 1; w->vel = vel; w->t = 0; w->ph = 0; w->ph2 = 0.25f; w->hp = 0; w->flt.ic1 = w->flt.ic2 = 0;
+    if (d->nbp > 0.0f) svf_coef(&w->fc, d->nbp * (0.6f + p01(par2[2]) * 0.8f), d->nq > 1.0f ? 0.9f : d->nq * 0.85f);
     w->env = 1.0f; w->nenv = 1.0f; w->penv = 1.0f;
     w->f0 = d->f0 * tune; w->f1 = d->f1 * tune; w->hz = w->f0;
     w->acoef = decay_coef(len < 0.004f ? 0.004f : len);
-    w->ncoef = decay_coef(d->ndec * (d->grp == 2u ? hats : dec));
-    w->pcoef = d->psw > 0.0f ? decay_coef(d->psw) : 0.0f;
+    w->ncoef = decay_coef(d->ndec * (d->grp == 2u ? hats : dec) * fm_exp2f((p01(par3[1]) - 0.5f) * 2.0f));
+    w->pcoef = d->psw > 0.0f ? decay_coef(d->psw * fm_exp2f((p01(par3[0]) - 0.5f) * 3.0f)) : 0.0f;
 }
 
 static void c_render(float *out, uint32_t n)
@@ -164,6 +209,7 @@ static void c_render(float *out, uint32_t n)
     float norm = 1.0f / fm_tanhf(drive * 0.6f);
     float tone = p01(par2[2]);
     float level = p01(par2[3]) * 1.3f;
+    float punch = p01(par3[2]) * 2.0f;
     int metal_on = 0;
     for (p = 0; p < NPADS; p++)
         if (trig[p]) { trig[p] = 0; start(p, (float)trig_vel[p] * (1.0f / 127.0f)); }
@@ -208,11 +254,8 @@ static void c_render(float *out, uint32_t n)
                 o *= w->env;
             }
             if (d->nmix > 0.0f) {
-                if (d->nbp > 0.0f) {                                         /* bandpassed noise, TONE moves it */
-                    float f = 2.0f * fm_sinf(3.1415926f * d->nbp * (0.6f + tone * 0.8f) / SR);
-                    if (f > 1.2f) f = 1.2f;
-                    w->lp += f * w->bp; w->bp += f * (nz - w->lp - d->nq * w->bp);
-                    ns = w->bp * 1.2f;
+                if (d->nbp > 0.0f) {                                         /* bandpassed noise, TONE moves it (set at the hit) */
+                    ns = svf_bp(&w->flt, &w->fc, nz) * 2.5f;
                 } else {                                                     /* highpassed white */
                     w->hp += (nz - w->hp) * (0.3f + tone * 0.5f);
                     ns = (nz - w->hp) * 0.9f;
@@ -221,8 +264,11 @@ static void c_render(float *out, uint32_t n)
                 if (d->src == NOISE && d->nmix >= 1.0f && w->t < 0.03f && d->nbp > 800.0f && d->nbp < 2000.0f)
                     ns *= (w->t - (float)(int)(w->t * 100.0f) * 0.01f) < 0.004f ? 1.0f : 0.2f;   /* a clap's bursts */
             }
-            if (d->click > 0.0f && w->t < 0.004f) o += (w->t < 0.001f ? 1.0f : -0.5f) * d->click * snap * 0.6f;
-            s += fm_tanhf((o + ns) * d->drive) * d->lvl * w->vel;
+            if (d->click > 0.0f && w->t < 0.006f) {                      /* the click: a lowpassed noise burst */
+                w->hp += (nz - w->hp) * 0.35f;
+                o += w->hp * d->click * snap * (1.0f - w->t * 160.0f);
+            }
+            s += fm_tanhf((o + ns) * d->drive) * d->lvl * (d->grp == 3u ? 0.7f : 1.0f) * w->vel * (1.0f + punch * (w->t < 0.02f ? 1.0f - w->t * 50.0f : 0.0f));
             if (w->env < 0.0005f && w->nenv < 0.0005f) w->on = 0;
         }
         out[i] += fm_tanhf(s * 0.6f * drive) * norm * level;
@@ -232,7 +278,8 @@ static void c_render(float *out, uint32_t n)
 static const char *c_text(uint8_t page, uint32_t p, char *buf)
 {
     (void)buf;
-    return page == 1u && p == 0u ? KITS[par2[0] >> 5] : 0;
+    return page == 1u && p == 0u ? KITS[KIT_I] : 0;
 }
 
-const engine_t cat = {"CAT", c_init, c_note, c_render, c_panic, 2, {NAMES1, NAMES2, 0}, {par1, par2, 0}, c_text};
+void cat_kit(int32_t step) { int32_t k = ((int32_t)KIT_I + step + NKITS) % NKITS; par2[0] = (uint8_t)(k * 22 + 2); }
+const engine_t cat = {"CAT", c_init, c_note, c_render, c_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, c_text};

@@ -2,11 +2,12 @@
 
 Three engines in one firmware, playing together. Built on [fm1-base](https://github.com/charlesvestal/fm1-base) (MPL-2.0).
 
-| Button | Does |
+| Button / knob | Does |
 |---|---|
 | FX / SEL / ENV | focus OTTER / CAT / FOX; press again for the next page (PRESET knob too) |
+| ALGO knob | browse Otter's 16 presets / Cat's 6 kits |
 | SEQ | sequencer page: TEMPO SWING STEPS GATE; the three lanes shown |
-| LFO | mix page: OTTER CAT FOX DELAY |
+| LFO | mix page (PRESET knob flips to FX): OTTER CAT FOX DELAY · DTIME DFEEDB CRUSH DRIVE |
 | ARP | SAMPLE: Fox records the groovebox's own output (up to 2 s) until ARP again |
 | PLAY / REC | run the 16-step pattern / record what you play onto it (hold REC 1 s: clear the focused lane) |
 | HOME | stop, back to the engine page |
@@ -14,13 +15,14 @@ Three engines in one firmware, playing together. Built on [fm1-base](https://git
 
 | Engine | Keys | Pages |
 |---|---|---|
-| OTTER 4-voice polysynth: PolyBLEP saw/pulse/square or 2-op FM, unison detune, sub, driven SVF, ADSR, LFO | chromatic, OCT-/OCT+ | TONE RES WAVE DETUNE · ATTACK DECAY SUSTAIN RELEASE · LFO VIBRATO WOBBLE GLIDE |
-| CAT kit: 4 kits x 16 parametric drums (808, 909, LOFI, FX) | 16 white keys = pads | TUNE DECAY SNAP DRIVE · KIT HATS TONE LEVEL |
-| FOX cut & sample: a 4 s bank, chromatic or chopped, 4 voices | chromatic (C4 = as recorded) or slices on the white keys | START END CHOPS PITCH · REV LOOP FILTER DECAY |
+| OTTER 4-voice polysynth: PolyBLEP saw/pulse/square/tri or 2-op FM, unison detune + drift, sub, trapezoidal SVF with key tracking, filter env, velocity, ADSR, LFO, glide, arpeggiator; 16 presets (leads, basses, acid, pads, plucks, brass, FM bell/piano, wobble, strings, chip, organ, arps) | chromatic, OCT-/OCT+ | TONE RES WAVE DETUNE · ATTACK DECAY SUSTAIN RELEASE · FENV FDECAY VEL>F SUB · LFO VIBRATO WOBBLE GLIDE · ARP ARPRATE ARPOCT MONO |
+| CAT kit: 6 kits x 16 parametric drums (808, 909, LOFI, FX, ROOM, GLITCH), named on screen | 16 white keys = pads | TUNE DECAY SNAP DRIVE · KIT HATS TONE LEVEL · PENV NDECAY PUNCH BODY |
+| FOX cut & sample: a 4 s bank drawn as a waveform with the window, slices and playhead; chromatic or chopped, 4 voices | chromatic (C4 = as recorded) or slices on the white keys | START END CHOPS PITCH · REV LOOP FILTER RES · ATTACK DECAY GATE ROLL |
 
-USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit. Master: delay, DC block, limiter.
+Dry by default: delay, bitcrusher and drive are off until you turn them up on the FX page. Master: DC block, limiter.
+USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit.
 Fox's bank, in order: the sample you SAMPLEd and SAVEd (flash), else `tools/sfa_sample.py x.wav` (the resource region),
-else four built-in sounds (growl, vowel, noise hit, pluck), a second each.
+else eight built-in sounds (growl, ah, oo, noise hit, pluck, bell, bass hit, chord), half a second each.
 
 ## Everyday loop (WSL/Ubuntu)
 ```
