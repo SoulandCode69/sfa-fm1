@@ -95,6 +95,12 @@ void app_init(void)
     }
 }
 
+/* ----------------------------------------------------------------- backup --- */
+int app_backup_playing(void) { return 0; }
+void app_backup_flush(void) { params_to_set(); plat_store_save(OBJ_SETTINGS, &set, sizeof set); set_dirty = 0; }
+void app_backup_hold(int on) { (void)on; }
+void app_backup_restored(void) { app_init(); }
+
 /* --------------------------------------------------------------------- UI --- */
 static struct {
     char msg[2][24];

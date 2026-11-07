@@ -5,8 +5,9 @@
  *   CHOP: the window is cut into CHOPS equal slices; white key n plays slice n.
  *   K1 START   window start            K3 CHOPS   1 = chromatic, 2..16 = slices on the white keys
  *   K2 END     window end              K4 PITCH   semitones, -24..+24
- * Loading: at boot the bank is read from flash (PLAT_XDATA1, header "SFA1"); if none, a synthesised "mrrp" growl
- * is generated so Fox plays out of the box. tools/sfa_sample.py (todo) writes a WAV there over USB.
+ * Loading: the bank is the firmware's resource region (fm1.toml resources = samples.bin, written over USB after an
+ * install; tools/sfa_sample.py makes it from a WAV). Header "SFA1", 24-bit sample count, then int16 mono 22.05 kHz.
+ * Without it (not written yet, another build's) a synthesised "mrrp" growl is generated so Fox always plays.
  * Cat Kit borrows two one-shot voices from here (fox_oneshot). */
 #include "fastmath.h"
 #include "engine.h"
@@ -26,7 +27,6 @@ static voice_t v[NV];
 static voice_t shot[2];                 /* Cat Kit's two sample pads */
 static volatile int32_t pend_note = -1;
 static volatile uint32_t pend_vel;
-static volatile int32_t shot_pend = -1;
 static uint32_t rng = 0xC0FFEEu;
 
 static void gen_mrrp(void)              /* a growly "mrrp": pitch-swept pulse through a swept formant, ~0.5 s */
@@ -53,15 +53,15 @@ static void gen_mrrp(void)              /* a growly "mrrp": pitch-swept pulse th
 
 static void f_init(void)
 {
-    const uint8_t *hdr = plat_data(PLAT_XDATA1_LO);
-    uint32_t i;
+    uint32_t rlen = 0, i;
+    const uint8_t *hdr = plat_res(&rlen);
     for (i = 0; i < NV; i++) v[i].on = 0;
     shot[0].on = shot[1].on = 0;
-    if (hdr && hdr[0] == 'S' && hdr[1] == 'F' && hdr[2] == 'A' && hdr[3] == '1') {
+    if (hdr && rlen >= 8u && hdr[0] == 'S' && hdr[1] == 'F' && hdr[2] == 'A' && hdr[3] == '1') {
         uint32_t len = (uint32_t)hdr[4] | (uint32_t)hdr[5] << 8 | (uint32_t)hdr[6] << 16;
         const int16_t *src = (const int16_t *)(hdr + 8);
         if (len > BANK_MAX) len = BANK_MAX;
-        if (len && len * 2u + 8u <= PLAT_XDATA1_HI - PLAT_XDATA1_LO) {
+        if (len && len * 2u + 8u <= rlen) {
             for (i = 0; i < len; i++) bank[i] = src[i];
             bank_len = len;
             return;
