@@ -1,6 +1,10 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Sin Fetish Audio
- * FOX CUT & SAMPLE: one bank (mono 16-bit, 22.05 kHz, up to 4 s), played on the keys, 4 voices + the Cat slices.
+ * FOX CUT & SAMPLE + FOX BASS. The ALGO knob picks SAMPLER or one of eight bass presets.
+ * BASS: a mono synth in the 303 / sub / reese manner: PolyBLEP saw or square + sub, a resonant lowpass with an
+ *   envelope (ENVMOD / DECAY), ACCENT from velocity, legato GLIDE, DRIVE, an LFO wobble on the filter.
+ *   page 1: CUTOFF RES ENVMOD DECAY     page 2: WAVE SUB GLIDE DRIVE     page 3: LFO WOBBLE ACCENT RELEASE
+ * SAMPLER: one bank (mono 16-bit, 22.05 kHz, up to 4 s), played on the keys, 4 voices.
  *   CHROMATIC (CHOPS = 1): every key plays the window START..END at the key's pitch (C4 = as recorded).
  *   CHOP (CHOPS 2..16):    the window cut into equal slices; white key n plays slice n.
  *   SAMPLE (the app's ARP button): records the groovebox's own output into the bank, up to 2 s, until ARP again.
@@ -18,12 +22,64 @@
 PLAT_POOL static int16_t bank[BANK_MAX];
 static uint32_t bank_len;
 
-static const char *const NAMES1[NPARAM] = {"START", "END", "CHOPS", "PITCH"};
-static const char *const NAMES2[NPARAM] = {"REV", "LOOP", "FILTER", "RES"};
-static const char *const NAMES3[NPARAM] = {"ATTACK", "DECAY", "GATE", "ROLL"};
-static uint8_t par1[NPARAM] = {0, 127, 0, 64};
+static const char *const SN1[NPARAM] = {"START", "END", "CHOPS", "PITCH"};
+static const char *const SN2[NPARAM] = {"REV", "LOOP", "FILTER", "RES"};
+static const char *const SN3[NPARAM] = {"ATTACK", "DECAY", "GATE", "ROLL"};
+static const char *const BN1[NPARAM] = {"CUTOFF", "RES", "ENVMOD", "DECAY"};
+static const char *const BN2[NPARAM] = {"WAVE", "SUB", "GLIDE", "DRIVE"};
+static const char *const BN3[NPARAM] = {"LFO", "WOBBLE", "ACCENT", "RELEASE"};
+static const char *NAMES1[NPARAM] = {"START", "END", "CHOPS", "PITCH"};   /* the live page names (mode) */
+static const char *NAMES2[NPARAM] = {"REV", "LOOP", "FILTER", "RES"};
+static const char *NAMES3[NPARAM] = {"ATTACK", "DECAY", "GATE", "ROLL"};
+static uint8_t par1[NPARAM] = {0, 127, 0, 64};          /* the live params (mode) */
 static uint8_t par2[NPARAM] = {0, 0, 127, 0};
 static uint8_t par3[NPARAM] = {0, 127, 0, 0};
+static uint8_t samp_par[3][NPARAM] = {{0, 127, 0, 64}, {0, 0, 127, 0}, {0, 127, 0, 0}};   /* each mode's own */
+static uint8_t bass_par[3][NPARAM] = {{40, 70, 80, 45}, {0, 60, 20, 30}, {30, 0, 60, 20}};
+static uint8_t mode;                                     /* 0 sampler, 1 bass */
+static uint8_t preset_i;                                 /* 0 SAMPLER, 1..8 bass presets */
+typedef struct { const char *name; uint8_t p[3][NPARAM]; } fpreset_t;
+#define NFPRESET 9
+static const fpreset_t FPRESETS[NFPRESET] = {
+    /*                CUT RES ENV DEC    WAVE SUB GLI DRV   LFO WOB ACC REL */
+    {"SAMPLER",     {{0}, {0}, {0}}},
+    {"ACID 303",    {{38, 85, 95, 40},  {0, 0, 25, 40},    {30, 0, 90, 15}}},
+    {"SQR ACID",    {{42, 80, 90, 45},  {127, 0, 25, 35},  {30, 0, 90, 15}}},
+    {"SUB",         {{20, 10, 20, 70},  {127, 110, 10, 10}, {20, 0, 20, 30}}},
+    {"REESE",       {{35, 30, 10, 90},  {0, 80, 0, 50},    {12, 10, 20, 40}}},
+    {"PLUCK BASS",  {{55, 50, 100, 25}, {0, 60, 0, 30},    {30, 0, 60, 10}}},
+    {"WOBBLE BASS", {{30, 75, 30, 80},  {0, 70, 0, 60},    {60, 110, 40, 30}}},
+    {"GROWL",       {{45, 60, 60, 60},  {127, 50, 15, 110},{80, 70, 70, 25}}},
+    {"DEEP HOUSE",  {{30, 35, 70, 35},  {0, 90, 0, 20},    {20, 0, 40, 20}}},
+};
+static void mode_apply(void)
+{
+    uint32_t g, p;
+    const char *const *n1 = mode ? BN1 : SN1, *const *n2 = mode ? BN2 : SN2, *const *n3 = mode ? BN3 : SN3;
+    uint8_t (*src)[NPARAM] = mode ? bass_par : samp_par;
+    for (p = 0; p < NPARAM; p++) { NAMES1[p] = n1[p]; NAMES2[p] = n2[p]; NAMES3[p] = n3[p]; }
+    for (g = 0; g < 3u; g++) for (p = 0; p < NPARAM; p++) (g == 0 ? par1 : g == 1 ? par2 : par3)[p] = src[g][p];
+}
+static void mode_stash(void)                             /* the live params back into the mode's own */
+{
+    uint32_t g, p;
+    uint8_t (*dst)[NPARAM] = mode ? bass_par : samp_par;
+    for (g = 0; g < 3u; g++) for (p = 0; p < NPARAM; p++) dst[g][p] = (g == 0 ? par1 : g == 1 ? par2 : par3)[p];
+}
+void fox_preset(int32_t step)
+{
+    uint32_t g, p;
+    mode_stash();
+    preset_i = (uint8_t)(((int32_t)preset_i + step + NFPRESET) % NFPRESET);
+    mode = preset_i ? 1u : 0u;
+    if (mode) for (g = 0; g < 3u; g++) for (p = 0; p < NPARAM; p++) bass_par[g][p] = FPRESETS[preset_i].p[g][p];
+    mode_apply();
+}
+const char *fox_preset_name(void) { return FPRESETS[preset_i].name; }
+int fox_mode(void) { return mode; }
+int fox_preset_index(void) { return preset_i; }
+void fox_preset_set(int i) { mode_stash(); preset_i = (uint8_t)(i % NFPRESET); mode = preset_i ? 1u : 0u; mode_apply(); }
+void fox_mode_set_params(void) { mode_stash(); }        /* after the app restored the live params: keep them as the mode's */
 
 typedef struct { float pos, inc, env, dcoef, att, aenv; svf_t flt; uint32_t start, end, roll, roll_n; int32_t note; uint8_t on, loop, gate; float vel; } voice_t;
 #define NV 4
@@ -151,11 +207,75 @@ static int load_res(void)
     return 1;
 }
 
+/* ---- the bass synth */
+static struct {
+    float hz, hz_target, ph, phs, env, aenv, lfo_ph;
+    int32_t held[8]; uint8_t nheld;
+    int32_t note; uint8_t gate, accent;
+    svf_t flt;
+    float sm_cut;
+} bs;
+
+static void bass_note(int32_t note, uint32_t vel, int on)
+{
+    uint32_t i, j;
+    if (on) {
+        for (i = 0; i < bs.nheld; i++) if (bs.held[i] == note) break;
+        if (i == bs.nheld && bs.nheld < 8u) bs.held[bs.nheld++] = note;
+        bs.hz_target = note_hz(note);
+        if (!bs.gate) { bs.hz = bs.hz_target; bs.env = 1.0f; bs.aenv = 0.0f; }   /* a new note: no glide, retrigger */
+        else if (bs.nheld == 1u) bs.hz = bs.hz_target;
+        bs.gate = 1; bs.note = note;
+        bs.accent = vel > 100u;
+        if (!bs.gate || bs.nheld <= 1u) { bs.env = 1.0f; }
+    } else {
+        for (i = 0; i < bs.nheld; i++) if (bs.held[i] == note) { for (j = i; j + 1u < bs.nheld; j++) bs.held[j] = bs.held[j + 1]; bs.nheld--; break; }
+        if (bs.nheld) { bs.note = bs.held[bs.nheld - 1]; bs.hz_target = note_hz(bs.note); }   /* back to the last held */
+        else bs.gate = 0;
+    }
+}
+
+static void bass_render(float *out, uint32_t n)
+{
+    uint32_t i;
+    float cut = p01(par1[0]), res = p01(par1[1]) * 0.97f, envmod = p01(par1[2]), dec = decay_coef(0.03f + p01(par1[3]) * p01(par1[3]) * 2.0f);
+    int sqr = par2[0] >= 64; float sub = p01(par2[1]) * 0.8f, glide = par2[2] ? 0.03f * fm_exp2f(-p01(par2[2]) * 6.0f) : 1.0f;
+    float drive = 1.0f + p01(par2[3]) * p01(par2[3]) * 8.0f, dnorm = 1.0f / fm_tanhf(drive * 0.7f);
+    float lfo_inc = (0.2f + p01(par3[0]) * p01(par3[0]) * 14.0f) / SR, wob = p01(par3[1]), acc = p01(par3[2]);
+    float rel = decay_coef(0.005f + p01(par3[3]) * 0.4f);
+    float lfo, dt, dts, fbase, accg = bs.accent ? 1.0f + acc : 1.0f;
+    svfc_t fc;
+    bs.sm_cut += (cut - bs.sm_cut) * 0.3f;
+    lfo = fm_sinf(bs.lfo_ph * 6.2831853f); bs.lfo_ph += lfo_inc * (float)n; if (bs.lfo_ph >= 1.0f) bs.lfo_ph -= 1.0f;
+    bs.hz += (bs.hz_target - bs.hz) * (glide >= 1.0f ? 1.0f : glide * (float)n * 0.1f);
+    if (glide >= 1.0f) bs.hz = bs.hz_target;
+    dt = bs.hz * (1.0f / SR); dts = dt * 0.5f;
+    fbase = 60.0f * fm_exp2f(bs.sm_cut * 7.0f) * (1.0f + lfo * wob * 0.9f);        /* 60 Hz .. 7.7 kHz */
+    for (i = 0; i < n; i++) {
+        float o, s;
+        if (!bs.gate && bs.aenv < 0.0005f) break;
+        if (bs.gate) { bs.aenv += (1.0f - bs.aenv) * 0.02f; } else { bs.aenv *= rel; }
+        bs.env *= dec;
+        bs.ph += dt; if (bs.ph >= 1.0f) bs.ph -= 1.0f;
+        bs.phs += dts; if (bs.phs >= 1.0f) bs.phs -= 1.0f;
+        if (sqr) { float t2 = bs.ph + 0.5f; if (t2 >= 1.0f) t2 -= 1.0f; o = (bs.ph < 0.5f ? 1.0f : -1.0f) + polyblep(bs.ph, dt) - polyblep(t2, dt); }
+        else o = 2.0f * bs.ph - 1.0f - polyblep(bs.ph, dt);
+        o = o * 0.8f + fm_sinf(bs.phs * 6.2831853f) * sub;
+        if ((i & 15u) == 0u) svf_coef(&fc, fbase * (1.0f + envmod * envmod * 24.0f * bs.env * accg), res);
+        s = svf_lp(&bs.flt, &fc, o);
+        s = fm_tanhf(s * (1.0f + res * 0.8f) * 0.7f * drive) * dnorm;
+        out[i] += s * bs.aenv * (bs.accent ? 1.0f + acc * 0.4f : 1.0f) * 0.42f;
+    }
+    if (!bs.gate && bs.aenv < 0.0005f) { bs.flt.ic1 = bs.flt.ic2 = 0; }
+}
+
 static void f_init(void)
 {
     uint32_t i;
     for (i = 0; i < NV; i++) v[i].on = 0;
     rec_on = 0;
+    bs.gate = 0; bs.nheld = 0; bs.aenv = 0; bs.hz = bs.hz_target = 55.0f;
+    mode_apply();
     if (!load_own() && !load_res()) gen_builtin();
     {   /* a silent bank (a bad transfer, an empty region) is no use: the built-in one instead */
         int32_t pk = 0;
@@ -186,17 +306,23 @@ float fox_playhead(void)                  /* 0..1 of the bank, the loudest voice
     for (i = 0; i < NV; i++) if (v[i].on && (best < 0 || v[i].env > v[best].env)) best = (int)i;
     return best < 0 ? -1.0f : v[best].pos / (float)bank_len;
 }
-static void f_panic(void) { uint32_t i; for (i = 0; i < NV; i++) v[i].on = 0; rec_on = 0; }
+static void f_panic(void) { uint32_t i; for (i = 0; i < NV; i++) v[i].on = 0; rec_on = 0; bs.gate = 0; bs.nheld = 0; bs.aenv = 0; }
 
 static volatile int32_t pend_off = -1;
+static volatile int32_t bq_note[8]; static volatile uint8_t bq_vel[8], bq_on[8], bq_n;
 static void f_note(int32_t note, uint32_t vel, int on)
 {
+    if (mode) {                                                     /* bass: queued for the render */
+        uint8_t k = bq_n; if (k >= 8u) return;
+        bq_note[k] = note; bq_vel[k] = (uint8_t)vel; bq_on[k] = (uint8_t)on; bq_n = (uint8_t)(k + 1u);
+        return;
+    }
     if (!on) { pend_off = note; return; }
     pend_vel = vel;
     pend_note = note;
 }
 
-int fox_chop_mode(void) { return par1[2] >> 3 != 0; }
+int fox_chop_mode(void) { return !mode && par1[2] >> 3 != 0; }
 int fox_chops(void) { return (par1[2] >> 3) + 1; }
 int fox_recording(void) { return rec_on; }
 uint32_t fox_bank_seconds_x10(void) { return bank_len * 10u / 22050u; }
@@ -294,6 +420,8 @@ static void f_render(float *out, uint32_t n)
 {
     uint32_t i;
     int32_t note = pend_note, off = pend_off;
+    while (bq_n) { bq_n--; bass_note(bq_note[bq_n], bq_vel[bq_n], bq_on[bq_n]); }
+    if (mode) { bass_render(out, n); return; }
     float fl = p01(par2[2]), fhz = 60.0f * fm_exp2f(fl * 8.0f);     /* 60 Hz .. 15 kHz */
     svfc_t fc;
     svf_coef(&fc, fhz, p01(par2[3]) * 0.95f);
@@ -315,6 +443,7 @@ static const char *f_text(uint8_t page, uint32_t p, char *buf)
 {
     static const char *const ROLLS[4] = {"OFF", "1/16", "1/32", "1/64"};
     (void)buf;
+    if (mode) return page == 1u && p == 0u ? (par2[0] >= 64u ? "SQUARE" : "SAW") : 0;
     if (page == 2u && p == 2u) return par3[2] >= 64u ? "GATE" : "1-SHOT";
     if (page == 2u && p == 3u) return ROLLS[par3[3] >> 5];
     return 0;

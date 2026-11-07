@@ -14,7 +14,15 @@
 
 extern const engine_t otter, cat, fox;
 void otter_preset(int32_t step);
+void otter_preset_set(int i);
+int otter_preset_index(void);
 const char *otter_preset_name(void);
+void fox_preset(int32_t step);
+void fox_preset_set(int i);
+int fox_preset_index(void);
+const char *fox_preset_name(void);
+int fox_mode(void);
+void fox_mode_set_params(void);
 int otter_arp_on(void);
 int otter_arp_rate(void);
 void otter_arp_tick(void);
@@ -38,12 +46,13 @@ uint32_t fox_bank_seconds_x10(void);
 static const engine_t *const ENG[3] = {&otter, &cat, &fox};
 enum { E_OTTER, E_CAT, E_FOX };
 enum { PG_ENGINE, PG_SEQ, PG_MIX };
-static const uint16_t ENG_RGB[3] = {RGB(90, 200, 255), RGB(255, 170, 40), RGB(255, 90, 60)};
+static const uint16_t ENG_RGB[4] = {RGB(90, 200, 255), RGB(255, 170, 40), RGB(255, 90, 60), RGB(170, 120, 80)};
+#define C_BEAVER ENG_RGB[3]
 #define C_SFA RGB(255, 64, 160)
 
 #include "icons.c"
 
-#define SET_MAGIC 0x53464135u            /* "SFA5" */
+#define SET_MAGIC 0x53464136u            /* "SFA6" */
 typedef struct {
     uint32_t magic;
     int8_t octave;
@@ -51,16 +60,17 @@ typedef struct {
     uint8_t page[3];
     uint8_t level[3];
     uint8_t delay_mix, delay_time, delay_fb, crush;
-    uint8_t drive, mixpage, rsv[2];
+    uint8_t drive, mixpage, otter_preset, fox_preset;
+    uint8_t pattern, rsv[3];              /* the pattern slot playing, A..D */
     uint8_t param[3][NPAGES][NPARAM];
-    uint8_t pat[256];                     /* pattern_t */
+    uint8_t pat[4][256];                  /* pattern_t x 4 slots */
 } settings_t;
 static settings_t set;
 static uint8_t set_dirty;
 static uint8_t body;
 
 #include "seq.c"
-#define PAT ((pattern_t *)set.pat)
+#define PAT ((pattern_t *)set.pat[set.pattern])
 
 /* ------------------------------------------------------------------ audio --- */
 #define DLY_LEN 11025u                    /* 0.5 s at half rate (22.05 kHz), 22 KB in the pool */
@@ -164,6 +174,8 @@ static const char *const *page_names(uint8_t e, uint8_t pg) { return pg < ENG[e]
 static void params_to_set(void)
 {
     uint32_t e, g, p;
+    set.otter_preset = (uint8_t)otter_preset_index();
+    set.fox_preset = (uint8_t)fox_preset_index();
     for (e = 0; e < 3u; e++) for (g = 0; g < ENG[e]->npages; g++) for (p = 0; p < NPARAM; p++) set.param[e][g][p] = ENG[e]->params[g][p];
 }
 static void params_from_set(void)
@@ -178,16 +190,21 @@ void app_init(void)
     otter.init(); cat.init(); fox.init();
     if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) == (int)sizeof set && set.magic == SET_MAGIC
         && set.octave >= -2 && set.octave <= 2 && set.focus < 3u && set.page[0] < NPAGES && set.page[1] < NPAGES && set.page[2] < NPAGES
-        && PAT->bpm >= 40u && PAT->steps >= 1u && PAT->steps <= NSTEP) {
+        && set.pattern < 4u && PAT->bpm >= 40u && PAT->steps >= 1u && PAT->steps <= NSTEP) {
+        otter_preset_set(set.otter_preset);
+        fox_preset_set(set.fox_preset);
         params_from_set();
+        fox_mode_set_params();
     } else {
+        uint32_t k;
         set.magic = SET_MAGIC;
         set.octave = 0;
         set.focus = E_OTTER;
         set.page[0] = set.page[1] = set.page[2] = 0;
         set.level[0] = 100; set.level[1] = 110; set.level[2] = 100;
         set.delay_mix = 0; set.delay_time = 60; set.delay_fb = 50; set.crush = 0; set.drive = 0; set.mixpage = 0;
-        pattern_defaults(PAT);
+        set.otter_preset = 0; set.fox_preset = 0; set.pattern = 0;
+        for (k = 0; k < 4u; k++) pattern_defaults((pattern_t *)set.pat[k]);
         params_to_set();
     }
     seq_stop();
@@ -322,6 +339,12 @@ static void input(void)
         if ((keys & bit) && !(ui.keys & bit)) {
             int32_t note = key_to_note(k, set.focus);
             uint32_t v = touch_vel(k);
+            if (body == PG_SEQ) {                                      /* the Beaver: a white key toggles that step */
+                int32_t w = key_to_note(k, E_CAT);                     /* (white key index) */
+                if (w >= 0) { seq_toggle(PAT, set.focus, (uint32_t)w, ui.last_note, cat_last_pad()); set_dirty = 1; ui.redraw = 1; }
+                ui.key_note[k] = -1;
+                continue;
+            }
             ui.key_note[k] = note;
             ui.key_eng[k] = set.focus;
             if (note >= 0) {
@@ -388,13 +411,22 @@ static void input(void)
         else if (k == EN_PRESET) {
             if (body == PG_MIX) { set.mixpage ^= 1u; ui.redraw = 1; app_say("MIX", set.mixpage ? "FX" : "LEVELS"); }
             else { body = PG_ENGINE; page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u))); }
-        } else if (k == EN_ALGO) {                                /* presets and kits */
+        } else if (k == EN_ALGO) {                                /* presets, kits, patterns */
+            int was_seq = body == PG_SEQ;
             body = PG_ENGINE;
-            if (set.focus == E_OTTER) { otter.panic(); otter_preset(e > 0 ? 1 : -1); app_say("PRESET", otter_preset_name()); }
+            if (was_seq) {                                           /* on the Beaver: the pattern slot */
+                char t[2] = {'A', 0};
+                body = PG_SEQ;
+                set.pattern = (uint8_t)((set.pattern + 4u + (e > 0 ? 1u : 3u)) % 4u);
+                t[0] = (char)('A' + set.pattern);
+                if (seq.playing) { seq_stop(); seq_start(); }
+                app_say("PATTERN", t);
+            } else if (set.focus == E_OTTER) { otter.panic(); otter_preset(e > 0 ? 1 : -1); app_say("PRESET", otter_preset_name()); }
             else if (set.focus == E_CAT) { cat_kit(e > 0 ? 1 : -1); app_say("KIT", cat_kit_name()); }
+            else { fox.panic(); fox_preset(e > 0 ? 1 : -1); app_say("FOX", fox_preset_name()); }
             set_dirty = 1; ui.redraw = 1;
         }
-        else if (k == EN_SELECT) { body = PG_ENGINE; set.focus = (uint8_t)((set.focus + 3 + (e > 0 ? 1 : 2)) % 3u); set_dirty = 1; app_say(ENG[set.focus]->name, ""); }
+        else if (k == EN_SELECT) { if (body != PG_SEQ) body = PG_ENGINE; set.focus = (uint8_t)((set.focus + 3 + (e > 0 ? 1 : 2)) % 3u); set_dirty = 1; app_say(body == PG_SEQ ? "LANE" : ENG[set.focus]->name, body == PG_SEQ ? ENG[set.focus]->name : ""); }
     }
     if (keys != ui.keys || btn != ui.btn) ui.redraw = 1;
     ui.keys = keys;
@@ -426,7 +458,7 @@ static void draw(void)
     uint32_t i, now = plat_ms();
     static const uint8_t WK[16] = PLAT_WHITE_KEYS, BK[11] = PLAT_BLACK_KEYS;
     static const uint8_t AT[11] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};
-    uint16_t accent = body == PG_SEQ ? C_SFA : body == PG_MIX ? C_WHITE : ENG_RGB[set.focus];
+    uint16_t accent = body == PG_SEQ ? C_BEAVER : body == PG_MIX ? C_WHITE : ENG_RGB[set.focus];
     int32_t st = seq.step;
 
     /* header: SFA, the three animals as tabs, tempo and transport */
@@ -436,14 +468,15 @@ static void draw(void)
         cv_text(x + 8, 9, &FONT_B, ui.msg[1], accent);
     } else {
         const char *tr = seq.rec ? "REC" : seq.playing ? "PLAY" : "STOP";
-        cv_text(8, 9, &FONT_B, APP_NAME, C_SFA);
-        for (i = 0; i < 3u; i++) {
-            int32_t x = 44 + (int32_t)i * 52;
-            int on = body == PG_ENGINE && i == set.focus;
-            cv_rect(x, 4, 49, 28, on ? ENG_RGB[i] : C_LINE);
-            icon(x + 2, 10, ICONS[i], on ? C_BLACK : ENG_RGB[i], 1);
-            cv_text(x + 19, 11, &FONT_XS, ENG[i]->name, on ? C_BLACK : C_GRAY);
+        const char *title = body == PG_SEQ ? "BEAVER" : body == PG_MIX ? (set.mixpage ? "FX" : "MIX") : ENG[set.focus]->name;
+        cv_text(6, 9, &FONT_B, APP_NAME, C_SFA);
+        for (i = 0; i < 4u; i++) {
+            int32_t x = 40 + (int32_t)i * 28;
+            int on = i < 3u ? body == PG_ENGINE && i == set.focus : body == PG_SEQ;
+            cv_rect(x, 4, 26, 28, on ? ENG_RGB[i] : C_LINE);
+            icon(x + 5, 10, ICONS[i], on ? C_BLACK : ENG_RGB[i], 1);
         }
+        cv_text(158, 11, &FONT_XS, title, accent);
         int_text(PAT->bpm, t);
         cv_text(234 - text_w(&FONT_XS, t), 3, &FONT_XS, t, seq.playing ? C_SFA : C_GRAY);
         cv_text(234 - text_w(&FONT_XS, tr), 18, &FONT_XS, tr, seq.rec ? RGB(255, 40, 40) : seq.playing ? C_SFA : C_DIM);
@@ -457,7 +490,11 @@ static void draw(void)
         cv_text(42, 6, &FONT_B, cur->name, accent);
         for (i = 0; i < cur->npages; i++)
             cv_rect(42 + (int32_t)i * 10, 24, 6, 4, set.page[set.focus] == i ? accent : C_LINE);
-        if (set.focus == E_FOX) {
+        if (set.focus == E_FOX && fox_mode()) {
+            const char *pn = fox_preset_name();
+            cv_text(232 - text_w(&FONT_XS, "BASS"), 10, &FONT_XS, "BASS", C_HI);
+            cv_text(232 - text_w(&FONT_XS, "BASS") - 8 - text_w(&FONT_XS, pn), 10, &FONT_XS, pn, C_GRAY);
+        } else if (set.focus == E_FOX) {
             const char *m = fox_recording() ? "SAMPLING" : fox_chop_mode() ? "CHOP" : "KEYS";
             int32_t x = 232 - text_w(&FONT_XS, m);
             cv_text(x, 10, &FONT_XS, m, fox_recording() ? RGB(255, 40, 40) : C_HI);
@@ -474,7 +511,7 @@ static void draw(void)
             cv_text(232 - text_w(&FONT_XS, t), 10, &FONT_XS, t, C_HI);
             cv_text(232 - text_w(&FONT_XS, t) - 8 - text_w(&FONT_XS, pn), 10, &FONT_XS, pn, C_GRAY);
         }
-        if (set.focus == E_FOX) {                                 /* the bank as a waveform, the window and slices on it */
+        if (set.focus == E_FOX && !fox_mode()) {                  /* the bank as a waveform, the window and slices on it */
             uint32_t a, b, nc = fox_window(&a, &b), len = fox_bank_len(), c;
             float ph = fox_playhead();
             cv_rect(10, 30, 220, 26, C_LINE);
@@ -493,20 +530,27 @@ static void draw(void)
         for (i = 0; i < NPARAM; i++) {
             const char *nm, *txt = 0;
             uint8_t *pp = knob_target(i, &nm);
-            int sw = set.focus == E_FOX && set.page[E_FOX] == 1u && i < 2u;
+            int sw = set.focus == E_FOX && !fox_mode() && set.page[E_FOX] == 1u && i < 2u;
             int32_t v = *pp;
             if (sw) { txt = v >= 64 ? "ON" : "OFF"; v = v >= 64 ? 127 : 0; }
-            else if (set.focus == E_FOX && set.page[E_FOX] == 0u && i == 2u) { int_text(fox_chops(), t); txt = t; }
+            else if (set.focus == E_FOX && !fox_mode() && set.page[E_FOX] == 0u && i == 2u) { int_text(fox_chops(), t); txt = t; }
             else if (ENG[set.focus]->param_text) txt = ENG[set.focus]->param_text(set.page[set.focus], i, t);
-            if (set.focus == E_FOX) bar_h(10 + (int32_t)i * 57, 60, 36, nm, v, 0, 127, accent, txt);
+            if (set.focus == E_FOX && !fox_mode()) bar_h(10 + (int32_t)i * 57, 60, 36, nm, v, 0, 127, accent, txt);
             else bar(10 + (int32_t)i * 57, 36, nm, v, 0, 127, accent, txt);
         }
     } else if (body == PG_SEQ) {
         uint32_t e, s;
-        cv_text(8, 4, &FONT_B, "SEQUENCER", accent);
-        cv_text(104, 8, &FONT_XS, "REC+KEYS WRITES. HOLD REC CLEARS", C_GRAY);
+        icon(6, 0, ICONS[3], accent, 2);
+        cv_text(42, 6, &FONT_B, "BEAVER", accent);
+        for (i = 0; i < 4u; i++) {                                   /* the pattern slots */
+            char l[2] = {(char)('A' + i), 0};
+            cv_rect(112 + (int32_t)i * 18, 4, 16, 16, i == set.pattern ? accent : C_LINE);
+            cv_text(112 + (int32_t)i * 18 + 5, 6, &FONT_XS, l, i == set.pattern ? C_BLACK : C_GRAY);
+        }
+        cv_text(232 - text_w(&FONT_XS, ENG[set.focus]->name), 8, &FONT_XS, ENG[set.focus]->name, ENG_RGB[set.focus]);
+        cv_text(42, 22, &FONT_T, "KEYS TOGGLE STEPS  ALGO PATTERN  SELECT LANE", C_GRAY);
         for (e = 0; e < 3u; e++) {
-            int32_t y = 22 + (int32_t)e * 15;
+            int32_t y = 34 + (int32_t)e * 16;
             icon(6, y - 3, ICONS[e], ENG_RGB[e], 1);
             for (s = 0; s < NSTEP; s++) {
                 int has = seq_lane_has(PAT, (uint8_t)e, s), in = s < PAT->steps;
@@ -514,10 +558,10 @@ static void draw(void)
                 cv_rect(26 + (int32_t)s * 13, y + 2, 11, 9, on && has ? C_WHITE : !in ? C_BLACK : has ? ENG_RGB[e] : (s & 3u) ? C_LINE : C_DIM);
             }
         }
-        bar_h(10, 68, 32, "TEMPO", PAT->bpm, 40, 240, accent, 0);
-        bar_h(67, 68, 32, "SWING", PAT->swing, 0, 127, accent, 0);
-        bar_h(124, 68, 32, "STEPS", PAT->steps, 0, 16, accent, 0);
-        bar_h(181, 68, 32, "GATE", PAT->gate, 0, 127, accent, 0);
+        bar_h(10, 84, 20, "TEMPO", PAT->bpm, 40, 240, accent, 0);
+        bar_h(67, 84, 20, "SWING", PAT->swing, 0, 127, accent, 0);
+        bar_h(124, 84, 20, "STEPS", PAT->steps, 0, 16, accent, 0);
+        bar_h(181, 84, 20, "GATE", PAT->gate, 0, 127, accent, 0);
     } else {
         cv_text(8, 4, &FONT_B, set.mixpage ? "FX" : "MIX", accent);
         cv_text(120, 8, &FONT_XS, "PRESET KNOB: LEVELS / FX", C_GRAY);
@@ -548,7 +592,7 @@ static void draw(void)
     }
     for (i = 0; i < 11u; i++)
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 12, 11, 18, ui.keys >> BK[i] & 1u ? C_WHITE : C_LINE);
-    cv_text(4, 61, &FONT_XS, "ALGO=PRESET  SEQ  LFO=MIX  ARP=SAMPLE", C_GRAY);
+    cv_text(4, 61, &FONT_XS, body == PG_SEQ ? "REC+KEYS WRITES  HOLD REC CLEARS" : "ALGO=PRESET  SEQ=BEAVER  LFO=MIX", C_GRAY);
     int_text((int32_t)(plat_master() * 100u / 4096u), t);
     text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_HI);
@@ -591,6 +635,8 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "rec")) *got = seq.rec;
     else if (!strcmp(what, "step")) *got = seq.step;
     else if (!strcmp(what, "bpm")) *got = PAT->bpm;
+    else if (!strcmp(what, "pattern")) *got = set.pattern;
+    else if (!strcmp(what, "fox_mode")) *got = fox_mode();
     else if (!strcmp(what, "fox_rec")) *got = fox_recording();
     else if (!strcmp(what, "fox_secs")) *got = (int)fox_bank_seconds_x10();
     else if (!strcmp(what, "fox_peak")) *got = (int)fox_peak(0, fox_bank_len());

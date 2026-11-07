@@ -94,11 +94,48 @@ turn K2 30
 wait 30
 expect param0 90
 shot fox2.png
+# Fox bass: ALGO to ACID 303, a note
+tap ENV
+wait 30
+spin ALGO 1
+wait 30
+expect fox_mode 1
+shot fox_bass.png
+wav fox_bass.wav
+key 2 down
+wait 400
+key 2 up
+wait 300
+wavstop
+spin ALGO -1
+wait 30
+expect fox_mode 0
 # the sequencer: the starter beat plays; record an Otter line; mix page
 tap SEQ
 wait 30
 expect body 1
 shot seq.png
+# the Beaver: SELECT picks the lane, keys toggle steps, ALGO picks the pattern
+spin SELECT 1
+wait 30
+expect focus 0
+tapkey w0
+tapkey w4
+wait 30
+expect otter_steps 2
+spin ALGO 1
+wait 30
+expect pattern 1
+expect otter_steps 0
+spin ALGO -1
+wait 30
+expect pattern 0
+expect otter_steps 2
+shot beaver.png
+tapkey w0
+tapkey w4
+wait 30
+expect otter_steps 0
 tap PLAY
 wait 30
 expect playing 1

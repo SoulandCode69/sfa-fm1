@@ -127,3 +127,12 @@ static int seq_lane_has(const pattern_t *p, uint8_t e, uint32_t st)
 {
     return e == E_OTTER ? p->otter_note[st] != 0 : e == E_CAT ? p->cat_mask[st] != 0 : p->fox_note[st] != 255u;
 }
+
+/* the Beaver's keys: toggle a step of lane e (Otter: the last note played, or C3; Cat: the last pad; Fox: the last note) */
+static void seq_toggle(pattern_t *p, uint8_t e, uint32_t st, int32_t last_note, int last_pad)
+{
+    if (st >= NSTEP) return;
+    if (e == E_OTTER) p->otter_note[st] = p->otter_note[st] ? 0 : (uint8_t)(last_note > 0 && last_note < 120 ? last_note : 48);
+    else if (e == E_CAT) { uint16_t bit = (uint16_t)(1u << (last_pad >= 0 ? last_pad : 0)); p->cat_mask[st] ^= bit; }
+    else p->fox_note[st] = p->fox_note[st] != 255u ? 255u : (uint8_t)(last_note >= 0 && last_note < 120 ? last_note : 60);
+}
