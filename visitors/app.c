@@ -49,8 +49,8 @@ static const uint16_t ENG_DARK[5] = {RGB(110, 90, 30), RGB(20, 96, 84), RGB(30, 
 
 #include "icons.c"
 
-#define SET_MAGIC 0x56495331u            /* "VIS1" */
-#define USR_MAGIC 0x56495355u            /* "VISU" */
+#define SET_MAGIC 0x414C4931u            /* "ALI1" */
+#define USR_MAGIC 0x414C4955u            /* "ALIU" */
 #define NPAT 8
 #define PATSZ 652
 #define NSCENE 8
@@ -61,7 +61,7 @@ typedef struct {
     uint8_t focus;
     uint8_t page[NENG];
     uint8_t level[NENG], pan[NENG];
-    uint8_t delay_mix, delay_time, delay_fb, crush, drive, mixpage;
+    uint8_t delay_mix, delay_time, verb, verb_size, drive, mixpage;
     uint8_t otter_preset, fox_preset, cat_kit, pattern;
     uint8_t chain, glue, lowend, air;     /* the master page */
     uint8_t song[NSONG], song_len, hop_source, rsv2[2];   /* the song chain: pattern slots in order (CHAIN + key appends) */
@@ -92,6 +92,11 @@ static void chain_advance(void)
 /* ------------------------------------------------------------------ audio --- */
 #define DLY_LEN 11025u
 PLAT_POOL static int16_t dly[DLY_LEN];
+/* the reverb bus: four combs and two allpasses at half rate (Schroeder), int16 in the pool, stereo from the comb signs */
+static const uint32_t CL[4] = {779u, 907u, 1021u, 1117u}, AL[2] = {113u, 331u};
+PLAT_POOL static int16_t comb[4][1117], apf[2][331];
+static uint32_t comb_w[4], apf_w[2];
+static float comb_lp[4], verb_l, verb_r;
 static uint32_t dly_w;
 static float dly_lp, dly_prev, dc_x[2], dc_y[2], lim_env = 1.0f;
 static float low_lp[2], air_lp[2], glue_env, glue_g = 1.0f;
@@ -101,7 +106,6 @@ static float mixout[APP_BLOCK];
 static int cpu2_rc = -9;
 static float gain_now;
 static uint32_t arp_phase;
-static float crush_hold[2]; static uint32_t crush_cnt;
 static volatile float meter[NENG];       /* for the mixer's meters */
 
 static void note_in(uint8_t e, int32_t note, uint32_t vel, int on)
@@ -130,10 +134,9 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
 {
     uint32_t i, e;
     float gain = (float)master_q12 / 4096.0f * 8300000.0f;
-    float gl[NENG], gr[NENG], dmix = p01(set.delay_mix) * 0.8f, dfb = p01(set.delay_fb) * 0.8f;
+    float gl[NENG], gr[NENG], dmix = p01(set.delay_mix) * 0.8f, dfb = 0.45f;
+    float vmix = p01(set.verb) * 0.7f, vfb = 0.72f + p01(set.verb_size) * 0.21f, vdamp = 0.25f + (1.0f - p01(set.verb_size)) * 0.35f;
     float mdrive = 1.0f + p01(set.drive) * p01(set.drive) * 6.0f, dnorm = 1.0f / fm_soft(mdrive * 0.7f);
-    uint32_t crush_div = 1u + (uint32_t)(p01(set.crush) * p01(set.crush) * 24.0f);
-    float crush_q = set.crush ? fm_exp2f(2.0f + p01(set.crush) * 9.0f) : 0.0f;
     uint32_t dtime = 1100u + (uint32_t)(p01(set.delay_time) * (float)(DLY_LEN - 1200u));
     float low_c = 1.0f - fm_exp2f(-6.2831853f * 110.0f / SR), low_amt = p01(set.lowend) * 1.0f;      /* a low shelf at 110 Hz, up to +6 dB */
     float air_c = 1.0f - fm_exp2f(-6.2831853f * 5000.0f / SR), air_amt = p01(set.air) * 0.8f;       /* a high shelf from 5 kHz */
@@ -175,6 +178,27 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         }
         dly_prev = mono;
         l += dly_lp * dmix; r += dly_lp * dmix;
+        if (set.verb && dly_tick) {                                      /* the reverb, every other sample */
+            float in = mono * 0.5f, sum_l = 0.0f, sum_r = 0.0f, ap;
+            uint32_t c;
+            for (c = 0; c < 4u; c++) {
+                float yv = (float)comb[c][comb_w[c]] * (1.0f / 32768.0f);
+                comb_lp[c] += (yv - comb_lp[c]) * vdamp;
+                { float wv = in + comb_lp[c] * vfb; if (wv > 1.0f) wv = 1.0f; else if (wv < -1.0f) wv = -1.0f; comb[c][comb_w[c]] = (int16_t)(wv * 32767.0f); }
+                comb_w[c] = (comb_w[c] + 1u) % CL[c];
+                if (c & 1u) sum_r += yv; else sum_l += yv;
+            }
+            ap = sum_l + sum_r;
+            for (c = 0; c < 2u; c++) {                                   /* two allpasses in series on the sum */
+                float bv = (float)apf[c][apf_w[c]] * (1.0f / 32768.0f), wv = ap + bv * 0.5f;
+                if (wv > 1.0f) wv = 1.0f; else if (wv < -1.0f) wv = -1.0f;
+                apf[c][apf_w[c]] = (int16_t)(wv * 32767.0f);
+                apf_w[c] = (apf_w[c] + 1u) % AL[c];
+                ap = bv - wv * 0.5f;
+            }
+            verb_l = ap * 0.6f + sum_l * 0.5f; verb_r = ap * 0.6f + sum_r * 0.5f;
+        }
+        if (set.verb) { l += verb_l * vmix; r += verb_r * vmix; }
         if (set.lowend) { low_lp[0] += (l - low_lp[0]) * low_c; low_lp[1] += (r - low_lp[1]) * low_c; l += low_lp[0] * low_amt; r += low_lp[1] * low_amt; }
         if (set.air) { air_lp[0] += (l - air_lp[0]) * air_c; air_lp[1] += (r - air_lp[1]) * air_c; l += (l - air_lp[0]) * air_amt; r += (r - air_lp[1]) * air_amt; }
         if (set.glue) {                                                  /* GLUE: a master compressor, 2 ms attack, 150 ms release */
@@ -184,10 +208,6 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
             l *= glue_g * gmake; r *= glue_g * gmake;
         }
         if (set.drive) { l = fm_soft(l * 0.7f * mdrive) * dnorm; r = fm_soft(r * 0.7f * mdrive) * dnorm; }
-        if (set.crush) {
-            if (++crush_cnt >= crush_div) { crush_cnt = 0; crush_hold[0] = (float)(int32_t)(l * crush_q) / crush_q; crush_hold[1] = (float)(int32_t)(r * crush_q) / crush_q; }
-            l = crush_hold[0]; r = crush_hold[1];
-        }
         y[0] = l - dc_x[0] + 0.995f * dc_y[0]; dc_x[0] = l; dc_y[0] = y[0];
         y[1] = r - dc_x[1] + 0.995f * dc_y[1]; dc_x[1] = r; dc_y[1] = y[1];
         a = fm_fabsf(y[0]); pk = fm_fabsf(y[1]); if (pk > a) a = pk;
@@ -250,7 +270,7 @@ void app_init(void)
         set.magic = SET_MAGIC; set.octave = 0; set.focus = E_CAT;
         for (e = 0; e < NENG; e++) { set.page[e] = 0; set.level[e] = 92; set.pan[e] = 64; }
         set.level[E_CAT] = 100;
-        set.delay_mix = 0; set.delay_time = 60; set.delay_fb = 50; set.crush = 0; set.drive = 0; set.mixpage = 0;
+        set.delay_mix = 0; set.delay_time = 60; set.verb = 22; set.verb_size = 60; set.drive = 0; set.mixpage = 0;
         set.glue = 22; set.lowend = 16; set.air = 12;
         set.otter_preset = 0; set.fox_preset = 0; set.cat_kit = 0; set.pattern = 0; set.chain = 0;
         cat_pads_default(); hop_slices_default();
@@ -295,6 +315,7 @@ static struct {
     uint8_t step_edited;                  /* a knob moved while it was held: no toggle on release */
     int32_t held_slice;                   /* the Hopper: the slice key held (-1 none) */
     uint8_t chain_held, chain_used;       /* the Ship's CHAIN key down; something was done while it was */
+    uint8_t lock_arm, shippage;           /* a held step + the being's button: K1-K4 write parameter locks; the Ship's page */
     uint32_t key_t[NKEYS];                /* when each key went down (the mixer's scene keys: hold = store) */
 } ui;
 
@@ -401,7 +422,7 @@ static uint8_t *knob_target(uint32_t p, const char **name)
     static const char *const STEPN[4] = {"NOTE", "VEL", "LENGTH", "PROB"};
     static const char *const PADN[4] = {"PAD", "VEL", "LENGTH", "PROB"};
     static const char *const MIXN[4] = {"NORDIC", "MANTIS", "REPTIL", "GREYS"};
-    static const char *const MIX2[4] = {"DELAY", "DTIME", "DFEEDB", "CRUSH"};
+    static const char *const MIX2[4] = {"VERB", "SIZE", "DELAY", "DTIME"};
     static const char *const MIX3[4] = {"GLUE", "LOWEND", "AIR", "DRIVE"};
     static const char *const PANN[4] = {"PAN NOR", "PAN MAN", "PAN REP", "PAN GRY"};
     {                                                                   /* a creature's button held: its LEVEL / PAN, from any page */
@@ -409,13 +430,17 @@ static uint8_t *knob_target(uint32_t p, const char **name)
         if (h >= 0) { *name = p == 0 ? "LEVEL" : p == 1 ? "PAN" : "-"; return p == 0 ? &set.level[h] : p == 1 ? &set.pan[h] : &scratch; }
     }
     if (body == PG_SEQ) {
+        static const char *const LOCKN[4] = {"LOCK K1", "LOCK K2", "LOCK K3", "LOCK K4"};
+        static const char *const LENN[4] = {"LEN NOR", "LEN MAN", "LEN REP", "LEN GRY"};
+        if (ui.held_step >= 0 && ui.lock_arm) { *name = LOCKN[p]; return &scratch; }
         if (ui.held_step >= 0) { *name = (set.focus == E_CAT ? PADN : STEPN)[p]; return seq_step_param(PAT, set.focus, (uint32_t)ui.held_step, p); }
+        if (ui.shippage) { *name = LENN[p]; return &PAT->llen[p]; }
         *name = SEQN[p]; return p == 0 ? &PAT->bpm : p == 1 ? &PAT->swing : p == 2 ? &PAT->steps : &PAT->gate;
     }
     if (body == PG_HOME) { *name = MIXN[p]; return &set.level[p]; }
     if (body == PG_MIX) {
         if (set.mixpage == 1u) { *name = PANN[p]; return &set.pan[p]; }
-        if (set.mixpage == 2u) { *name = MIX2[p]; return p == 0 ? &set.delay_mix : p == 1 ? &set.delay_time : p == 2 ? &set.delay_fb : &set.crush; }
+        if (set.mixpage == 2u) { *name = MIX2[p]; return p == 0 ? &set.verb : p == 1 ? &set.verb_size : p == 2 ? &set.delay_mix : &set.delay_time; }
         if (set.mixpage == 3u) { *name = MIX3[p]; return p == 0 ? &set.glue : p == 1 ? &set.lowend : p == 2 ? &set.air : &set.drive; }
         *name = MIXN[p]; return &set.level[p];
     }
@@ -445,6 +470,15 @@ static void knob(uint32_t p, int32_t e)
         app_say("SLICE START", e > 0 ? ">" : "<");
         set_dirty = 1; ui.redraw = 1; return;
     }
+    if (body == PG_SEQ && ui.held_step >= 0 && ui.lock_arm && set.focus != E_CAT) {   /* a parameter lock on this step */
+        lane_t *l = &PAT->lane[set.focus];
+        uint8_t lk = LLOCK(l, ui.held_step), cur = (lk & 0x80u) && (lk >> 5 & 3u) == p ? (uint8_t)((lk & 31u) * 4u + 2u) : ENG[set.focus]->params[0][p];
+        int32_t nv = clamp((int32_t)cur + e * 4, 0, 127);
+        LLOCK(l, ui.held_step) = (uint8_t)(0x80u | p << 5 | (uint32_t)nv >> 2);
+        ui.step_edited = 1; set_dirty = 1;
+        int_text(nv, t); app_say(page_names(set.focus, 0)[p], t);
+        return;
+    }
     if (body == PG_SEQ && ui.held_step >= 0) {
         ui.step_edited = 1;
         if (p == 0) {                                                       /* NOTE / PAD: one per detent */
@@ -454,7 +488,8 @@ static void knob(uint32_t p, int32_t e)
         else { *v = (uint8_t)clamp((int32_t)*v + e * 4, 0, 127); if (p == 3 && *v >= 127u) { t[0] = 0; text_cat(t, "ALWAYS"); } else int_text(*v, t); }
         set_dirty = 1; app_say(name, t); return;
     }
-    if (body == PG_SEQ && p == 0) *v = (uint8_t)clamp((int32_t)*v + e, 40, 240);
+    if (body == PG_SEQ && ui.shippage) { *v = (uint8_t)clamp((int32_t)*v + e, 0, NSTEP); if (!*v) { set_dirty = 1; app_say(name, "PATTERN"); return; } }
+    else if (body == PG_SEQ && p == 0) *v = (uint8_t)clamp((int32_t)*v + e, 40, 240);
     else if (body == PG_SEQ && p == 2) *v = (uint8_t)clamp((int32_t)*v + e, 1, NSTEP);
     else *v = (uint8_t)clamp((int32_t)*v + e * 3, 0, 127);
     if (body == PG_ENGINE && set.focus == E_HOP && set.page[E_HOP] == 4u) hop_rechop();
@@ -542,7 +577,8 @@ static void engine_button(uint32_t k, uint8_t e, uint32_t btn, uint32_t now)
     uint32_t bit = 1u << k;
     if ((btn & bit) && !(ui.btn & bit)) { ui.btn_t[k] = now; ui.btn_long[k] = 0; }
     else if ((btn & bit) && ui.btn_t[k] && !ui.btn_long[k] && now - ui.btn_t[k] >= 600u) { ui.btn_long[k] = 1; }   /* a long hold: no page flip on release (hold + K1/K2 = level/pan) */
-    else if (!(btn & bit) && (ui.btn & bit)) { if (!ui.btn_long[k]) focus(e); ui.btn_t[k] = 0; }
+    else if (!(btn & bit) && (ui.btn & bit)) { if (!ui.btn_long[k] && !(body == PG_SEQ && ui.held_step >= 0 && e == set.focus)) focus(e); ui.btn_t[k] = 0; }
+    if ((btn & bit) && !(ui.btn & bit) && body == PG_SEQ && ui.held_step >= 0 && e == set.focus && e != E_CAT) { ui.lock_arm = 1; ui.step_edited = 1; app_say("LOCK", "TURN K1-K4"); }
 }
 
 static void input(void)
@@ -603,6 +639,7 @@ static void input(void)
                 if (now - ui.key_t[k] >= 700u) scene_store((uint32_t)scene_key(w)); else scene_recall((uint32_t)scene_key(w));
                 ui.key_t[k] = 0;
             }
+            if (body == PG_SEQ && w >= 0 && w == ui.held_step) ui.lock_arm = 0;
             if (body == PG_SEQ && w >= 0 && w == ui.held_step) {
                 if (!ui.step_edited) { seq_toggle(PAT, set.focus, (uint32_t)w, ui.last_note, cat_last_pad(), hop_last_slice()); set_dirty = 1; }
                 ui.held_step = -1; ui.redraw = 1;
@@ -681,6 +718,7 @@ static void input(void)
         else if (k == EN_PRESET) {
             if (body == PG_MIX) { set.mixpage = (uint8_t)((set.mixpage + 4u + (e > 0 ? 1u : 3u)) % 4u); ui.redraw = 1; app_say(body_name(), ""); }
             else if (body == PG_ENGINE) page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u)));
+            else if (body == PG_SEQ) { ui.shippage ^= 1u; ui.redraw = 1; app_say("SHIP", ui.shippage ? "LANE LENGTHS" : "PATTERN"); }
         } else if (k == EN_ALGO) {
             if (body == PG_SEQ) {
                 char t[2] = {'A', 0};
@@ -744,7 +782,14 @@ static void bar_h(int32_t x, int32_t y, int32_t bh, const char *name, int32_t v,
     char t[8];
     ui_panel(x, y, 52, bh);
     { int32_t k; for (k = 1; k < 4; k++) cv_rect(x + 2, y + 2 + (bh - 4) * k / 4, 48, 1, shade(C_PANEL, 18)); }   /* quarter ticks */
-    ui_fill(x + 2, y + bh - 2 - h, 48, h, col);
+    {                                                                  /* a stack of 10 segments, the top one bright */
+        int32_t seg = (bh - 4) / 10, k, lit = h ? (h + seg - 1) / seg : 0;
+        if (seg < 3) { ui_fill(x + 2, y + bh - 2 - h, 48, h, col); seg = 0; }      /* a short bar: solid */
+        for (k = 0; seg && k < 10; k++) {
+            int32_t sy = y + bh - 2 - (k + 1) * seg;
+            if (k < lit) ui_fill(x + 3, sy + 1, 46, seg - 1, k == lit - 1 ? shade(col, 60) : rgb_mix(col, 0, 0, 0, 40 - k * 4));
+        }
+    }
     cv_text(x + (52 - text_w(&FONT_XS, name)) / 2, y + bh + 3, &FONT_XS, name, C_SUB);
     if (!txt) { int_text(v, t); txt = t; }
     cv_text(x + (52 - text_w(&FONT_XS, txt)) / 2, y + bh + 15, &FONT_XS, txt, C_TXT);
@@ -781,7 +826,7 @@ static void draw(void)
         cv_text(x + 8, 9, &FONT_B, ui.msg[1], accent);
     } else {
         const char *tr = seq.stepin && !seq.playing ? "STEP" : seq.rec ? "REC" : seq.playing ? "PLAY" : "STOP";
-        cv_text(5, 9, &FONT_B, "VIS", C_BRAND);
+        cv_text(4, 3, &FONT_T, "ALIEN", C_BRAND); cv_text(4, 14, &FONT_T, "STACK", C_SUB);
         for (i = 0; i < 5u; i++) {
             int32_t x = 38 + (int32_t)i * 27;
             int on = i < NENG ? body == PG_ENGINE && i == set.focus : body == PG_SEQ;
@@ -876,8 +921,8 @@ static void draw(void)
             uint32_t sr = 0x9E3779B9u, k;
             for (k = 0; k < 70u; k++) { sr = sr * 1664525u + 1013904223u; cv_rect((int32_t)((sr >> 8) % 240u), (int32_t)((sr >> 20) % 128u), 1, 1, (sr >> 30) ? C_MUTED : C_SUB); }
         }
-        cv_text(8, 4, &FONT_B, "VISITORS", C_BRAND);
-        cv_text(8 + text_w(&FONT_B, "VISITORS") + 8, 8, &FONT_XS, "WE COME IN BEATS", C_SUB);
+        cv_text(8, 4, &FONT_B, "ALIEN STACK", C_BRAND);
+        cv_text(8 + text_w(&FONT_B, "ALIEN STACK") + 8, 8, &FONT_XS, "WE COME IN BEATS", C_SUB);
         for (i = 0; i < 5u; i++) {                                     /* five tiles */
             int32_t x = 8 + (int32_t)i * 46, y = 24;
             int is_eng = i < NENG, muted = is_eng && !lane_audible(PAT, (uint8_t)i), armed = is_eng && (seq.armed >> i & 1u);
@@ -918,18 +963,21 @@ static void draw(void)
             cv_rect(104 + (int32_t)i * 13, 5, 11, 16, i == set.pattern ? accent : C_PANEL);
             cv_text(104 + (int32_t)i * 13 + 3, 7, &FONT_XS, l, i == set.pattern ? C_BG : C_SUB);
         }
-        cv_text(232 - text_w(&FONT_XS, ENG[set.focus]->name), 8, &FONT_XS, ENG[set.focus]->name, ENG_RGB[set.focus]);
+        cv_text(232 - text_w(&FONT_T, ENG[set.focus]->name), 22, &FONT_T, ENG[set.focus]->name, ENG_RGB[set.focus]);
         for (e = 0; e < NENG; e++) {
             int32_t y = 30 + (int32_t)e * 11;
             int muted = !lane_audible(PAT, (uint8_t)e), armed = seq.armed >> e & 1u;
             cv_rect(8, y + 1, 12, 8, e == set.focus ? ENG_RGB[e] : muted ? C_MUTED : ENG_DARK[e]);
             if (armed) cv_rect(8, y + 1, 3, 8, C_REC);
+            uint32_t ll = PAT->llen[e] ? PAT->llen[e] : PAT->steps;
+            int32_t lst = seq.playing ? (PAT->llen[e] ? seq.lstep[e] : st) : -1;
             for (s = 0; s < shown; s++) {
-                int has = seq_lane_has(PAT, (uint8_t)e, s), in = s < PAT->steps, on = seq.playing && (int32_t)s == st;
+                int has = seq_lane_has(PAT, (uint8_t)e, s), in = s < ll, on = (int32_t)s == lst;
                 uint16_t c = on && has ? C_TXT : !in ? C_BG : has ? (muted ? C_MUTED : ENG_RGB[e]) : (s & 3u) ? C_PANEL : C_RULE;
                 if ((int32_t)s == ui.held_step && e == set.focus) c = C_TXT;
                 if (seq.stepin && !seq.playing && (int32_t)s == seq.cursor && e == set.focus && !has) c = C_REC;
                 cv_rect(26 + (int32_t)(s * cw), y + 1, (int32_t)cw - 2, 8, c);
+                if (e != E_CAT && (LLOCK(&PAT->lane[e], s) & 0x80u)) cv_rect(26 + (int32_t)(s * cw), y + 1, (int32_t)cw - 2, 2, C_BRAND);   /* a lock */
                 if (has && STEP_RAT(PAT->lane[e].len[s])) {               /* ratchet: the cell split into its hits */
                     uint32_t r = STEP_RAT(PAT->lane[e].len[s]) + 1u, q;
                     for (q = 1; q < r; q++) cv_rect(26 + (int32_t)(s * cw) + (int32_t)((cw - 2u) * q / r), y + 1, 1, 8, C_BG);
@@ -938,12 +986,17 @@ static void draw(void)
         }
         for (i = 0; i < NPARAM; i++) {
             const char *nm, *txt = 0; uint8_t *pp = knob_target(i, &nm); int32_t v = *pp, lo = 0, hi = 127;
-            if (ui.held_step >= 0) {
+            if (ui.held_step >= 0 && ui.lock_arm) {
+                uint8_t lk = LLOCK(&PAT->lane[set.focus], ui.held_step);
+                nm = page_names(set.focus, 0)[i];
+                if ((lk & 0x80u) && (lk >> 5 & 3u) == i) v = (int32_t)(lk & 31u) * 4 + 2; else { v = ENG[set.focus]->params[0][i]; txt = "-"; }
+            } else if (ui.shippage) { hi = NSTEP; if (!v) txt = "PAT"; }
+            else if (ui.held_step >= 0) {
                 if (i == 0) { if (set.focus == E_CAT) { int_text(cat_last_pad() + 1, t); txt = t; v = cat_last_pad() * 8; } else if (lane_rest(set.focus, (uint8_t)v)) { txt = "REST"; v = 0; } }
                 else if (i == 2) { uint32_t r = STEP_RAT((uint8_t)v); v = (int32_t)STEP_LEN((uint8_t)v); if (r) { t[0] = 'x'; t[1] = (char)('1' + r); t[2] = 0; txt = t; } else if (!v) txt = "GATE"; hi = 16; }
                 else if (i == 3 && v >= 127) txt = "ALWAYS";
             } else if (i == 0) { lo = 40; hi = 240; } else if (i == 2) { hi = NSTEP; }
-            bar_h(BX(i), 78, 20, nm, v, lo, hi, ui.held_step >= 0 ? ENG_RGB[set.focus] : accent, txt);
+            bar_h(BX(i), 78, 20, nm, v, lo, hi, ui.held_step >= 0 && ui.lock_arm ? C_BRAND : ui.held_step >= 0 ? ENG_RGB[set.focus] : ui.shippage ? ENG_RGB[i] : accent, txt);
         }
     } else {
         cv_text(8, 4, &FONT_B, body_name(), accent);
@@ -956,10 +1009,10 @@ static void draw(void)
             bar(BX(3), 34, "DRIVE", set.drive, 0, 127, C_BRAND, set.drive ? 0 : "CLEAN");
         }
         else if (set.mixpage == 2u) {
-            bar(BX(0), 34, "DELAY", set.delay_mix, 0, 127, C_TXT, set.delay_mix ? 0 : "DRY");
-            bar(BX(1), 34, "DTIME", set.delay_time, 0, 127, C_TXT, 0);
-            bar(BX(2), 34, "DFEEDB", set.delay_fb, 0, 127, C_TXT, 0);
-            bar(BX(3), 34, "CRUSH", set.crush, 0, 127, C_TXT, set.crush ? 0 : "OFF");
+            bar(BX(0), 34, "VERB", set.verb, 0, 127, C_BRAND, set.verb ? 0 : "DRY");
+            bar(BX(1), 34, "SIZE", set.verb_size, 0, 127, C_BRAND, 0);
+            bar(BX(2), 34, "DELAY", set.delay_mix, 0, 127, C_TXT, set.delay_mix ? 0 : "DRY");
+            bar(BX(3), 34, "DTIME", set.delay_time, 0, 127, C_TXT, 0);
         } else for (i = 0; i < NENG; i++) {
             int muted = !lane_audible(PAT, (uint8_t)i);
             int32_t m = (int32_t)(meter[i] * 52.0f); if (m > 52) m = 52;
@@ -994,7 +1047,7 @@ static void draw(void)
         if (body == PG_SEQ) { if (i <= 3u) c = C_SHIP; else if (i >= 5u && i <= 8u) c = (PAT->mute >> (i - 5u) & 1u) ? C_REC : ENG_DARK[i - 5u]; else if (i == 10u) c = seq.solo ? ENG_RGB[3] : C_RULE; else if (i == 4u || i == 9u) c = C_BRAND; if (ui.keys >> BK[i] & 1u) c = C_TXT; }
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 10, 11, 18, c);
     }
-    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "KEYS 1-6 JUMP  7 = NEW SIGNAL" : body == PG_SEQ ? "CPY PST CLR CHN SIGNAL M1-4 GEN SOLO" : body == PG_MIX ? "SCENES: TAP RECALL  HOLD STORE" : seq.stepin && !seq.playing ? "STEP ENTRY: KEYS WRITE  OCT+ REST" : "REC=STEP  HOLD+K1/K2=LVL/PAN", C_SUB);
+    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "KEYS 1-6 JUMP  7 = NEW SIGNAL" : body == PG_SEQ ? "STEP+BEING=LOCK  PRESET=LENGTHS" : body == PG_MIX ? "SCENES: TAP / HOLD" : seq.stepin && !seq.playing ? "STEP ENTRY: KEYS WRITE  OCT+ REST" : "REC=STEP  HOLD+K1/K2=LVL/PAN", C_SUB);
     int_text((int32_t)(plat_master() * 100u / 4096u), t); text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_TXT);
     if (body == PG_MIX) {                                              /* the mixer shows the audio load and any xruns */
@@ -1045,6 +1098,9 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "song_len")) *got = set.song_len;
     else if (!strcmp(what, "scene0")) *got = set.scene[0].used;
     else if (!strcmp(what, "hop_source")) *got = hop_source_index();
+    else if (!strcmp(what, "lock0")) *got = LLOCK(&PAT->lane[set.focus], 0);
+    else if (!strcmp(what, "llen2")) *got = PAT->llen[2];
+    else if (!strcmp(what, "fox_p0")) *got = ENG[E_FOX]->params[0][0];
     else if (!strcmp(what, "cursor")) *got = seq.cursor;
     else if (!strcmp(what, "fox_steps")) { uint32_t i, n = 0; for (i = 0; i < NSTEP; i++) n += LNOTE(&PAT->lane[E_FOX], i) != 0; *got = (int)n; }
     else if (!strcmp(what, "step")) *got = seq.step;

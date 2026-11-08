@@ -522,3 +522,51 @@ tapkey w0
 wait 400
 tap HOME
 wait 50
+# Alien Stack: a parameter lock (hold step + the being's button + K1), lane lengths (PRESET on the Ship), the reverb
+tapkey w2
+wait 50
+expect focus 2
+tap SEQ
+wait 50
+expect body 1
+key w0 down
+wait 100
+tap ENV
+wait 50
+spin K1 -10
+wait 50
+key w0 up
+wait 50
+expect lock0 149
+spin PRESET 1
+wait 50
+spin K3 12
+wait 50
+expect llen2 12
+spin K3 -12
+wait 50
+expect llen2 0
+spin PRESET 1
+wait 50
+shot ship_lengths.png
+tap PLAY
+wait 1200
+expect fox_p0 86
+tap PLAY
+wait 50
+tap EDIT
+wait 50
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 50
+expect mixpage 2
+spin K1 10
+wait 50
+shot fx_verb.png
+wav verb.wav
+tap ENV
+wait 50
+tapkey w0 110
+wait 1500
+wavstop

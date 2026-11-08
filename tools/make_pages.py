@@ -9,17 +9,19 @@ sys.path.insert(0, str(ROOT / "base" / "tools")); sys.path.insert(0, str(ROOT / 
 import make_site  # noqa: E402
 import ecb_site   # noqa: E402
 out = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "app" / "build" / "site")
-pages = make_site.tool_pages(ROOT / "app")
+APP = sys.argv[2] if len(sys.argv) > 2 else "app"
+ecb_site.set_brand(APP)
+pages = make_site.tool_pages(ROOT / APP)
 for rel, html in pages.items():
     p = out / rel
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(ecb_site.skin(html, rel.split("/")[0], 1), encoding="utf-8")
     print(p)
-fw = ROOT / "app" / "build" / "firmware.json"
+fw = ROOT / APP / "build" / "firmware.json"
 version = "dev"
 try: version = json.loads(fw.read_text()).get("version", "dev")
 except Exception: pass
-pkgs = sorted((ROOT / "app" / "build").glob("*.fwsc"))
-(out / "index.html").write_text(ecb_site.landing(version, pkgs[-1].name if pkgs else "ecb.fwsc", has_install=False), encoding="utf-8")
+pkgs = sorted((ROOT / APP / "build").glob("*.fwsc"))
+(out / "index.html").write_text(ecb_site.landing(version, pkgs[-1].name if pkgs else "ecb.fwsc", has_install=False, title=None if APP == "app" else "VISITORS"), encoding="utf-8")
 (out / "quickstart.html").write_text(ecb_site.quickstart(), encoding="utf-8")
 print(out / "index.html")

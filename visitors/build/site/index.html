@@ -1,0 +1,39 @@
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alien Stack</title><style>
+:root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+  --ground: #141824; --ink: #f8faff; --muted: #bac4d8; --rule: #424a62; --accent: #ff5caa; --teal: #54ccff; --card: #282e40;
+  --otter: #54ccff; --cat: #ffc428; --fox: #ff7650; --hopper: #8ee864; --beaver: #e2a46c; }
+body { background: radial-gradient(1200px 600px at 20% -10%, #243052 0%, var(--ground) 55%) fixed, var(--ground); color: var(--ink);
+  font-family: "Barlow Semi Condensed", "Segoe UI", system-ui, sans-serif; }
+a { color: var(--accent); }
+.ecb-nav { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin: 0 0 22px; padding: 10px 0 14px; border-bottom: 1px solid var(--rule); }
+.ecb-nav .brand { font-weight: 800; letter-spacing: .08em; color: var(--accent); text-decoration: none; font-size: 18px; display: flex; gap: 10px; align-items: center; }
+.ecb-nav .brand svg { width: 28px; height: 28px; }
+.ecb-nav a.link { color: var(--muted); text-decoration: none; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 13px; }
+.ecb-nav a.link:hover, .ecb-nav a.link[aria-current] { color: var(--ink); }
+.ecb-nav .creatures { margin-left: auto; display: flex; gap: 4px; }
+.ecb-nav .creatures svg { width: 30px; height: 30px; }
+h1, h2, h3 { font-weight: 800; letter-spacing: .02em; }
+button, .btn { font-family: inherit; }
+
+:root { --ground: #07071a; --accent: #ff3ef0; --card: #1c1838; --rule: #3e366e; }
+body { margin: 0; padding: 0 16px 60px; background: radial-gradient(900px 500px at 70% -10%, #2a1a5a 0%, #07071a 60%) fixed, #07071a; }
+.wrap { max-width: 1100px; margin: 0 auto; } h1 { font-size: clamp(40px, 7vw, 76px); line-height: .95; margin: 30px 0 12px; } h1 em { font-style: normal; color: var(--accent); }
+p.lead { font-size: 19px; color: var(--muted); max-width: 60ch; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 22px 0; }
+.btn { display: inline-block; padding: 12px 18px; border-radius: 12px; border: 1px solid var(--rule); color: var(--ink); text-decoration: none; font-weight: 700; background: var(--card); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #1a0a18; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 30px 0; }
+.card { background: linear-gradient(180deg, #241e48, #171334); border: 1px solid var(--rule); border-top: 3px solid var(--c); border-radius: 18px; padding: 18px; }
+.card h3 { margin: 0 0 8px; font-size: 16px; } .card h3 span { color: var(--c); margin-right: 6px; } .card p { color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0; }
+footer { color: var(--muted); font-size: 13px; margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 14px; }
+</style></head><body><div class="wrap">
+<h1>ALIEN <em>STACK</em></h1>
+<p class="lead">Alien Stack is a second firmware for the M-VAVE FM-1 from the people behind Earth Creature Beats: a synthesized
+drum machine, an alien bass bank, a polysynth, a sampler that samples itself, and a ship that sequences them all, with
+scenes and a song, parameter locks on every step, polymeter, and a reverb bus. Same hardware, another world.</p>
+<div class="actions"><a class="btn" href="firmware/ecb.fwsc">Download ecb.fwsc</a><a class="btn" href="quickstart.html">Quick start</a><a class="btn" href="mirror/">Open the mirror</a></div>
+<p style="color:var(--muted);font-size:13px">Version dev · for the FM-1 · built on fm1-base · all audio original, CC0</p>
+<section class="grid"><article class="card" style="--c:#ffd86a"><h3><span>NORDICS</span> Poly synth</h3><p>A 4-voice polysynth of pads, choirs, leads and arps.</p></article><article class="card" style="--c:#38e0c0"><h3><span>MANTIS</span> Drum synth</h3><p>Sixteen synthesized drum voices, eight kits, every voice shaped per pad. No samples.</p></article><article class="card" style="--c:#58ff7a"><h3><span>REPTILES</span> Bass & lead</h3><p>Sixteen chromatic alien one-shots: growls, folded subs, lasers, vowels; plus 24 synth basses.</p></article><article class="card" style="--c:#c8d0e8"><h3><span>GREYS</span> Sampler</h3><p>Sample the output or load your own; chop by transients; play the slices. Drone, transmission, sweep and choir on board.</p></article><article class="card" style="--c:#c05cff"><h3><span>SHIP</span> Sequencer</h3><p>8 patterns, scenes, a 16-slot song, ratchets, probability, groove generators, step entry and live record.</p></article></section>
+<footer>Alien Stack by Sin Fetish Audio · GPL-3.0 (the app) on fm1-base (MPL-2.0) · not affiliated with M-VAVE. One firmware per unit.</footer>
+</div></body></html>

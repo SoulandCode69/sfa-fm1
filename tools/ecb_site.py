@@ -79,18 +79,30 @@ h1, h2, h3 { font-weight: 800; letter-spacing: .02em; }
 button, .btn { font-family: inherit; }
 """
 
+BRAND = {"name": "EARTH CREATURE BEATS", "icon": "CAT", "beings": None}
+def set_brand(app):
+    """the ECB look (app) or Alien Stack's (visitors): the nav's name and colours"""
+    global BRAND
+    BRAND = {"name": "EARTH CREATURE BEATS", "icon": "CAT", "alien": False} if app == "app" else {"name": "ALIEN STACK", "icon": None, "alien": True}
+
+ALIEN_CSS = """
+:root, :root[data-theme="dark"], :root:not([data-theme="light"]) { --ground: #07071a; --accent: #ff3ef0; --card: #1c1838; --rule: #3e366e; --muted: #bebae4; }
+body { background: radial-gradient(900px 500px at 70% -10%, #2a1a5a 0%, #07071a 60%) fixed, #07071a; }
+"""
 def nav(active, depth=1):
     up = "../" * depth
     links = [("mirror/", "Mirror"), ("backup/", "Backup"), ("install/", "Install"), ("quickstart.html", "Quick start")]
     row = "".join(f'<a class="link" href="{up}{h}"{" aria-current=page" if a == active else ""}>{t}</a>' for h, t, a in
                   [(h, t, h.split("/")[0].split(".")[0]) for h, t in links])
-    crit = "".join(svg(n, 30) for n in NAMES)
-    return (f'<nav class="ecb-nav"><a class="brand" href="{up}index.html">{svg("CAT", 28)}EARTH CREATURE BEATS</a>{row}'
+    crit = "" if BRAND.get("alien") else "".join(svg(n, 30) for n in NAMES)
+    icon = svg(BRAND["icon"], 28) if BRAND.get("icon") else '<span style="font-size:22px">&#x1F6F8;</span>'
+    return (f'<nav class="ecb-nav"><a class="brand" href="{up}index.html">{icon}{BRAND["name"]}</a>{row}'
             f'<span class="creatures">{crit}</span></nav>')
 
 def skin(html, active, depth=1):
     """fm1-base's page in ECB's clothes: the theme forced dark, the nav above its content"""
-    html = html.replace("</style>", THEME_CSS + "</style>", 1)
+    html = html.replace("</style>", THEME_CSS + (ALIEN_CSS if BRAND.get("alien") else "") + "</style>", 1)
+    if BRAND.get("alien"): html = html.replace("ALIEN Mirror", "Alien Stack Mirror").replace("running ALIEN", "running Alien Stack").replace("ALIEN Backup", "Alien Stack Backup")
     html = re.sub(r"<html([^>]*)>", lambda m: "<html" + m.group(1).replace('data-theme="light"', "") + ' data-theme="dark">' if "data-theme" not in m.group(1) else m.group(0), html, count=1)
     # the nav as the first thing in the body (after the opening tag and any <main> / <header>)
     m = re.search(r"<body[^>]*>", html)
@@ -217,7 +229,7 @@ def landing_visitors(version, pkg_name, has_install=True):
     cards = "".join(f'<article class="card" style="--c:{c}"><h3><span>{n}</span> {r}</h3><p>{b}</p></article>' for n, r, c, b in beings)
     install = (f'<a class="btn primary" href="install/">Install on your FM-1</a>' if has_install else "") + f'<a class="btn" href="firmware/{pkg_name}">Download {pkg_name}</a>'
     return f"""<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VISITORS</title><style>{THEME_CSS}
+<title>Alien Stack</title><style>{THEME_CSS}
 :root {{ --ground: #07071a; --accent: #ff3ef0; --card: #1c1838; --rule: #3e366e; }}
 body {{ margin: 0; padding: 0 16px 60px; background: radial-gradient(900px 500px at 70% -10%, #2a1a5a 0%, #07071a 60%) fixed, #07071a; }}
 .wrap {{ max-width: 1100px; margin: 0 auto; }} h1 {{ font-size: clamp(40px, 7vw, 76px); line-height: .95; margin: 30px 0 12px; }} h1 em {{ font-style: normal; color: var(--accent); }}
@@ -230,12 +242,12 @@ p.lead {{ font-size: 19px; color: var(--muted); max-width: 60ch; }}
 .card h3 {{ margin: 0 0 8px; font-size: 16px; }} .card h3 span {{ color: var(--c); margin-right: 6px; }} .card p {{ color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0; }}
 footer {{ color: var(--muted); font-size: 13px; margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 14px; }}
 </style></head><body><div class="wrap">
-<h1>They came for the <em>low end.</em></h1>
-<p class="lead">VISITORS is a second firmware for the M-VAVE FM-1 from the people behind Earth Creature Beats: a synthesized
+<h1>ALIEN <em>STACK</em></h1>
+<p class="lead">Alien Stack is a second firmware for the M-VAVE FM-1 from the people behind Earth Creature Beats: a synthesized
 drum machine, an alien bass bank, a polysynth, a sampler that samples itself, and a ship that sequences them all, with
-scenes and a song. Same hardware, another world.</p>
+scenes and a song, parameter locks on every step, polymeter, and a reverb bus. Same hardware, another world.</p>
 <div class="actions">{install}<a class="btn" href="quickstart.html">Quick start</a><a class="btn" href="mirror/">Open the mirror</a></div>
 <p style="color:var(--muted);font-size:13px">Version {version} · for the FM-1 · built on fm1-base · all audio original, CC0</p>
 <section class="grid">{cards}</section>
-<footer>VISITORS by Sin Fetish Audio · GPL-3.0 (the app) on fm1-base (MPL-2.0) · not affiliated with M-VAVE. One firmware per unit.</footer>
+<footer>Alien Stack by Sin Fetish Audio · GPL-3.0 (the app) on fm1-base (MPL-2.0) · not affiliated with M-VAVE. One firmware per unit.</footer>
 </div></body></html>"""

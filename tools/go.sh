@@ -10,6 +10,7 @@ APP="${1:-app}"                                              # which firmware: a
 case "$APP" in app|visitors) ;; *) echo "usage: tools/go.sh [app|visitors]"; exit 2;; esac
 cd "$(dirname "$0")/.."
 PORT=8577
+[ "$APP" = visitors ] && PORT=8578                          # Alien Stack's pages on their own port
 # the toolchain and SDK, wherever the README put them (a non-interactive shell skips ~/.bashrc)
 [ -n "$JIELI_TOOLCHAIN" ] || { [ -d "$HOME/.jieli/toolchain" ] && export JIELI_TOOLCHAIN="$HOME/.jieli/toolchain"; }
 [ -n "$AC79_SDK" ] || { [ -d "$HOME/fw-AC79_AIoT_SDK" ] && export AC79_SDK="$HOME/fw-AC79_AIoT_SDK"; }
@@ -17,7 +18,7 @@ for a in "$@"; do case "$a" in --pull) git pull --recurse-submodules;; --no-flas
 
 echo "== build"
 python3 base/tools/build.py "$APP"
-python3 tools/make_pages.py app/build/site >/dev/null
+python3 tools/make_pages.py "$APP"/build/site "$APP" >/dev/null
 
 if [ -z "$NOFLASH" ]; then
     echo "== install (Windows Python; the FM-1 on USB; close the hub / mirror tabs first)"
@@ -34,7 +35,7 @@ python3 tools/release.py --app "$APP" || echo "release: skipped"
 
 echo "== laptop UI"
 if ! (ss -ltn 2>/dev/null | grep -q ":$PORT "); then
-    nohup python3 -m http.server "$PORT" --bind 127.0.0.1 --directory app/build/site >/dev/null 2>&1 &
+    nohup python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$APP"/build/site >/dev/null 2>&1 &
     sleep 1
 fi
 URL="http://localhost:$PORT/mirror/"
