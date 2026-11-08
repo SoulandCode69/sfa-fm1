@@ -80,6 +80,7 @@ Rules: one unit at a time; never flash a build that hasn't run in fm1-emu/host s
 | 2026-11-07 | A | SFA v2..v6 | FM-1_5700 | groovebox, sound overhauls, Beaver. OK. v5 fixed a NaN-silence bug (Chamberlin SVF) |
 | 2026-11-08 | A | ECB Build 1 (v1.0 step 1) | FM-1_5700 | Earth Creature Beats: sample Cat, Fox 808, Hopper, Beaver 4 lanes, mixer |
 | 2026-11-08 | A | ECB Build 2 | FM-1_5700 | workflow: hold=mute, REC arms, step edit (hold+knobs), copy/paste/chain, mute/solo, new palette |
+| 2026-11-08 | A | ECB Build 6 | FM-1_5700 | refinement: tools/audit.py sound audit (no harshness found: HF share <8% everywhere); Otter per-preset trim table (peak spread 24 -> 4.6 dB), Fox synth basses +3 dB, SNAP = highpassed tick, 808 CLICK = lowpassed knock, 808 default decay 105, master defaults eased (30/20/14), ARMED/REC/MUTED/STEP badge on engine pages |
 | 2026-11-08 | A | ECB Build 5 | FM-1_5700 | Cat PAD+ page (SAMPLE any of 64 per pad, PUNCH, SNAP, CRUSH; pads blob 512 B, settings magic ECB3 resets saves), Fox 808 CLICK+PUNCH, MASTER mixer page (GLUE, LOWEND, AIR, DRIVE), 48 Otter presets, 16 Fox basses, hold creature + K1/K2 = level/pan anywhere (mute now at 600 ms); 86 sim checks; beat peaks -1.5 dBFS, 0 clipped |
 | 2026-11-08 | A | ECB Build 4 | FM-1_5700 | vector cartoon creatures (AA, cached), brighter palette + gradient panels, step entry (REC stopped), GEN/BEAT groove generators, second core renders Otter+Fox (cpu2_fallback), fm_soft replaces per-sample tanh, Cat comp gain every 8 samples, CPU/xrun readout in mixer; 80 sim checks pass, generated beat peaks -2.4 dBFS no clipping |
 | 2026-11-08 | A | ECB Build 3 | FM-1_5700 | HOME screen (5 tiles, keys 1-5 jump, K1-K4 levels), page titles, outlined icons, Hopper slice grid, header pattern strip; 69 sim checks pass |
@@ -156,3 +157,8 @@ CPU overrun (xruns) with four engines at once. Build 4: cheaper saturation, the 
 2026-11-08 — why no ECB build ever reached the device: the rename SFA → ECB moved the package to app/build/ECB.fwsc,
 but tools/go.sh kept flashing app/build/sfa.fwsc, the stale pre-rename package. Every run rebuilt ECB and reflashed old
 SFA. go.sh now flashes the newest .fwsc the build wrote, deletes the old one and prints which package it is sending.
+
+Sound audit (tools/audit.py): every Otter preset played as a 3-note chord for 1 s, every Fox sound as two notes;
+peak / RMS / crest / share of energy above 5 kHz. Rerun after any engine change: `python3 tools/audit.py gen`,
+the two scripts in the simulator, `python3 tools/audit.py report`. Build 6 numbers: Otter peaks -7.2..-2.6 dBFS,
+Fox RMS spread 7.4 dB, HF share under 8% on all 80 sounds.

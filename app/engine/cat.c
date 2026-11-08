@@ -64,7 +64,7 @@ void cat_sync(void)                                     /* main loop, every fram
     else pad_view_store();
 }
 
-typedef struct { adpcm_t a; float env, dcoef, gain, inc, punch, snap, crushq; svf_t flt; svfc_t fc; uint8_t on, filt; } voice_t;
+typedef struct { adpcm_t a; float env, dcoef, gain, inc, punch, snap, snap_lp, crushq; svf_t flt; svfc_t fc; uint8_t on, filt; } voice_t;
 static voice_t v[NPADS];
 static volatile uint8_t trig[NPADS], trig_vel[NPADS];
 static float comp_env, comp_g = 1.0f, hp_x, hp_y;
@@ -96,7 +96,7 @@ static void start(uint32_t p, float vel)
     w->dcoef = dec >= 1.99f ? 1.0f : decay_coef(0.01f + dec * dec * 0.6f);   /* DECAY 127 = the whole sample */
     w->gain = (0.2f + 0.8f * vel * vel) * p01(pp[3]) * 1.27f;          /* a velocity curve, the pad's level */
     w->punch = p01(pp[5]) * 2.0f;
-    w->snap = p01(pp[6]) * 0.9f;
+    w->snap = p01(pp[6]) * 0.9f; w->snap_lp = 0.0f;
     w->crushq = pp[7] ? fm_exp2f(11.0f - p01(pp[7]) * 8.5f) : 0.0f;   /* 2048 .. 6 levels */
     w->filt = filt < 0.99f;
     if (w->filt) { svf_coef(&w->fc, 100.0f * fm_exp2f(filt * 7.2f), 0.1f); w->flt.ic1 = w->flt.ic2 = 0; }   /* 100 Hz .. 15 kHz */
@@ -125,7 +125,10 @@ static void c_render(float *out, uint32_t n)
             if (pos < 1800.0f) {                                                     /* the first 40 ms: PUNCH and SNAP */
                 float lift = 1.0f - pos * (1.0f / 1800.0f);
                 x *= 1.0f + (punch + w->punch) * lift * lift;
-                if (w->snap > 0.0f && pos < 140.0f) x += noise(&rng) * w->snap * w->gain * (1.0f - pos * (1.0f / 140.0f));
+                if (w->snap > 0.0f && pos < 140.0f) {                                    /* SNAP: a bright 3 ms tick (highpassed noise) */
+                    float nz = noise(&rng); w->snap_lp += (nz - w->snap_lp) * 0.35f;
+                    x += (nz - w->snap_lp) * w->snap * w->gain * (1.0f - pos * (1.0f / 140.0f));
+                }
             }
             if (w->crushq > 0.0f) x = (float)(int32_t)(x * w->crushq) / w->crushq;
             w->env *= w->dcoef;

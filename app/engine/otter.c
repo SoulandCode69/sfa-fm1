@@ -74,6 +74,9 @@ static const preset_t PRESETS[NPRESET] = {
     {"ARP TRANCE",   {{100, 40, 115, 75}, {0, 30, 10, 30},   {100, 35, 70, 0},  {40, 8, 0, 0},    {32, 96, 32, 0}}},
     {"ARP CHIP",     {{127, 0, 50, 0},    {0, 25, 0, 5},     {0, 50, 0, 0},     {0, 0, 0, 0},     {96, 96, 64, 127}}},
 };
+/* a trim per preset (dB), from tools/audit.py: every preset peaks about the same */
+static const int8_t GAIN_DB[NPRESET] = {0, -1, 0, 4, 3, 4, 3, 3, 1, 2, 4, 2, 2, 4, 1, -1, -1, -1, 1, -1, 0, 0, 3, 5, -2, 2, 2, 2, 5, 4, 3, -1, -1, 2, 8, 1, 2, -1, 0, -1, -1, 2, 3, 2, -1, 1, 4, 4};
+static float pgain = 1.0f;
 static uint8_t preset_i;
 void otter_preset(int32_t step)
 {
@@ -187,6 +190,7 @@ static void voice_off(int32_t note)
 static void o_render(float *out, uint32_t n)
 {
     uint32_t i, k;
+    pgain = fm_db2lin((float)GAIN_DB[preset_i]);
     uint8_t wave = (uint8_t)(par[0][2] / 21u); if (wave > 5u) wave = 5;
     float att = fm_exp2f(-5.0f - p01(par[1][0]) * 8.0f);
     float dec = fm_exp2f(-5.5f - p01(par[1][1]) * 7.5f);
@@ -270,7 +274,7 @@ static void o_render(float *out, uint32_t n)
             s = fm_soft(s * drive);
             f = svf_lp(&w->flt, &fc, s);
             if (sm_cut > 0.7f) f += s * (sm_cut - 0.7f) * 0.6f;      /* presence: some of the raw wave at high TONE */
-            out[i] += fm_soft(f * (0.9f + sm_res * 0.6f)) * w->env * vl * tilt * (wave == 4u ? 1.2f : 0.95f);
+            out[i] += fm_soft(f * (0.9f + sm_res * 0.6f)) * w->env * vl * tilt * pgain * (wave == 4u ? 1.2f : 0.95f);
         }
     }
 }

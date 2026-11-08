@@ -26,7 +26,7 @@ playing, REC arms the track for live record. The mixer shows the audio load (CPU
 
 **Two FM-1s**: the installer flashes whichever FM-1 answers, so plug in Unit A alone when running tools/go.sh
 (or pass `--port` to base/tools/fm1_install.py). Unit B stays stock. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
-Samples: docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
+Sound audit: tools/audit.py (every preset measured in the simulator). Samples: docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
 
 ## Everyday loop (WSL/Ubuntu)
 ```

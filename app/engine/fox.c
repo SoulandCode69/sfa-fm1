@@ -16,7 +16,7 @@ static const char *const BN2[NPARAM] = {"WAVE", "SUB", "GLIDE", "DRIVE"};
 static const char *const BN3[NPARAM] = {"LFO", "WOBBLE", "ACCENT", "RELEASE"};
 static const char *NAMES1[NPARAM], *NAMES2[NPARAM], *NAMES3[NPARAM];
 static uint8_t par1[NPARAM], par2[NPARAM], par3[NPARAM];
-static uint8_t e_par[3][NPARAM] = {{127, 127, 10, 0}, {0, 20, 0, 0}, {64, 25, 30, 0}};        /* 808 mode's own */
+static uint8_t e_par[3][NPARAM] = {{127, 105, 10, 0}, {0, 20, 0, 0}, {64, 30, 35, 0}};        /* 808 mode's own */
 static uint8_t b_par[3][NPARAM] = {{40, 70, 80, 45}, {0, 60, 20, 30}, {30, 0, 60, 20}};    /* bass mode's own */
 static uint8_t mode;                                     /* 0 = 808 sample, 1 = bass synth */
 static const char *TITLES[3];
@@ -85,7 +85,7 @@ void fox_mode_set_params(void) { mode_stash(); }
 static struct {
     adpcm_t a; float inc, inc_target, env, aenv, sub_ph, pitch_env;
     int32_t held[8]; uint8_t nheld; int32_t note; uint8_t gate, on;
-    svf_t flt; uint32_t rng;
+    svf_t flt; uint32_t rng; float click_lp;
 } e8;
 
 static void e8_note(int32_t note, uint32_t vel, int on)
@@ -135,7 +135,10 @@ static void e8_render(float *out, uint32_t n)
         if (e8.a.pos < 1800.0f) {                                       /* the first 40 ms: PUNCH lifts it, CLICK adds the beater */
             float lift = 1.0f - e8.a.pos * (1.0f / 1800.0f);
             x *= 1.0f + punch * lift * lift;
-            if (click > 0.0f && e8.a.pos < 110.0f) x += noise(&e8.rng) * click * (1.0f - e8.a.pos * (1.0f / 110.0f));
+            if (click > 0.0f && e8.a.pos < 180.0f) {                            /* CLICK: a 4 ms beater knock (lowpassed noise) */
+                e8.click_lp += (noise(&e8.rng) - e8.click_lp) * 0.22f;
+                x += e8.click_lp * click * 1.6f * (1.0f - e8.a.pos * (1.0f / 180.0f));
+            }
         }
         if (e8.gate) { if (e8.aenv < 1.0f) { e8.aenv += att; if (e8.aenv > 1.0f) e8.aenv = 1.0f; } } else e8.aenv *= rel;
         e8.env *= dcoef;
@@ -199,7 +202,7 @@ static void bass_render(float *out, uint32_t n)
         if ((i & 15u) == 0u) svf_coef(&fc, fbase * (1.0f + envmod * envmod * 24.0f * bs.env * accg), res);
         s = svf_lp(&bs.flt, &fc, o);
         s = fm_soft(s * (1.0f + res * 0.8f) * 0.7f * drive) * dnorm;
-        out[i] += s * bs.aenv * (bs.accent ? 1.0f + acc * 0.4f : 1.0f) * 0.42f;
+        out[i] += s * bs.aenv * (bs.accent ? 1.0f + acc * 0.4f : 1.0f) * 0.6f;
     }
     if (!bs.gate && bs.aenv < 0.0005f) bs.flt.ic1 = bs.flt.ic2 = 0;
 }

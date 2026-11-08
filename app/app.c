@@ -232,7 +232,7 @@ void app_init(void)
         for (e = 0; e < NENG; e++) { set.page[e] = 0; set.level[e] = 100; set.pan[e] = 64; }
         set.level[E_CAT] = 110;
         set.delay_mix = 0; set.delay_time = 60; set.delay_fb = 50; set.crush = 0; set.drive = 0; set.mixpage = 0;
-        set.glue = 35; set.lowend = 25; set.air = 20;
+        set.glue = 30; set.lowend = 20; set.air = 14;
         set.otter_preset = 0; set.fox_preset = 0; set.cat_kit = 0; set.pattern = 0; set.chain = 0;
         cat_pads_default(); hop_slices_default();
         for (k = 0; k < 4u; k++) pattern_defaults((pattern_t *)set.pat[k]);
@@ -716,6 +716,11 @@ static void draw(void)
         icon_px(4, 0, ICONS[set.focus], 34, accent, C_BG);
         cv_text(44, 2, &FONT_B, cur->name, accent);
         if (cur->titles) cv_text(44, 18, &FONT_XS, cur->titles[set.page[set.focus]], C_SUB);
+        {                                                              /* the track's state, always in view */
+            int armed = seq.armed >> set.focus & 1u, muted = !lane_audible(PAT, (uint8_t)set.focus);
+            const char *bd = seq.stepin && !seq.playing ? "STEP" : armed && seq.playing && seq.rec ? "REC" : armed ? "ARMED" : muted ? "MUTED" : 0;
+            if (bd) { int32_t bx = 44 + text_w(&FONT_B, cur->name) + 8, bw = text_w(&FONT_XS, bd) + 8; cv_rect(bx, 3, bw, 12, muted && !armed ? C_MUTED : C_REC); cv_text(bx + 4, 4, &FONT_XS, bd, C_TXT); }
+        }
         for (i = 0; i < cur->npages; i++) cv_rect(44 + text_w(&FONT_XS, cur->titles ? cur->titles[set.page[set.focus]] : "") + 8 + (int32_t)i * 8, 23, 5, 3, set.page[set.focus] == i ? accent : C_RULE);
         {
             const char *a = "", *b = "";
