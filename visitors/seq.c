@@ -274,7 +274,7 @@ static void seq_euclid(pattern_t *p, uint8_t e, uint32_t pulses, uint32_t steps,
         if (bucket >= steps) {
             bucket -= steps;
             if (e == E_CAT) LMASK(l, s) = (uint16_t)(1u << (pad < 0 || pad > 15 ? 0 : pad));
-            else LNOTE(l, s) = (uint8_t)(note < 0 ? (e == E_FOX ? 36 : 60) : note);
+            else LNOTE(l, s) = (uint8_t)(note <= 0 || note > 119 ? (e == E_FOX ? 36 : 60) : note);
             l->vel[s] = (uint8_t)((i % (steps / (pulses ? pulses : 1u) + 1u)) == 0u ? 110u : 92u);
         }
     }

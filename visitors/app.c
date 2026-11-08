@@ -260,6 +260,7 @@ void app_init(void)
     _Static_assert(sizeof(settings_t) <= 3900u, "the settings fit a store object");
     for (e = 0; e < NENG; e++) ENG[e]->init();
     cpu2_rc = plat_cpu2_set(1);                                        /* the second core renders the synths */
+    plat_usb_audio_full(1);                                            /* USB audio at full level whatever MASTER does: sampling into a computer or an MPC */
     seq.rng = 0x1234567u;
     if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) == (int)sizeof set && set.magic == SET_MAGIC
         && set.octave >= -2 && set.octave <= 2 && set.focus < NENG && set.pattern < NPAT

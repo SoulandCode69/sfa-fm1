@@ -13,13 +13,14 @@ typedef struct {
 } lane_t;
 #define LNOTE(l, i) (((uint8_t *)&(l)->ev[i])[0])  /* (little-endian: the note is the low byte) */
 #define LMASK(l, i) ((l)->ev[i])
+#define LLOCK(l, i) (((uint8_t *)&(l)->ev[i])[1])  /* a parameter lock (melodic lanes): 0x80 | knob << 5 | value >> 2 */
 #define STEP_LEN(b) ((b) & 31u)
 #define STEP_RAT(b) ((b) >> 5)
 
 typedef struct {
     uint8_t bpm, swing, steps, gate;      /* 40..240; 0..127; 1..32; 0..127 of a step */
     uint8_t mute;                         /* bit per lane */
-    uint8_t rsv[3];
+    uint8_t llen[NLANE];                  /* polymeter: a lane's own length in steps, 0 = the pattern's */
     lane_t lane[NLANE];
 } pattern_t;
 
@@ -32,6 +33,8 @@ static struct {
     uint8_t solo;                         /* bit per lane, 0 = none */
     uint8_t stepin;                       /* step entry: keys write at the cursor and advance it */
     int32_t cursor;
+    uint32_t count;                       /* steps since the pattern started: polymeter lanes take theirs from it */
+    int32_t lstep[NLANE];                 /* each lane's current step */
     uint8_t rat_left[NLANE];              /* ratchet: repeats still to fire this step, and when the next one is due */
     uint32_t rat_next[NLANE], rat_gap[NLANE];
     uint8_t chain, chain_pos;             /* chain mode: play the slots in a row */
@@ -71,31 +74,42 @@ static void seq_release(uint8_t e)
     if (seq.held[e] >= 0) { ENG[e]->note(seq.held[e], 0, 0); seq.held[e] = -1; }
 }
 
+static uint32_t lane_len(const pattern_t *p, uint8_t e) { return p->llen[e] ? p->llen[e] : (p->steps ? p->steps : 1u); }
+static int32_t lane_step_of(const pattern_t *p, uint8_t e, int32_t st) { return p->llen[e] ? (int32_t)(seq.count % lane_len(p, e)) : st; }
+
 /* one lane's hit at step st (also each ratchet repeat; div = how many hits share the step) */
 static void lane_hit(const pattern_t *p, uint8_t e, int32_t st, uint32_t div)
 {
     const lane_t *l = &p->lane[e];
     uint32_t i, len_q = STEP_LEN(l->len[st]);
+    if (e != E_CAT && (LLOCK(l, st) & 0x80u) && ENG[e]->params[0]) {              /* a parameter lock: the knob lands there */
+        uint8_t lk = LLOCK(l, st); ENG[e]->params[0][lk >> 5 & 3u] = (uint8_t)((lk & 31u) * 4u + 2u);
+    }
     if (e == E_CAT) {
         if (LMASK(l, st)) for (i = 0; i < 16u; i++) if (LMASK(l, st) >> i & 1u) cat.note((int32_t)i, l->vel[st], 1);
     } else if (!lane_rest(e, LNOTE(l, st))) {
         seq_release(e);
-        ENG[e]->note(LNOTE(l, st), l->vel[st], 1);
-        if (e == E_HOP) return;                                            /* one-shots */
-        seq.held[e] = LNOTE(l, st);
-        seq.held_t[e] = 0;
+        {
+            int32_t nt = (int32_t)LNOTE(l, st) + lane_transpose(e);
+            if (e != E_HOP) { if (nt < 1) nt = 1; else if (nt > 119) nt = 119; }
+            ENG[e]->note(nt, l->vel[st], 1);
+            if (e == E_HOP) return;                                        /* one-shots */
+            seq.held[e] = nt; seq.held_t[e] = 0;
+        }
         seq.off_at[e] = len_q ? seq.step_len * len_q / 4u : seq_this_len(p, st) * (uint32_t)p->gate / 127u;
         if (div > 1u) { uint32_t g = seq_this_len(p, st) / div; if (seq.off_at[e] > g * 3u / 4u) seq.off_at[e] = g * 3u / 4u; }
         if (seq.off_at[e] < 300u) seq.off_at[e] = 300u;
     }
 }
 
-static void seq_fire(const pattern_t *p, int32_t st)
+static void seq_fire(const pattern_t *p, int32_t gst)
 {
     uint32_t e;
     for (e = 0; e < NLANE; e++) {
         const lane_t *l = &p->lane[e];
+        int32_t st = lane_step_of(p, (uint8_t)e, gst);
         uint32_t rat = STEP_RAT(l->len[st]);
+        seq.lstep[e] = st;
         seq.rat_left[e] = 0;
         if (e != E_CAT && !lane_rest((uint8_t)e, LNOTE(l, st))) seq_release((uint8_t)e);
         if (!lane_audible(p, (uint8_t)e)) continue;
@@ -119,22 +133,22 @@ static void seq_tick(pattern_t *p, uint32_t n)
     for (e = 0; e < NLANE; e++) {
         if (seq.held[e] >= 0) { seq.held_t[e] += n; if (seq.held_t[e] >= seq.off_at[e]) seq_release((uint8_t)e); }
         if (seq.rat_left[e] && seq.phase >= seq.rat_next[e]) {           /* a ratchet repeat */
-            uint32_t rat = STEP_RAT(p->lane[e].len[seq.step]);
+            uint32_t rat = STEP_RAT(p->lane[e].len[seq.lstep[e]]);
             seq.rat_left[e]--; seq.rat_next[e] += seq.rat_gap[e];
-            lane_hit(p, (uint8_t)e, seq.step, rat + 1u);
+            lane_hit(p, (uint8_t)e, seq.lstep[e], rat + 1u);
         }
     }
     if (seq.phase >= seq_this_len(p, seq.step)) {
         seq.phase -= seq_this_len(p, seq.step);
         seq.step_len = seq_step_samples(p);
-        seq.step = seq.step + 1;
-        if (seq.step >= (int32_t)(p->steps ? p->steps : 1)) { seq.step = 0; if (seq.chain) chain_advance(); }
+        seq.step = seq.step + 1; seq.count++;
+        if (seq.step >= (int32_t)(p->steps ? p->steps : 1)) { seq.step = 0; if (seq.chain) { chain_advance(); seq.count = 0; } }
         for (e = 0; e < NLANE; e++) seq.rat_left[e] = 0;
         seq_fire(PAT, seq.step);
     }
 }
 
-static void seq_start(void) { uint32_t e; seq.step = -1; for (e = 0; e < NLANE; e++) seq.held[e] = -1; seq.playing = 1; }
+static void seq_start(void) { uint32_t e; seq.step = -1; seq.count = 0; for (e = 0; e < NLANE; e++) { seq.held[e] = -1; seq.lstep[e] = 0; } seq.playing = 1; }
 static void seq_stop(void)
 {
     uint32_t e;
@@ -149,8 +163,8 @@ static void seq_record(pattern_t *p, uint8_t e, int32_t note, uint32_t vel)
     int32_t st;
     lane_t *l = &p->lane[e];
     if (!seq.rec || !seq.playing || seq.step < 0 || note < 0 || !(seq.armed >> e & 1u)) return;
-    st = seq.step;
-    if (seq.phase > seq_this_len(p, st) / 2u) st = (st + 1) % (p->steps ? p->steps : 1);
+    st = lane_step_of(p, e, seq.step);
+    if (seq.phase > seq_this_len(p, seq.step) / 2u) st = (st + 1) % (int32_t)lane_len(p, e);
     if (e == E_CAT) { if (note < 16) { LMASK(l, st) |= (uint16_t)(1u << note); l->vel[st] = (uint8_t)vel; } }
     else { LNOTE(l, st) = (uint8_t)note; l->vel[st] = (uint8_t)vel; }
 }
@@ -232,7 +246,15 @@ static void seq_gen(pattern_t *p, uint8_t e, int32_t root, int32_t nslices)
                 if (oct && (i & 3u) == 2u) nt += 12;
                 LNOTE(l, i) = (uint8_t)nt; l->vel[i] = hvel((i & 3u) ? 88u : 110u); l->len[i] = (uint8_t)(1u + rnd(3));
             }
-    } else if (e == E_OTTER) {
+    } else if (e == E_HOP) {                                             /* the Hopper: slices in order or at random */
+        int order = rnd(2), every = 1 + (int)rnd(2);
+        if (nslices < 1) nslices = 1;
+        for (i = 0; i < n; i += (uint32_t)every) {
+            LNOTE(l, i) = (uint8_t)(order ? (i / (uint32_t)every) % (uint32_t)nslices : rnd((uint32_t)nslices));
+            l->vel[i] = hvel(100u);
+            if (rnd(6) == 0) l->prob[i] = 80;
+        }
+    } else {                                                             /* the Otter: pentatonic lines */
         int dir = rnd(2), dense = rnd(2), hi = rnd(2);
         uint32_t idx = 0;
         if (root < 36 || root > 84) root = 60;
@@ -243,14 +265,43 @@ static void seq_gen(pattern_t *p, uint8_t e, int32_t root, int32_t nslices)
             LNOTE(l, i) = (uint8_t)(root + PENTA[idx] + (hi && rnd(4) == 0 ? 12 : 0));
             l->vel[i] = hvel((i & 3u) ? 80u : 100u); l->len[i] = (uint8_t)(dense ? 1u : 2u);
         }
-    } else {
-        int order = rnd(2), every = 1 + (int)rnd(2);
-        if (nslices < 1) nslices = 1;
-        for (i = 0; i < n; i += (uint32_t)every) {
-            LNOTE(l, i) = (uint8_t)(order ? (i / (uint32_t)every) % (uint32_t)nslices : rnd((uint32_t)nslices));
-            l->vel[i] = hvel(100u);
-            if (rnd(6) == 0) l->prob[i] = 80;
+    }
+}
+
+/* a Euclidean rhythm on one lane: pulses spread as evenly as possible over steps, rotated; the pattern's length follows */
+static void seq_euclid(pattern_t *p, uint8_t e, uint32_t pulses, uint32_t steps, uint32_t rot, int32_t note, int32_t pad)
+{
+    lane_t *l = &p->lane[e];
+    uint32_t i, bucket = 0;
+    seq_clear_lane(p, e);
+    if (steps > NSTEP) steps = NSTEP;
+    if (!p->llen[e] && p->steps < steps) p->steps = (uint8_t)steps;
+    for (i = 0; i < steps; i++) {
+        uint32_t s = (i + rot) % steps;
+        bucket += pulses;
+        if (bucket >= steps) {
+            bucket -= steps;
+            if (e == E_CAT) LMASK(l, s) = (uint16_t)(1u << (pad < 0 || pad > 15 ? 0 : pad));
+            else LNOTE(l, s) = (uint8_t)(e == E_HOP ? (note < 0 || note > 15 ? 0 : note) : note <= 0 || note > 119 ? (e == E_FOX ? 36 : 60) : note);
+            l->vel[s] = (uint8_t)((i % (steps / (pulses ? pulses : 1u) + 1u)) == 0u ? 110u : 92u);
         }
+    }
+}
+
+/* a fill: the lane busier for a bar; ratchets on some hits, extra hits between, velocities up (restored by the app) */
+static void seq_fill(pattern_t *p, uint8_t e)
+{
+    lane_t *l = &p->lane[e];
+    uint32_t i, n = lane_len(p, e);
+    for (i = 0; i < n; i++) {
+        int has = e == E_CAT ? LMASK(l, i) != 0 : !lane_rest(e, LNOTE(l, i));
+        if (has && (i & 3u) == 2u) l->len[i] = (uint8_t)(STEP_LEN(l->len[i]) | 1u << 5);            /* x2 on the off-beats */
+        if (has && i >= n - 4u) l->len[i] = (uint8_t)(STEP_LEN(l->len[i]) | 2u << 5);               /* x3 into the turnaround */
+        if (!has && (i & 1u) && rnd(3) == 0) {
+            if (e == E_CAT) { LMASK(l, i) = (uint16_t)(1u << (rnd(2) ? 5u : 2u)); l->vel[i] = 80; }
+            else { int32_t src = (int32_t)i - 1; LNOTE(l, i) = LNOTE(l, src); l->vel[i] = 84; }
+        }
+        if (has) l->vel[i] = (uint8_t)(l->vel[i] > 110u ? 127u : l->vel[i] + 16u);
     }
 }
 

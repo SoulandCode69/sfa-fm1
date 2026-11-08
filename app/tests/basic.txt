@@ -320,6 +320,10 @@ expect mixpage 3
 shot master.png
 turn PRESET 1
 wait 30
+expect mixpage 4
+shot sends.png
+turn PRESET 1
+wait 30
 expect mixpage 0
 # tap tempo
 tap GLO
@@ -522,3 +526,63 @@ tapkey w0
 wait 400
 tap HOME
 wait 50
+# Build 10: parameter lock, lane length, Euclid on GEN, step page, fill on a held BEAT, transpose page
+tapkey w2
+wait 50
+expect focus 2
+tap HOME
+wait 50
+tapkey w4
+wait 50
+expect body 1
+key w0 down
+wait 100
+tap ENV
+wait 50
+spin K1 -10
+wait 50
+key w0 up
+wait 50
+expect lock0 149
+spin PRESET 1
+wait 50
+spin K3 12
+wait 50
+expect llen2 12
+spin K3 -12
+wait 50
+spin PRESET 1
+wait 50
+spin K3 7
+wait 50
+expect tr_rep 7
+spin K3 -7
+wait 50
+spin PRESET 1
+wait 50
+key b9 down
+wait 100
+spin K2 -4
+wait 50
+spin K1 2
+wait 50
+key b9 up
+wait 50
+expect fox_hits 6
+tap OCT+
+wait 50
+expect steps 32
+tap OCT-
+wait 50
+tap PLAY
+wait 300
+key b4 down
+wait 600
+expect fill 1
+wait 300
+key b4 up
+wait 100
+expect fill 0
+tap PLAY
+wait 50
+shot beaver_locks.png
