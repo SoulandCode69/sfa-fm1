@@ -79,6 +79,7 @@ Rules: one unit at a time; never flash a build that hasn't run in fm1-emu/host s
 | 2026-11-07 22:33 | A | Felucca → SFA v1 | FM-1_5700 | first own build. 3 engines. OK |
 | 2026-11-07 | A | SFA v2..v6 | FM-1_5700 | groovebox, sound overhauls, Beaver. OK. v5 fixed a NaN-silence bug (Chamberlin SVF) |
 | 2026-11-08 | A | ECB Build 1 (v1.0 step 1) | FM-1_5700 | Earth Creature Beats: sample Cat, Fox 808, Hopper, Beaver 4 lanes, mixer |
+| 2026-11-08 | A | ECB Build 2 | FM-1_5700 | workflow: hold=mute, REC arms, step edit (hold+knobs), copy/paste/chain, mute/solo, new palette |
 
 ---
 

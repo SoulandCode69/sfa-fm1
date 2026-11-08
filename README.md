@@ -5,14 +5,16 @@ A groovebox of five creatures that play together. Built on [fm1-base](https://gi
 | Creature | Button | What |
 |---|---|---|
 | OTTER Synth | FX | 4-voice polysynth, 32 presets (ALGO), ADSR, filter env, LFO, arpeggiator |
-| CAT Kit | SEL | sample drum machine: 3 factory kits x 16 pads, per-pad PITCH DECAY FILTER LEVEL, bus compressor |
+| CAT Kit | SEL | sample drum machine: 3 factory kits x 16 pads, per-pad PITCH DECAY FILTER LEVEL (page 1 follows the pad you hit), bus compressor |
 | FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive) + 8 synth basses |
-| HOPPER Cut | LFO | slicer: SAMPLE the output (ARP), chop EQUAL or at TRANSIENTS, per-slice pitch / reverse / decay / level, chromatic play |
-| BEAVER | SEQ | sequencer: 4 lanes, up to 32 steps, swing, patterns A-D (ALGO), live record (REC) and step entry (keys), tap tempo (GLO) |
+| HOPPER Cut | LFO | slicer: SAMPLE the output (ARP), chop EQUAL / TRANSIENT / MANUAL (hold a slice key + K1 moves its start), per-slice pitch / reverse / decay / level |
+| BEAVER | SEQ | 4 tracks x up to 32 steps, per step NOTE VEL LENGTH PROB (hold a step + K1-K4), swing, patterns A-D, chain, copy / paste, live record onto armed tracks |
 
-EDIT = the mixer (levels, pans, FX: delay, bitcrusher). Press a creature's button again for its next page; PRESET knob
-turns pages; SELECT knob changes focus. SAVE keeps everything. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
-Samples: see docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
+**One way of working everywhere**: a creature's button = its track (again: next page; **hold: mute**). K1-K4 are always
+the four things on screen; PRESET knob = page; ALGO knob = preset / kit / 808 / pattern; SELECT knob = track.
+REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = mixer (levels + meters, pans, FX;
+keys 1-4 mute, 9-12 solo); HOME stops. SAVE keeps everything. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
+Samples: docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
 
 ## Everyday loop (WSL/Ubuntu)
 ```

@@ -20,7 +20,7 @@ static const char *const NAMES1[NPARAM] = {"START", "END", "CHOPS", "PITCH"};
 static const char *const NAMES2[NPARAM] = {"REV", "LOOP", "FILTER", "RES"};
 static const char *const NAMES3[NPARAM] = {"ATTACK", "DECAY", "GATE", "ROLL"};
 static const char *const NAMES4[NPARAM] = {"S.PITCH", "S.REV", "S.DECAY", "S.LEVEL"};
-static const char *const NAMES5[NPARAM] = {"CHOPMODE", "SENS", "-", "-"};
+static const char *const NAMES5[NPARAM] = {"CHOPMODE", "SENS", "-", "-"};   /* MANUAL: hold a slice key, turn K1 to move its start */
 static uint8_t par1[NPARAM] = {0, 127, 0, 64};
 static uint8_t par2[NPARAM] = {0, 0, 127, 0};
 static uint8_t par3[NPARAM] = {0, 127, 0, 0};
@@ -270,7 +270,24 @@ static void find_transients(uint32_t a, uint32_t b, uint32_t nc)
     nslice_pt = (uint8_t)(cnt + 1u);
     slice_pt[nslice_pt] = b;
 }
-uint32_t hop_slice_points(const uint32_t **pts) { *pts = slice_pt; return par5[0] >= 64u ? nslice_pt : 0u; }
+int hop_chopmode(void) { return par5[0] / 43u > 2u ? 2 : (int)(par5[0] / 43u); }   /* 0 EQUAL, 1 TRANSIENT, 2 MANUAL */
+uint32_t hop_slice_points(const uint32_t **pts) { *pts = slice_pt; return hop_chopmode() ? nslice_pt : 0u; }
+static void equal_points(uint32_t a, uint32_t b, uint32_t nc)
+{
+    uint32_t i;
+    for (i = 0; i <= nc && i <= NSLICES; i++) slice_pt[i] = a + (b - a) * i / nc;
+    nslice_pt = (uint8_t)(nc > NSLICES ? NSLICES : nc);
+}
+/* MANUAL: move slice idx's start (1..n-1) by delta samples, kept between its neighbours */
+void hop_slice_nudge(uint32_t idx, int32_t delta)
+{
+    int32_t v;
+    if (hop_chopmode() != 2 || idx == 0u || idx >= nslice_pt) return;
+    v = (int32_t)slice_pt[idx] + delta;
+    if (v < (int32_t)slice_pt[idx - 1] + 220) v = (int32_t)slice_pt[idx - 1] + 220;
+    if (v > (int32_t)slice_pt[idx + 1] - 220) v = (int32_t)slice_pt[idx + 1] - 220;
+    slice_pt[idx] = (uint32_t)v;
+}
 
 static void start_voice(voice_t *w, int32_t note, float vel)
 {
@@ -287,8 +304,8 @@ static void start_voice(voice_t *w, int32_t note, float vel)
     len = b - a;
     if (chops >= 1u) {
         uint32_t nc = chops + 1u, idx = (uint32_t)note % nc;
-        if (par5[0] >= 64u) {                                            /* TRANSIENT chop */
-            if (!nslice_pt || slice_pt[0] != a || slice_pt[nslice_pt] != b) find_transients(a, b, nc);
+        if (hop_chopmode()) {                                            /* TRANSIENT or MANUAL: the slice points */
+            if (!nslice_pt || slice_pt[0] != a || slice_pt[nslice_pt] != b) { if (hop_chopmode() == 1) find_transients(a, b, nc); else equal_points(a, b, nc); }
             if (idx >= nslice_pt) idx = nslice_pt - 1u;
             b = slice_pt[idx + 1]; a = slice_pt[idx];
         } else { a += len * idx / nc; b = a + len / nc; }
@@ -371,7 +388,7 @@ static const char *f_text(uint8_t page, uint32_t p, char *buf)
     static const char *const ROLLS[4] = {"OFF", "1/16", "1/32", "1/64"};
     (void)buf;
     if (page == 2u && p == 2u) return par3[2] >= 64u ? "GATE" : "1-SHOT";
-    if (page == 4u && p == 0u) return par5[0] >= 64u ? "TRANSNT" : "EQUAL";
+    if (page == 4u && p == 0u) return hop_chopmode() == 2 ? "MANUAL" : hop_chopmode() == 1 ? "TRANSNT" : "EQUAL";
     if (page == 3u && p == 1u) return par4[1] >= 64u ? "REV" : "FWD";
     if (page == 2u && p == 3u) return ROLLS[par3[3] >> 5];
     return 0;

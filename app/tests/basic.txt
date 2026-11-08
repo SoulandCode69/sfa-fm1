@@ -133,7 +133,7 @@ shot hopper_transient.png
 tap LFO
 wait 30
 expect page 0
-# the Beaver: starter beat plays; patterns; step toggles
+# the Beaver: starter beat plays; patterns; step toggles; held-step editing; copy / paste / chain; mute / solo
 tap SEQ
 wait 30
 expect body 1
@@ -152,17 +152,82 @@ tapkey w0
 tapkey w8
 wait 30
 expect otter_steps 2
+key w0 down
+wait 30
+spin K2 -5
+spin K3 2
+spin K4 -10
+wait 30
+expect step_0vel 80
+expect step_0len 2
+expect step_0prob 87
+key w0 up
+wait 30
+expect otter_steps 2
+shot beaver_step.png
+tapkey b0
+wait 30
 spin ALGO 1
 wait 30
 expect pattern 1
 expect otter_steps 0
+tapkey b1
+wait 30
+expect otter_steps 2
+tapkey b3
+wait 30
+expect chain 1
+tapkey b3
+wait 30
+expect chain 0
 spin ALGO -1
 wait 30
 expect pattern 0
-expect otter_steps 2
-wait 1000
+tapkey b6
+wait 30
+expect mute 2
+tapkey b6
+wait 30
+expect mute 0
+tapkey b10
+wait 30
+expect solo 1
+tapkey b10
+wait 30
+expect solo 0
+# arm Otter, record a note live
+tap REC
+wait 30
+expect armed 1
+expect rec 1
+tap FX
+wait 30
+key 14 down
+wait 100
+key 14 up
+wait 260
+key 16 down
+wait 100
+key 16 up
+wait 300
+expect otter_steps >2
+tap REC
+wait 30
+expect armed 0
+wait 600
 wavstop
 shot beaver_playing.png
+# hold the Cat button: mute
+press SEL
+wait 600
+release SEL
+wait 30
+expect mute 2
+press SEL
+wait 600
+release SEL
+wait 30
+expect mute 0
 # sample the output into Hopper
 tap ARP
 wait 30
@@ -174,10 +239,16 @@ expect hop_rec 0
 expect hop_secs >9
 expect hop_peak >3000
 shot hopper_sampled.png
-# mixer: levels, pans, fx
+# mixer: levels, pans, fx, key mutes
 tap EDIT
 wait 30
 expect body 2
+tapkey w1
+wait 30
+expect mute 2
+tapkey w1
+wait 30
+expect mute 0
 shot mixer.png
 turn PRESET 1
 wait 30
@@ -215,7 +286,7 @@ expect store_writes 1
 reboot
 wait 600
 expect bpm 120
-expect otter_steps 2
+expect otter_steps 4
 expect cat_steps 8
 expect mixpage 0
 tap SEL
