@@ -41,8 +41,8 @@ static struct {
     uint32_t rng;
 } seq;
 
-static int lane_rest(uint8_t e, uint8_t v) { return e == E_HOP ? v == 255u : v == 0u; }
-static uint8_t lane_rest_value(uint8_t e) { return e == E_HOP ? 255u : 0u; }
+static int lane_rest(uint8_t e, uint8_t v) { (void)e; return v == 0u; }          /* the Greys are a synth: notes, like the others */
+static uint8_t lane_rest_value(uint8_t e) { (void)e; return 0u; }
 
 static void pattern_defaults(pattern_t *p)
 {
@@ -89,10 +89,12 @@ static void lane_hit(const pattern_t *p, uint8_t e, int32_t st, uint32_t div)
         if (LMASK(l, st)) for (i = 0; i < 16u; i++) if (LMASK(l, st) >> i & 1u) cat.note((int32_t)i, l->vel[st], 1);
     } else if (!lane_rest(e, LNOTE(l, st))) {
         seq_release(e);
-        ENG[e]->note(LNOTE(l, st), l->vel[st], 1);
-        if (e == E_HOP) return;                                            /* one-shots */
-        seq.held[e] = LNOTE(l, st);
-        seq.held_t[e] = 0;
+        {
+            int32_t nt = (int32_t)LNOTE(l, st) + lane_transpose(e);
+            if (nt < 1) nt = 1; else if (nt > 119) nt = 119;
+            ENG[e]->note(nt, l->vel[st], 1);
+            seq.held[e] = nt; seq.held_t[e] = 0;
+        }
         seq.off_at[e] = len_q ? seq.step_len * len_q / 4u : seq_this_len(p, st) * (uint32_t)p->gate / 127u;
         if (div > 1u) { uint32_t g = seq_this_len(p, st) / div; if (seq.off_at[e] > g * 3u / 4u) seq.off_at[e] = g * 3u / 4u; }
         if (seq.off_at[e] < 300u) seq.off_at[e] = 300u;
@@ -184,7 +186,7 @@ static void seq_toggle(pattern_t *p, uint8_t e, uint32_t st, int32_t last_note, 
     if (st >= NSTEP) return;
     if (e == E_CAT) LMASK(l, st) ^= (uint16_t)(1u << (last_pad >= 0 ? last_pad : 0));
     else if (!lane_rest(e, LNOTE(l, st))) LNOTE(l, st) = lane_rest_value(e);
-    else LNOTE(l, st) = e == E_HOP ? (uint8_t)(last_slice >= 0 ? last_slice : 0) : (uint8_t)(last_note > 0 && last_note < 120 ? last_note : e == E_FOX ? 36 : 48);
+    else { (void)last_slice; LNOTE(l, st) = (uint8_t)(last_note > 0 && last_note < 120 ? last_note : e == E_FOX ? 36 : 48); }
 }
 
 /* a step's four values for the knobs: NOTE/PAD, VEL, LEN, PROB */
@@ -212,6 +214,7 @@ static uint32_t rnd(uint32_t n) { seq.rng = seq.rng * 1664525u + 1013904223u; re
 static uint8_t hvel(uint32_t base) { int32_t v = (int32_t)base + (int32_t)rnd(13) - 6; return (uint8_t)(v < 1 ? 1 : v > 127 ? 127 : v); }
 static void seq_gen(pattern_t *p, uint8_t e, int32_t root, int32_t nslices)
 {
+    (void)nslices;
     static const uint16_t KICK[7] = {0x1111, 0x0511, 0x4141, 0x0909, 0x0491, 0x5111, 0x2111};   /* bit i = step i */
     static const uint16_t SNARE[4] = {0x1010, 0x1010, 0x9010, 0x1090};
     static const uint16_t HAT[5] = {0x5555, 0xFFFF, 0x4444, 0x5755, 0xDDDD};
@@ -243,7 +246,7 @@ static void seq_gen(pattern_t *p, uint8_t e, int32_t root, int32_t nslices)
                 if (oct && (i & 3u) == 2u) nt += 12;
                 LNOTE(l, i) = (uint8_t)nt; l->vel[i] = hvel((i & 3u) ? 88u : 110u); l->len[i] = (uint8_t)(1u + rnd(3));
             }
-    } else if (e == E_OTTER) {
+    } else {                                                             /* the Nordics and the Greys: pentatonic lines */
         int dir = rnd(2), dense = rnd(2), hi = rnd(2);
         uint32_t idx = 0;
         if (root < 36 || root > 84) root = 60;
@@ -253,14 +256,6 @@ static void seq_gen(pattern_t *p, uint8_t e, int32_t root, int32_t nslices)
             idx = dir ? (idx + 1u + (uint32_t)rnd(2)) % 6u : (idx + 5u) % 6u;
             LNOTE(l, i) = (uint8_t)(root + PENTA[idx] + (hi && rnd(4) == 0 ? 12 : 0));
             l->vel[i] = hvel((i & 3u) ? 80u : 100u); l->len[i] = (uint8_t)(dense ? 1u : 2u);
-        }
-    } else {
-        int order = rnd(2), every = 1 + (int)rnd(2);
-        if (nslices < 1) nslices = 1;
-        for (i = 0; i < n; i += (uint32_t)every) {
-            LNOTE(l, i) = (uint8_t)(order ? (i / (uint32_t)every) % (uint32_t)nslices : rnd((uint32_t)nslices));
-            l->vel[i] = hvel(100u);
-            if (rnd(6) == 0) l->prob[i] = 80;
         }
     }
 }
@@ -282,6 +277,23 @@ static void seq_euclid(pattern_t *p, uint8_t e, uint32_t pulses, uint32_t steps,
             else LNOTE(l, s) = (uint8_t)(note < 0 ? (e == E_FOX ? 36 : 60) : note);
             l->vel[s] = (uint8_t)((i % (steps / (pulses ? pulses : 1u) + 1u)) == 0u ? 110u : 92u);
         }
+    }
+}
+
+/* a fill: the lane busier for a bar; ratchets on some hits, extra hits between, velocities up (restored by the app) */
+static void seq_fill(pattern_t *p, uint8_t e)
+{
+    lane_t *l = &p->lane[e];
+    uint32_t i, n = lane_len(p, e);
+    for (i = 0; i < n; i++) {
+        int has = e == E_CAT ? LMASK(l, i) != 0 : !lane_rest(e, LNOTE(l, i));
+        if (has && (i & 3u) == 2u) l->len[i] = (uint8_t)(STEP_LEN(l->len[i]) | 1u << 5);            /* x2 on the off-beats */
+        if (has && i >= n - 4u) l->len[i] = (uint8_t)(STEP_LEN(l->len[i]) | 2u << 5);               /* x3 into the turnaround */
+        if (!has && (i & 1u) && rnd(3) == 0) {
+            if (e == E_CAT) { LMASK(l, i) = (uint16_t)(1u << (rnd(2) ? 5u : 2u)); l->vel[i] = 80; }
+            else { int32_t src = (int32_t)i - 1; LNOTE(l, i) = LNOTE(l, src); l->vel[i] = 84; }
+        }
+        if (has) l->vel[i] = (uint8_t)(l->vel[i] > 110u ? 127u : l->vel[i] + 16u);
     }
 }
 

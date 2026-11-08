@@ -83,6 +83,11 @@ void fox_preset(int32_t step)
     mode_apply();
 }
 const char *fox_preset_name(void) { return mode ? BPRESETS[preset_i - bank()->n].name : cur_smp()->name; }
+const char *fox_preset_name_at(int32_t off)
+{
+    uint32_t total = bank()->n + NBPRESET, i = (uint32_t)(((int32_t)preset_i + off + (int32_t)total * 4) % (int32_t)total);
+    return i < bank()->n ? SMP[bank()->first + i].name : BPRESETS[i - bank()->n].name;
+}
 int fox_mode(void) { return mode; }
 int fox_preset_index(void) { return preset_i; }
 void fox_preset_set(int i) { mode_stash(); preset_i = (uint8_t)((uint32_t)i % npre()); mode = preset_i >= bank()->n; mode_apply(); }
@@ -162,6 +167,7 @@ static struct {
     int32_t held[8]; uint8_t nheld;
     int32_t note; uint8_t gate, accent;
     svf_t flt;
+float ph2;
 } bs;
 
 static void bass_note(int32_t note, uint32_t vel, int on)
@@ -186,7 +192,8 @@ static void bass_render(float *out, uint32_t n)
     uint32_t i;
     float cut = p01(par1[0]), res = p01(par1[1]) * 0.97f, envmod = p01(par1[2]), dec = decay_coef(0.03f + p01(par1[3]) * p01(par1[3]) * 2.0f);
     int sqr = par2[0] >= 64; float sub = p01(par2[1]) * 0.8f, glide = par2[2] ? 0.03f * fm_exp2f(-p01(par2[2]) * 6.0f) : 1.0f;
-    float drive = 1.0f + p01(par2[3]) * p01(par2[3]) * 8.0f, dnorm = 1.0f / fm_soft(drive * 0.7f);
+    float dknob = p01(par2[3]), drive = 1.0f + (dknob < 0.5f ? dknob * 2.0f : 1.0f) * 3.0f, dnorm = 1.0f / fm_soft(drive * 0.7f);
+    float fold = dknob > 0.5f ? (dknob - 0.5f) * 2.0f : 0.0f;          /* DRIVE past half: a wavefolder, the Reptiles' snarl */
     float lfo_inc = (0.2f + p01(par3[0]) * p01(par3[0]) * 14.0f) / SR, wob = p01(par3[1]), acc = p01(par3[2]);
     float rel = decay_coef(0.005f + p01(par3[3]) * 0.4f);
     float lfo, dt, dts, fbase, accg = bs.accent ? 1.0f + acc : 1.0f;
@@ -196,7 +203,7 @@ static void bass_render(float *out, uint32_t n)
     lfo = fm_sinf(bs.lfo_ph * 6.2831853f); bs.lfo_ph += lfo_inc * (float)n; if (bs.lfo_ph >= 1.0f) bs.lfo_ph -= 1.0f;
     bs.hz += (bs.hz_target - bs.hz) * (glide >= 1.0f ? 1.0f : glide * (float)n * 0.1f);
     dt = bs.hz * (1.0f / SR); dts = dt * 0.5f;
-    fbase = 60.0f * fm_exp2f(bs.sm_cut * 7.0f) * (1.0f + lfo * wob * 0.9f);
+    fbase = 60.0f * fm_exp2f(bs.sm_cut * 7.0f) * (1.0f + lfo * wob * 0.9f) * (0.7f + 0.3f * bs.hz / 110.0f);   /* keytracked a third */
     for (i = 0; i < n; i++) {
         float o, s;
         if (bs.gate) bs.aenv += (1.0f - bs.aenv) * 0.02f; else bs.aenv *= rel;
@@ -205,7 +212,10 @@ static void bass_render(float *out, uint32_t n)
         bs.phs += dts; if (bs.phs >= 1.0f) bs.phs -= 1.0f;
         if (sqr) { float t2 = bs.ph + 0.5f; if (t2 >= 1.0f) t2 -= 1.0f; o = (bs.ph < 0.5f ? 1.0f : -1.0f) + polyblep(bs.ph, dt) - polyblep(t2, dt); }
         else o = 2.0f * bs.ph - 1.0f - polyblep(bs.ph, dt);
-        o = o * 0.8f + fm_sinf(bs.phs * 6.2831853f) * sub;
+        bs.ph2 += dt * 1.004f; if (bs.ph2 >= 1.0f) bs.ph2 -= 1.0f;
+        o = o * 0.7f + (2.0f * bs.ph2 - 1.0f - polyblep(bs.ph2, dt * 1.004f)) * 0.25f;   /* a second, slightly detuned saw: width */
+        if (fold > 0.0f) o = fm_sinf(o * (1.0f + fold * 5.0f) * 1.5707963f) * (1.0f - fold * 0.3f) + o * (1.0f - fold);
+        o = o + fm_sinf(bs.phs * 6.2831853f) * sub;
         if ((i & 15u) == 0u) svf_coef(&fc, fbase * (1.0f + envmod * envmod * 24.0f * bs.env * accg), res);
         s = svf_lp(&bs.flt, &fc, o);
         s = fm_soft(s * (1.0f + res * 0.8f) * 0.7f * drive) * dnorm;

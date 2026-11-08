@@ -56,6 +56,7 @@ void greys_preset(int32_t step) { preset_i = (uint8_t)(((int32_t)preset_i + step
 void greys_preset_set(int i) { preset_i = (uint8_t)(i % NPRE); }
 int greys_preset_index(void) { return preset_i; }
 const char *greys_preset_name(void) { return PRESETS[preset_i].name; }
+const char *greys_preset_name_at(int32_t off) { return PRESETS[((int32_t)preset_i + off + NPRE * 4) % NPRE].name; }
 
 /* the wavetables, built once: sine, triangle, saw, square, a formant pulse, glass (odd partials, bright) */
 PLAT_POOL static float wt[NWT][WT_N + 1];
@@ -84,7 +85,7 @@ static inline float wt_read(float morph, float ph)
     return x0 + (x1 - x0) * f;
 }
 
-typedef struct { float ph[3], mph, sph, hz, hz_target, env, fenv; int32_t note; uint8_t on, stage, gate; uint32_t age; svf_t flt; svfc_t fc; } voice_t;
+typedef struct { float ph[3], mph, sph, hz, hz_target, env, fenv, vel; int32_t note; uint8_t on, stage, gate; uint32_t age; svf_t flt; svfc_t fc; } voice_t;
 static voice_t v[NV];
 static uint32_t age_clock;
 static float lfo_ph, pgain = 1.0f;
@@ -92,6 +93,7 @@ static float lfo_ph, pgain = 1.0f;
 PLAT_POOL static int16_t chorus[CH_LEN];
 static uint32_t ch_w; static float ch_ph;
 static int32_t last_note = -1;
+static float vel_last = 0.8f;
 
 static void g_init(void) { uint32_t i; wt_build(); for (i = 0; i < NV; i++) { v[i].on = 0; v[i].hz = 110.0f; } preset_load(); }
 static void g_panic(void) { uint32_t i; for (i = 0; i < NV; i++) v[i].on = 0; }
@@ -99,9 +101,9 @@ static void g_panic(void) { uint32_t i; for (i = 0; i < NV; i++) v[i].on = 0; }
 static void g_note(int32_t note, uint32_t vel, int on)
 {
     uint32_t i, pick = 0;
-    (void)vel;
     if (note < 0) return;
     if (!on) { for (i = 0; i < NV; i++) if (v[i].on && v[i].note == note && v[i].gate) v[i].gate = 0; return; }
+    vel_last = (float)vel * (1.0f / 127.0f);
     for (i = 0; i < NV; i++) if (!v[i].on) { pick = i; break; }
     if (i == NV) { for (i = 0; i < NV; i++) if (v[i].age < v[pick].age) pick = i; }
     {
@@ -110,7 +112,7 @@ static void g_note(int32_t note, uint32_t vel, int on)
         w->hz_target = hz;
         if (!w->on || par[4][2] == 0u) w->hz = hz;
         else if (last_note >= 0) w->hz = note_hz(last_note);
-        w->note = note; w->on = 1; w->gate = 1; w->stage = 0; w->age = ++age_clock;
+        w->note = note; w->on = 1; w->gate = 1; w->stage = 0; w->age = ++age_clock; w->vel = vel_last;
         if (!w->env) { w->ph[0] = 0.0f; w->ph[1] = 0.33f; w->ph[2] = 0.67f; w->mph = 0.0f; w->sph = 0.0f; w->flt.ic1 = w->flt.ic2 = 0.0f; }
         last_note = note;
     }
@@ -131,7 +133,7 @@ static void g_render(float *out, uint32_t n)
         voice_t *w = &v[k];
         if (!w->on) continue;
         {
-            float fc = 40.0f * fm_exp2f((cut + w->fenv * envamt + lfo * lfilt * 0.5f) * 8.6f);   /* 40 Hz .. ~16 kHz */
+            float fc = 40.0f * fm_exp2f((cut * (0.7f + 0.3f * w->vel) + w->fenv * envamt + lfo * lfilt * 0.5f) * 8.6f);   /* 40 Hz .. ~16 kHz, velocity opens it */
             svf_coef(&w->fc, fc, res);
         }
     }
@@ -163,7 +165,7 @@ static void g_render(float *out, uint32_t n)
             w->sph += dt * 0.5f; if (w->sph >= 1.0f) w->sph -= 1.0f;
             x += fm_sinf(6.2831853f * w->sph) * sub;
             u = svf_lp(&w->flt, &w->fc, fm_soft(x * drive) * (1.0f / (0.6f + drive * 0.4f)));
-            s += u * w->env;
+            s += u * w->env * (0.5f + 0.5f * w->vel);
         }
         s *= level;
         if (chmix > 0.0f) {                                              /* the chorus: a 7..19 ms modulated tap */
@@ -191,7 +193,7 @@ static const char *g_text(uint8_t page, uint32_t p, char *buf)
 }
 
 /* a trim per preset (dB) from tools/audit.py */
-static const int8_t GAIN_DB[NPRE] = {4, 5, -1, 5, -2, -2, 3, 5, 2, 4, 3, 9, -2, 2, 3, 2, -1, 3, 3, 2, 1, 8, -1, 1};
+static const int8_t GAIN_DB[NPRE] = {5, 6, 1, 6, -1, -1, 5, 6, 4, 5, 4, 10, -1, 4, 4, 3, 0, 5, 5, 3, 2, 8, 0, 2};
 static void g_render_t(float *out, uint32_t n) { pgain = fm_db2lin((float)GAIN_DB[preset_i]); g_render(out, n); }
 
 const engine_t hopper = {"GREYS", g_init, g_note, g_render_t, g_panic, 5, {NAMES[0], NAMES[1], NAMES[2], NAMES[3], NAMES[4]},

@@ -9,6 +9,7 @@
  *   the ALGO knob browses 16 presets (the app calls otter_preset) */
 #include "fastmath.h"
 #include "engine.h"
+#include "../../base/include/plat.h"
 
 static const char *const NAMES[5][NPARAM] = {
     {"TONE", "RES", "WAVE", "DETUNE"}, {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"}, {"FENV", "FDECAY", "VEL>F", "SUB"},
@@ -73,7 +74,7 @@ static const preset_t PRESETS[NPRESET] = {
     {"FAREWELL", {{50, 25, 95, 60}, {80, 90, 100, 127}, {30, 80, 10, 20}, {20, 8, 0, 0}, {0, 64, 0, 0}}},
 };
 /* a trim per preset (dB), from tools/audit.py: every preset peaks about the same */
-static const int8_t GAIN_DB[NPRESET] = {4, 2, -2, 8, 8, 4, 9, 7, 10, 8, 4, -1, 2, 2, 3, 5, 8, 6, 10, 4, 4, 9, -1, 6, 5, 8, 10, 8, 10, 8, 5, 2, 6, 0, -2, 2, 6, 2, 3, 8, 2, 3, 4, 8, 3, -1, 4, -2};
+static const int8_t GAIN_DB[NPRESET] = {6, 4, 0, 10, 10, 6, 10, 9, 10, 10, 6, 1, 5, 4, 5, 7, 10, 8, 10, 6, 6, 10, 0, 8, 9, 10, 10, 10, 10, 10, 7, 4, 8, 2, -1, 4, 8, 6, 5, 10, 4, 3, 7, 10, 5, 2, 6, 0};
 static float pgain = 1.0f;
 static uint8_t preset_i;
 void otter_preset(int32_t step)
@@ -83,6 +84,7 @@ void otter_preset(int32_t step)
     for (g = 0; g < 5u; g++) for (p = 0; p < NPARAM; p++) par[g][p] = PRESETS[preset_i].p[g][p];
 }
 const char *otter_preset_name(void) { return PRESETS[preset_i].name; }
+const char *otter_preset_name_at(int32_t off) { return PRESETS[((int32_t)preset_i + off + NPRESET * 4) % NPRESET].name; }
 void otter_preset_set(int i) { preset_i = (uint8_t)(i % NPRESET); }
 int otter_preset_index(void) { return preset_i; }
 
@@ -100,6 +102,10 @@ static volatile uint8_t pend_vel[8], pend_on[8], pend_n;
 static uint32_t clock_, rng = 0x9E3779B9u;
 static float lfo_ph, last_hz = 220.0f;
 static float sm_cut, sm_res, sm_det;      /* smoothed knobs */
+#define ENS_LEN 2048u
+PLAT_POOL static int16_t ens[ENS_LEN];        /* the ensemble: three modulated taps over the voices' sum */
+static uint32_t ens_w; static float ens_ph;
+static float vsum[256];
 
 /* the arpeggiator: the held notes, stepped by the app's clock (otter_arp_tick, from the sequencer's tempo) */
 static int32_t held[8]; static uint8_t held_vel[8]; static uint8_t nheld;
@@ -273,7 +279,29 @@ static void o_render(float *out, uint32_t n)
             s = fm_soft(s * drive);
             f = svf_lp(&w->flt, &fc, s);
             if (sm_cut > 0.7f) f += s * (sm_cut - 0.7f) * 0.6f;      /* presence: some of the raw wave at high TONE */
-            out[i] += fm_soft(f * (0.9f + sm_res * 0.6f)) * w->env * vl * tilt * pgain * (wave == 4u ? 1.2f : 0.95f);
+            vsum[i] += f * (0.9f + sm_res * 0.3f) * w->env * vl * tilt * pgain * (wave == 4u ? 1.2f : 0.95f);
+        }
+    }
+    {                                                                /* the ensemble: in with DETUNE past a third */
+        float amt = sm_det > 0.35f ? (sm_det - 0.35f) / 0.65f : 0.0f;
+        for (i = 0; i < n; i++) {
+            float s = vsum[i], wet = 0.0f; uint32_t t;
+            vsum[i] = 0.0f;
+            if (amt > 0.0f) {
+                { float cs = s > 1.0f ? 1.0f : s < -1.0f ? -1.0f : s; ens[ens_w] = (int16_t)(cs * 32767.0f); }
+                ens_ph += 0.35f / SR; if (ens_ph >= 1.0f) ens_ph -= 1.0f;
+                for (t = 0; t < 3u; t++) {
+                    float ph = ens_ph + (float)t * 0.3333f, rd, d; uint32_t ri; int32_t a, b;
+                    if (ph >= 1.0f) ph -= 1.0f;
+                    rd = 440.0f + 200.0f * fm_sinf(6.2831853f * ph) + (float)t * 90.0f;   /* 10 .. 18 ms */
+                    ri = (uint32_t)rd; d = rd - (float)ri;
+                    a = ens[(ens_w + ENS_LEN - ri) % ENS_LEN]; b = ens[(ens_w + ENS_LEN - ri - 1u) % ENS_LEN];
+                    wet += ((float)a + ((float)b - (float)a) * d) * (1.0f / 32768.0f);
+                }
+                ens_w = (ens_w + 1u) % ENS_LEN;
+                s = s * (1.0f - amt * 0.45f) + wet * 0.4f * amt;
+            }
+            out[i] += fm_clip(s);
         }
     }
 }

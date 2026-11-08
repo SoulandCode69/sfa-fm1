@@ -314,6 +314,10 @@ expect mixpage 3
 shot master.png
 turn PRESET 1
 wait 30
+expect mixpage 4
+shot sends.png
+turn PRESET 1
+wait 30
 expect mixpage 0
 # tap tempo
 tap GLO
@@ -541,7 +545,7 @@ expect llen2 12
 spin K3 -12
 wait 50
 expect llen2 0
-spin PRESET 1
+spin PRESET -1
 wait 50
 shot ship_lengths.png
 tap PLAY
@@ -589,3 +593,33 @@ expect step_16on 1
 tap OCT-
 wait 50
 shot ship_euclid.png
+# Build 4: transpose page, SIGNAL hold = fill then back, sends page
+tap HOME
+wait 50
+tapkey w4
+wait 50
+expect body 1
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 50
+spin K3 7
+wait 50
+expect tr_rep 7
+spin K3 -7
+wait 50
+expect tr_rep 0
+spin PRESET 1
+wait 50
+tap PLAY
+wait 300
+key b4 down
+wait 600
+expect fill 1
+wait 400
+key b4 up
+wait 100
+expect fill 0
+tap PLAY
+wait 50
+shot ship_fill.png

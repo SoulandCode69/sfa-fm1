@@ -14,6 +14,16 @@ Audio: `python3 tools/render_visitors.py` (the REPTILE bank and the Greys' defau
 `python3 tools/pack_samples.py --pack assets/vpack --out visitors/samples_data.c` and
 `python3 tools/sfa_sample.py assets/vuser --out visitors/samples.bin`.
 
+Build 4: **the Alien Stack layout**: every parameter page is four horizontal stack rows (name, 12 segments, value) with
+a context strip under them (a synth: the presets either side of the one you are on; Mantis: the sixteen voices, the one
+you hit lit). **The Mothership**: per-being **FX sends** (mixer page 5: SENDS; the reverb and delay are fed from them,
+so drums stay dry while pads swim), **hold SIGNAL** = a fill on every being that snaps back when you let go (a tap is
+still a new signal), and a third Ship page (PRESET knob): **live transpose** per being, -24..+24. **DSP**: the Nordics
+gain an ensemble (DETUNE past a third brings in three modulated taps) and a transparent voice stage; the Reptiles'
+DRIVE past half becomes a wavefolder, with a second detuned saw for width and a keytracked filter; Mantis: the closed
+hat chokes the open one, velocity brightens the tone, kicks carry a 2nd harmonic that dies first; the Greys' filter and
+level follow velocity. Every synth re-measured (tools/audit.py --app visitors).
+
 Build 3: **GREYS is a synth** now: a wavetable / FM engine (morphing table in a three-voice unison, an FM modulator,
 sub, filter with drive, ADSR, LFO to morph / pitch / filter, glide, chorus), 24 presets on ALGO, measured level trims.
 **The Mothership**: OCT- / OCT+ on the Ship page the keys to steps 1-16 / 17-32 (the other half dims); hold GEN and

@@ -116,6 +116,8 @@ static void start(uint32_t p, float vel)
     float pitch = ((float)q[0] - 64.0f) * (24.0f / 127.0f) + ((float)par2[1] - 64.0f) * (12.0f / 127.0f);
     float dec = p01(q[1]) * p01(par2[2]) * 2.0f, tone = p01(q[2]), bend = p01(q[4]);
     float semi = fm_exp2f(pitch * (1.0f / 12.0f)), base_dec, base_hz, nhz;
+    if (p == V_CHAT) v[V_OHAT].on = 0;                                /* the closed hat chokes the open one */
+    tone = tone * (0.75f + 0.25f * vel);                              /* velocity brightens */
     w->kind = (uint8_t)p; w->tone = tone;
     w->gain = (0.25f + 0.75f * vel * vel) * p01(q[3]) * 1.1f;
     w->drive = p01(q[6]); w->nmix = p01(q[7]); w->snap = p01(q[5]) * 0.9f; w->snap_lp = 0.0f;
@@ -181,6 +183,7 @@ static void m_render(float *out, uint32_t n)
             switch (w->kind) {
             case V_KICK: case V_KICK2: case V_LTOM: case V_MTOM: case V_HTOM: case V_ZAP: case V_BLIP:
                 tonal = fm_sinf(6.2831853f * w->ph1);                                           /* a sine body, saturated */
+                if (w->kind <= V_KICK2) tonal += fm_sinf(12.566371f * w->ph1) * 0.25f * w->env * w->env;   /* a 2nd harmonic that dies first: definition */
                 tonal = fm_soft(tonal * (1.0f + w->tone * 2.5f + w->drive * 4.0f));
                 if (w->kind >= V_LTOM && w->kind <= V_HTOM) tonal = tonal * 0.8f + tri_of(w->ph1) * 0.3f;
                 break;
@@ -207,7 +210,7 @@ static void m_render(float *out, uint32_t n)
             }
             if (w->kind == V_CLAP) {                                                            /* three bursts then the tail */
                 float tt = 1.0f - w->nenv;
-                if (tt < 0.03f && ((int32_t)(tt * 300.0f) & 1)) nz *= 0.1f;
+                if (tt < 0.035f && ((int32_t)(tt * 260.0f) & 1)) nz *= 0.05f;
             }
             nz = svf_bp(&w->nf, &w->nfc, nz) * 2.2f;
             x = tonal * w->env * (1.0f - w->nmix * 0.6f) + nz * w->nenv * w->nmix * (w->kind >= V_CLAP && w->kind <= V_CYM ? 1.4f : 1.0f);

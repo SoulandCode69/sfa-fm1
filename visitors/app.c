@@ -23,7 +23,7 @@ void cat_kit(int32_t step); void cat_kit_set(int k); int cat_kit_index(void); co
 const char *cat_pad_name(int pad); int cat_last_pad(void); uint8_t *cat_pad_blob(uint32_t *size); void cat_pads_default(void); void cat_sync(void);
 void fox_preset(int32_t step); void fox_preset_set(int i); int fox_preset_index(void); const char *fox_preset_name(void); int fox_mode(void); void fox_mode_set_params(void);
 const char *hop_source_name(char *buf); int hop_source(int32_t step); int hop_source_index(void); void hop_source_set(int s);
-void otter_arp_set(int on);
+void otter_arp_set(int on); const char *otter_preset_name_at(int32_t off); const char *fox_preset_name_at(int32_t off); const char *greys_preset_name_at(int32_t off);
 int hop_chop_mode(void); int hop_chops(void); int hop_chopmode(void); void hop_chopmode_set(int m); void hop_chop_on(int chops); int hop_recording(void); void hop_record_start(void); void hop_record_stop(void);
 void hop_record_feed(const float *mix, uint32_t n); int hop_save_needed(void); int hop_save(void); uint32_t hop_bank_seconds_x10(void);
 uint32_t hop_bank_len(void); int32_t hop_peak(uint32_t from, uint32_t to); uint32_t hop_window(uint32_t *a, uint32_t *b); float hop_playhead(void);
@@ -50,7 +50,7 @@ static const uint16_t ENG_DARK[5] = {RGB(110, 90, 30), RGB(20, 96, 84), RGB(30, 
 
 #include "icons.c"
 
-#define SET_MAGIC 0x414C4931u            /* "ALI1" */
+#define SET_MAGIC 0x414C4932u            /* "ALI2" */
 #define USR_MAGIC 0x414C4955u            /* "ALIU" */
 #define NPAT 8
 #define PATSZ 652
@@ -65,7 +65,9 @@ typedef struct {
     uint8_t delay_mix, delay_time, verb, verb_size, drive, mixpage;
     uint8_t otter_preset, fox_preset, cat_kit, pattern;
     uint8_t chain, glue, lowend, air;     /* the master page */
-    uint8_t song[NSONG], song_len, hop_source, rsv2[2];   /* the song chain: pattern slots in order (CHAIN + key appends) */
+    uint8_t song[NSONG], song_len, hop_source, rsv2[2];
+    uint8_t send[NENG];                   /* each being's FX send (reverb + delay) */
+    int8_t transpose[NENG];               /* live transpose per being, semitones (the Mantis ignores it) */   /* the song chain: pattern slots in order (CHAIN + key appends) */
     uint8_t param[NENG][NPAGES][NPARAM];
     uint8_t slices[16 * 4];
     struct { uint8_t used, pattern, otter, fox, kit, mute, level[4], pan[4], rsv[2]; } scene[NSCENE];   /* 16 B each */
@@ -83,6 +85,7 @@ static uint8_t body;
 
 #define PATN(n) ((pattern_t *)((n) < 4u ? set.pat[(n)] : usr.pat[(n) - 4u]))
 #define PAT PATN(set.pattern)
+static int32_t lane_transpose(uint8_t e) { return e == E_CAT ? 0 : set.transpose[e]; }
 #include "seq.c"
 static void chain_advance(void)
 {
@@ -135,7 +138,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
 {
     uint32_t i, e;
     float gain = (float)master_q12 / 4096.0f * 8300000.0f;
-    float gl[NENG], gr[NENG], dmix = p01(set.delay_mix) * 0.8f, dfb = 0.45f;
+    float gl[NENG], gr[NENG], gs[NENG], dmix = p01(set.delay_mix) * 0.8f, dfb = 0.45f;
     float vmix = p01(set.verb) * 0.7f, vfb = 0.72f + p01(set.verb_size) * 0.21f, vdamp = 0.25f + (1.0f - p01(set.verb_size)) * 0.35f;
     float mdrive = 1.0f + p01(set.drive) * p01(set.drive) * 6.0f, dnorm = 1.0f / fm_soft(mdrive * 0.7f);
     uint32_t dtime = 1100u + (uint32_t)(p01(set.delay_time) * (float)(DLY_LEN - 1200u));
@@ -159,14 +162,14 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
     }
     for (e = 0; e < NENG; e++) {
         float lvl = lane_audible(PAT, (uint8_t)e) ? p01(set.level[e]) : 0.0f, pan = p01(set.pan[e]), pk = 0.0f;
-        gl[e] = lvl * fm_sinf((1.0f - pan) * 1.5707963f); gr[e] = lvl * fm_sinf(pan * 1.5707963f);
+        gl[e] = lvl * fm_sinf((1.0f - pan) * 1.5707963f); gr[e] = lvl * fm_sinf(pan * 1.5707963f); gs[e] = lvl * p01(set.send[e]) * 0.8f;
         for (i = 0; i < n; i += 4) { float a = fm_fabsf(mix[e][i]) * lvl; if (a > pk) pk = a; }
         meter[e] = pk > meter[e] ? pk : meter[e] * 0.85f;
     }
     for (i = 0; i < n; i++) {
         float l = 0.0f, r = 0.0f, mono, d, y[2], a, pk;
-        for (e = 0; e < NENG; e++) { l += mix[e][i] * gl[e]; r += mix[e][i] * gr[e]; }
-        mono = (l + r) * 0.5f;
+        mono = 0.0f;
+        for (e = 0; e < NENG; e++) { l += mix[e][i] * gl[e]; r += mix[e][i] * gr[e]; mono += mix[e][i] * gs[e]; }
         if (dly_tick ^= 1u) {
             uint32_t rd = (dly_w + DLY_LEN - dtime) % DLY_LEN;
             float w;
@@ -271,7 +274,8 @@ void app_init(void)
         set.magic = SET_MAGIC; set.octave = 0; set.focus = E_CAT;
         for (e = 0; e < NENG; e++) { set.page[e] = 0; set.level[e] = 92; set.pan[e] = 64; }
         set.level[E_CAT] = 100;
-        set.delay_mix = 0; set.delay_time = 60; set.verb = 22; set.verb_size = 60; set.drive = 0; set.mixpage = 0;
+        set.delay_mix = 0; set.delay_time = 60; set.verb = 40; set.verb_size = 60; set.drive = 0; set.mixpage = 0;
+        set.send[E_OTTER] = 70; set.send[E_CAT] = 10; set.send[E_FOX] = 0; set.send[E_HOP] = 80;
         set.glue = 22; set.lowend = 16; set.air = 12;
         set.otter_preset = 0; set.fox_preset = 0; set.cat_kit = 0; set.pattern = 0; set.chain = 0;
         cat_pads_default(); hop_slices_default();
@@ -318,6 +322,8 @@ static struct {
     uint8_t chain_held, chain_used;       /* the Ship's CHAIN key down; something was done while it was */
     uint8_t lock_arm, shippage;           /* a held step + the being's button: K1-K4 write parameter locks; the Ship's page */
     uint8_t steppage;                     /* the Ship's keys: steps 1-16 (0) or 17-32 (1), OCT- / OCT+ */
+    uint32_t fill_t; uint8_t fill_on;     /* SIGNAL held: after 350 ms the pattern becomes a fill until release */
+    pattern_t fill_keep;
     uint8_t gen_held;                     /* the GEN key down: K1-K3 shape a Euclidean pattern live */
     uint32_t key_t[NKEYS];                /* when each key went down (the mixer's scene keys: hold = store) */
 } ui;
@@ -349,7 +355,7 @@ void app_say(const char *a, const char *b)
     }
 }
 
-static const char *body_name(void) { return body == PG_HOME ? "HOME" : body == PG_SEQ ? "SHIP" : body == PG_MIX ? (set.mixpage == 0 ? "MIXER" : set.mixpage == 1 ? "PANS" : set.mixpage == 2 ? "FX" : "MASTER") : ENG[set.focus]->name; }
+static const char *body_name(void) { return body == PG_HOME ? "HOME" : body == PG_SEQ ? "SHIP" : body == PG_MIX ? (set.mixpage == 0 ? "MIXER" : set.mixpage == 1 ? "PANS" : set.mixpage == 2 ? "FX" : set.mixpage == 3 ? "MASTER" : "SENDS") : ENG[set.focus]->name; }
 
 static void speak(void)
 {
@@ -427,6 +433,7 @@ static uint8_t *knob_target(uint32_t p, const char **name)
     static const char *const MIXN[4] = {"NORDIC", "MANTIS", "REPTIL", "GREYS"};
     static const char *const MIX2[4] = {"VERB", "SIZE", "DELAY", "DTIME"};
     static const char *const MIX3[4] = {"GLUE", "LOWEND", "AIR", "DRIVE"};
+    static const char *const MIX4[4] = {"SEND NOR", "SEND MAN", "SEND REP", "SEND GRY"};
     static const char *const PANN[4] = {"PAN NOR", "PAN MAN", "PAN REP", "PAN GRY"};
     {                                                                   /* a creature's button held: its LEVEL / PAN, from any page */
         int32_t h = held_engine();
@@ -437,6 +444,7 @@ static uint8_t *knob_target(uint32_t p, const char **name)
         static const char *const LENN[4] = {"LEN NOR", "LEN MAN", "LEN REP", "LEN GRY"};
         if (ui.held_step >= 0 && ui.lock_arm) { *name = LOCKN[p]; return &scratch; }
         if (ui.held_step >= 0) { *name = (set.focus == E_CAT ? PADN : STEPN)[p]; return seq_step_param(PAT, set.focus, (uint32_t)ui.held_step, p); }
+        if (ui.shippage == 2u) { static const char *const TRN[4] = {"TR NOR", "TR MAN", "TR REP", "TR GRY"}; *name = TRN[p]; return (uint8_t *)&set.transpose[p]; }
         if (ui.shippage) { *name = LENN[p]; return &PAT->llen[p]; }
         *name = SEQN[p]; return p == 0 ? &PAT->bpm : p == 1 ? &PAT->swing : p == 2 ? &PAT->steps : &PAT->gate;
     }
@@ -445,6 +453,7 @@ static uint8_t *knob_target(uint32_t p, const char **name)
         if (set.mixpage == 1u) { *name = PANN[p]; return &set.pan[p]; }
         if (set.mixpage == 2u) { *name = MIX2[p]; return p == 0 ? &set.verb : p == 1 ? &set.verb_size : p == 2 ? &set.delay_mix : &set.delay_time; }
         if (set.mixpage == 3u) { *name = MIX3[p]; return p == 0 ? &set.glue : p == 1 ? &set.lowend : p == 2 ? &set.air : &set.drive; }
+        if (set.mixpage == 4u) { *name = MIX4[p]; return &set.send[p]; }
         *name = MIXN[p]; return &set.level[p];
     }
     *name = page_names(set.focus, set.page[set.focus])[p];
@@ -497,10 +506,15 @@ static void knob(uint32_t p, int32_t e)
         ui.step_edited = 1;
         if (p == 0) {                                                       /* NOTE / PAD: one per detent */
             if (set.focus == E_CAT) { uint16_t *m = &LMASK(&PAT->lane[E_CAT], ui.held_step); int32_t pd = cat_last_pad(); pd = clamp(pd + e, 0, 15); *m = (uint16_t)(1u << pd); int_text(pd + 1, t); }
-            else { int32_t lo = set.focus == E_HOP ? 0 : 1, hi = set.focus == E_HOP ? 15 : 119; int32_t nv = lane_rest(set.focus, *v) ? (set.focus == E_HOP ? 0 : 48) : (int32_t)*v; *v = (uint8_t)clamp(nv + e, lo, hi); int_text(*v, t); }
+            else { int32_t nv = lane_rest(set.focus, *v) ? 48 : (int32_t)*v; *v = (uint8_t)clamp(nv + e, 1, 119); int_text(*v, t); }
         } else if (p == 2) { uint8_t r = (uint8_t)(*v & 0xE0u); *v = (uint8_t)(clamp((int32_t)STEP_LEN(*v) + e, 0, 16) | r); if (STEP_LEN(*v)) { int_text((int32_t)STEP_LEN(*v), t); text_cat(t, "/4"); } else { t[0] = 0; text_cat(t, "GATE"); } }
         else { *v = (uint8_t)clamp((int32_t)*v + e * 4, 0, 127); if (p == 3 && *v >= 127u) { t[0] = 0; text_cat(t, "ALWAYS"); } else int_text(*v, t); }
         set_dirty = 1; app_say(name, t); return;
+    }
+    if (body == PG_SEQ && ui.shippage == 2u) {                            /* transpose: -24..+24 semitones, live */
+        int8_t *tr = (int8_t *)v; if (p == E_CAT) { app_say(name, "-"); return; }
+        *tr = (int8_t)clamp((int32_t)*tr + e, -24, 24); set_dirty = 1;
+        t[0] = *tr < 0 ? '-' : '+'; int_text(*tr < 0 ? -*tr : *tr, t + 1); app_say(name, t); return;
     }
     if (body == PG_SEQ && ui.shippage) { *v = (uint8_t)clamp((int32_t)*v + e, 0, NSTEP); if (!*v) { set_dirty = 1; app_say(name, "PATTERN"); return; } }
     else if (body == PG_SEQ && p == 0) *v = (uint8_t)clamp((int32_t)*v + e, 40, 240);
@@ -577,7 +591,7 @@ static void beaver_black(int32_t b)
     case 1: if (pattern_paste(PAT)) { set_dirty = 1; app_say("PASTED", ""); } else app_say("NOTHING", "COPIED"); break;
     case 2: seq_clear_lane(PAT, set.focus); set_dirty = 1; app_say(ENG[set.focus]->name, "CLEARED"); break;
     case 3: seq.chain = (uint8_t)!seq.chain; seq.chain_pos = 0; set_dirty = 1; if (seq.chain) song_say(); else app_say("CHAIN", "OFF"); break;
-    case 4: gen_all(); break;
+    case 4: break;                                              /* SIGNAL: handled on the key's release */
     case 5: case 6: case 7: case 8: mute_toggle((uint8_t)(b - 5)); break;
     case 9: seq_gen(PAT, set.focus, ui.last_note, hop_chops()); set_dirty = 1; app_say(ENG[set.focus]->name, "NEW GROOVE"); break;
     case 10: solo_toggle(set.focus); break;
@@ -621,6 +635,7 @@ static void input(void)
                     set.song_len = 0; seq.chain_pos = 0; ui.chain_used = 1; set_dirty = 1; app_say("SONG", "CLEARED");
                 } else if (b == 3) { ui.chain_held = 1; ui.chain_used = 0; }
                 else if (b == 9) { ui.gen_held = 1; ui.step_edited = 0; }  /* GEN down: tap = a groove, GEN + K1-K3 = Euclid */
+                else if (b == 4) { ui.fill_t = now ? now : 1u; }           /* SIGNAL down: see the release */
                 else if (w >= 0) { ui.held_step = w + (int32_t)ui.steppage * 16; ui.step_edited = 0; }
                 else if (b >= 0) beaver_black(b);
                 ui.redraw = 1;
@@ -653,6 +668,11 @@ static void input(void)
             if (body == PG_MIX && scene_key(w) >= 0 && ui.key_t[k]) {  /* a scene key up: a hold stored it, a tap recalls it */
                 if (now - ui.key_t[k] >= 700u) scene_store((uint32_t)scene_key(w)); else scene_recall((uint32_t)scene_key(w));
                 ui.key_t[k] = 0;
+            }
+            if (body == PG_SEQ && b == 4 && ui.fill_t) {                /* SIGNAL up: a tap = a new signal; a hold was a fill, now undone */
+                if (ui.fill_on) { pattern_t *pp = PAT; *pp = ui.fill_keep; ui.fill_on = 0; app_say("FILL", "BACK"); }
+                else if (now - ui.fill_t < 350u) gen_all();
+                ui.fill_t = 0; ui.redraw = 1;
             }
             if (body == PG_SEQ && b == 9 && ui.gen_held) {             /* GEN up: a tap makes a groove, a hold with knobs already did */
                 ui.gen_held = 0;
@@ -718,6 +738,11 @@ static void input(void)
             if (rc == 0) { set_dirty = 0; app_say("SAVED", ""); } else app_say("SAVE", "FAILED");
         }
     }
+    if (ui.fill_t && !ui.fill_on && now - ui.fill_t >= 350u) {           /* a held SIGNAL: a fill on every being, kept until release */
+        uint32_t e; ui.fill_keep = *PAT; ui.fill_on = 1;
+        for (e = 0; e < NENG; e++) seq_fill(PAT, (uint8_t)e);
+        app_say("FILL", "HOLD"); ui.redraw = 1;
+    }
     if (ui.btn_t[B_REC]) {                                             /* REC: a press arms the focused track; a hold clears it */
         if (btn >> B_REC & 1u) {
             if (now - ui.btn_t[B_REC] >= 1000u) { ui.btn_t[B_REC] = 0; seq_clear_lane(PAT, set.focus); set_dirty = 1; app_say(ENG[set.focus]->name, "CLEARED"); }
@@ -741,9 +766,9 @@ static void input(void)
         if ((e = plat_enc((int)k)) == 0) continue;
         if (k >= EN_K1 && k < EN_K1 + NPARAM) knob(k - EN_K1, e);
         else if (k == EN_PRESET) {
-            if (body == PG_MIX) { set.mixpage = (uint8_t)((set.mixpage + 4u + (e > 0 ? 1u : 3u)) % 4u); ui.redraw = 1; app_say(body_name(), ""); }
+            if (body == PG_MIX) { set.mixpage = (uint8_t)((set.mixpage + 5u + (e > 0 ? 1u : 4u)) % 5u); ui.redraw = 1; app_say(body_name(), ""); }
             else if (body == PG_ENGINE) page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u)));
-            else if (body == PG_SEQ) { ui.shippage ^= 1u; ui.redraw = 1; app_say("SHIP", ui.shippage ? "LANE LENGTHS" : "PATTERN"); }
+            else if (body == PG_SEQ) { ui.shippage = (uint8_t)((ui.shippage + (e > 0 ? 1u : 2u)) % 3u); ui.redraw = 1; app_say("SHIP", ui.shippage == 1u ? "LANE LENGTHS" : ui.shippage == 2u ? "TRANSPOSE" : "PATTERN"); }
         } else if (k == EN_ALGO) {
             if (body == PG_SEQ) {
                 char t[2] = {'A', 0};
@@ -818,8 +843,46 @@ static void bar_h(int32_t x, int32_t y, int32_t bh, const char *name, int32_t v,
     if (!txt) { int_text(v, t); txt = t; }
     cv_text(x + (52 - text_w(&FONT_XS, txt)) / 2, y + bh + 15, &FONT_XS, txt, C_TXT);
 }
-#define bar(x, y, name, v, lo, hi, col, txt) bar_h(x, y, 56, name, v, lo, hi, col, txt)
 #define BX(i) (8 + (int32_t)(i) * 57)
+/* Alien Stack's parameter rows: the name, a horizontal stack of 12 segments, the value; four rows fill the page */
+#define ROW_Y(i) (30 + (int32_t)(i) * 18)
+/* a string cut to fit a width (the tiles' preset names) */
+static const char *fit_text(const char *s, const felucca_font_t *f, int32_t w, char *buf)
+{
+    uint32_t n = 0;
+    while (s[n] && n < 13u) { buf[n] = s[n]; buf[n + 1] = 0; if (text_w(f, buf) > w) { buf[n] = 0; break; } n++; }
+    return buf;
+}
+static void rowbar(int32_t i, const char *name, int32_t v, int32_t lo, int32_t hi, uint16_t col, const char *txt, int32_t meter_px)
+{
+    int32_t y = ROW_Y(i), k, lit = (v - lo) * 12 / (hi - lo), x0 = 74, segw = 9;
+    char t[8];
+    if (lit > 12) lit = 12;
+    if (lit < 0) lit = 0;
+    cv_rect(0, y, 240, 18, i & 1 ? rgb_mix(C_BG, 255, 255, 255, 6) : C_BG);
+    cv_text(8, y + 2, &FONT_XS, name, C_SUB);
+    for (k = 0; k < 12; k++) {
+        int32_t sx = x0 + k * segw;
+        if (k < lit) ui_fill(sx, y + 4, segw - 2, 9, k == lit - 1 ? shade(col, 60) : rgb_mix(col, 0, 0, 0, 36 - k * 3));
+        else cv_rect(sx, y + 4, segw - 2, 9, C_PANEL);
+    }
+    if (meter_px >= 0) cv_rect(x0, y + 14, meter_px > 106 ? 106 : meter_px, 2, C_TXT);      /* a meter under the stack */
+    if (!txt) { int_text(v, t); txt = t; }
+    cv_text(232 - text_w(&FONT_XS, txt), y + 2, &FONT_XS, txt, C_TXT);
+}
+static void rowpan(int32_t i, const char *name, int32_t v, uint16_t col)
+{
+    int32_t y = ROW_Y(i), c = 74 + 53, p = (v - 64) * 52 / 64;
+    char t[8];
+    cv_rect(0, y, 240, 18, i & 1 ? rgb_mix(C_BG, 255, 255, 255, 6) : C_BG);
+    cv_text(8, y + 2, &FONT_XS, name, C_SUB);
+    cv_rect(74, y + 4, 106, 9, C_PANEL);
+    cv_rect(c, y + 4, 1, 9, C_MUTED);
+    if (p >= 0) ui_fill(c, y + 4, p + 1, 9, col); else ui_fill(c + p, y + 4, -p + 1, 9, col);
+    if (v == 64) { t[0] = 'C'; t[1] = 0; } else { t[0] = v < 64 ? 'L' : 'R'; int_text(v < 64 ? 64 - v : v - 64, t + 1); }
+    cv_text(232 - text_w(&FONT_XS, t), y + 2, &FONT_XS, t, C_TXT);
+}
+#define bar(x, y, name, v, lo, hi, col, txt) rowbar(((x) - 8) / 57, name, v, lo, hi, col, txt, -1)
 
 static void pan_bar(int32_t x, int32_t y, const char *name, int32_t v, uint16_t col)
 {
@@ -922,17 +985,23 @@ static void draw(void)
             if (sw) { txt = v >= 64 ? "ON" : "OFF"; v = v >= 64 ? 127 : 0; }
             else if (set.focus == E_HOP && set.page[E_HOP] == 0u && i == 2u) { int_text(hop_chops(), t); txt = t; }
             else if (cur->param_text) txt = cur->param_text(set.page[set.focus], i, t);
-            if (hop_wave) bar_h(BX(i), 62, 34, nm, v, 0, 127, accent, txt);
-            else bar(BX(i), 34, nm, v, 0, 127, accent, txt);
+            rowbar((int32_t)i, nm, v, 0, 127, accent, txt, -1);
         }
-        if (set.focus == E_HOP && set.page[E_HOP] == 3u && hop_chop_mode()) {   /* the slice page: the slices as a grid */
-            uint32_t nc = (uint32_t)hop_chops(), c;
-            for (c = 0; c < 16u; c++) {
-                int32_t x = 8 + (int32_t)c * 14;
-                uint16_t col = c >= nc ? C_PANEL : (int)c == hop_last_slice() ? accent : hop_slice_active(c) ? C_TXT : ENG_DARK[3];
-                cv_rect(x, 108, 12, 14, col);
-                if (c < nc) { int_text((int32_t)c + 1, t); cv_text(x + (c < 9u ? 3 : 1), 109, &FONT_T, t, col == accent || col == C_TXT ? C_BG : C_SUB); }
+        if (set.focus == E_CAT) {                                      /* Mantis: the sixteen voices, the one you hit lit */
+            for (i = 0; i < 16u; i++) {
+                int32_t x = 4 + (int32_t)(i & 7u) * 29, y = 107 + (int32_t)(i >> 3) * 11;
+                int on = (int32_t)i == cat_last_pad();
+                if (on) cv_rect(x - 1, y - 1, 28, 10, accent);
+                cv_text(x, y, &FONT_T, cat_pad_name((int)i), on ? C_BG : C_MUTED);
             }
+        } else {                                                       /* a synth: where ALGO sits among the presets */
+            const char *pv = set.focus == E_OTTER ? otter_preset_name_at(-1) : set.focus == E_FOX ? fox_preset_name_at(-1) : greys_preset_name_at(-1);
+            const char *nx = set.focus == E_OTTER ? otter_preset_name_at(1) : set.focus == E_FOX ? fox_preset_name_at(1) : greys_preset_name_at(1);
+            const char *cu = set.focus == E_OTTER ? otter_preset_name() : set.focus == E_FOX ? fox_preset_name() : greys_preset_name_at(0);
+            cv_rect(0, 104, 240, 1, C_RULE);
+            cv_text(6, 112, &FONT_T, "<", C_MUTED); cv_text(14, 112, &FONT_T, pv, C_MUTED);
+            cv_text(120 - text_w(&FONT_XS, cu) / 2, 109, &FONT_XS, cu, accent);
+            cv_text(226 - text_w(&FONT_T, nx), 112, &FONT_T, nx, C_MUTED); cv_text(229, 112, &FONT_T, ">", C_MUTED);
         }
     } else if (body == PG_HOME) {
         {                                                              /* the mothership: a starfield behind the title */
@@ -950,7 +1019,7 @@ static void draw(void)
             ui_panel(x, y, 42, 100);
             icon_px(x + 3, y + 3, ICONS[i], 36, muted ? C_MUTED : ENG_RGB[i], C_PANEL);
             cv_text(x + (42 - text_w(&FONT_T, i < NENG ? ENG[i]->name : "SHIP")) / 2, y + 40, &FONT_T, i < NENG ? ENG[i]->name : "SHIP", muted ? C_MUTED : ENG_RGB[i]);
-            cv_text(x + 3, y + 52, &FONT_T, sub, C_SUB);
+            { char ft[14]; cv_text(x + 3, y + 52, &FONT_T, fit_text(sub, &FONT_T, 38, ft), C_SUB); }
             if (is_eng) {
                 int32_t m = (int32_t)(meter[i] * 30.0f); if (m > 30) m = 30;
                 cv_rect(x + 3, y + 64, 36, 4, C_RULE); cv_rect(x + 3, y + 64, set.level[i] * 36 / 127, 4, muted ? C_MUTED : ENG_RGB[i]);
@@ -1010,7 +1079,8 @@ static void draw(void)
                 uint8_t lk = LLOCK(&PAT->lane[set.focus], ui.held_step);
                 nm = page_names(set.focus, 0)[i];
                 if ((lk & 0x80u) && (lk >> 5 & 3u) == i) v = (int32_t)(lk & 31u) * 4 + 2; else { v = ENG[set.focus]->params[0][i]; txt = "-"; }
-            } else if (ui.shippage) { hi = NSTEP; if (!v) txt = "PAT"; }
+            } else if (ui.shippage == 2u) { int8_t tr = (int8_t)v; v = tr + 24; hi = 48; if (i == E_CAT) txt = "-"; else { t[0] = tr < 0 ? '-' : '+'; int_text(tr < 0 ? -tr : tr, t + 1); txt = t; } }
+            else if (ui.shippage) { hi = NSTEP; if (!v) txt = "PAT"; }
             else if (ui.held_step >= 0) {
                 if (i == 0) { if (set.focus == E_CAT) { int_text(cat_last_pad() + 1, t); txt = t; v = cat_last_pad() * 8; } else if (lane_rest(set.focus, (uint8_t)v)) { txt = "REST"; v = 0; } }
                 else if (i == 2) { uint32_t r = STEP_RAT((uint8_t)v); v = (int32_t)STEP_LEN((uint8_t)v); if (r) { t[0] = 'x'; t[1] = (char)('1' + r); t[2] = 0; txt = t; } else if (!v) txt = "GATE"; hi = 16; }
@@ -1021,7 +1091,8 @@ static void draw(void)
     } else {
         cv_text(8, 4, &FONT_B, body_name(), accent);
         cv_text(232 - text_w(&FONT_XS, "MUTE 1-4 SOLO 9-12 SCENES 5-8"), 8, &FONT_XS, "MUTE 1-4 SOLO 9-12 SCENES 5-8", C_SUB);
-        if (set.mixpage == 1u) { for (i = 0; i < NENG; i++) pan_bar(BX(i), 34, ENG[i]->name, set.pan[i], ENG_RGB[i]); }
+        if (set.mixpage == 1u) { for (i = 0; i < NENG; i++) rowpan((int32_t)i, ENG[i]->name, set.pan[i], ENG_RGB[i]); }
+        else if (set.mixpage == 4u) { for (i = 0; i < NENG; i++) rowbar((int32_t)i, ENG[i]->name, set.send[i], 0, 127, ENG_RGB[i], set.send[i] ? 0 : "DRY", -1); }
         else if (set.mixpage == 3u) {
             bar(BX(0), 34, "GLUE", set.glue, 0, 127, C_BRAND, set.glue ? 0 : "OFF");
             bar(BX(1), 34, "LOWEND", set.lowend, 0, 127, C_BRAND, set.lowend ? 0 : "FLAT");
@@ -1035,9 +1106,8 @@ static void draw(void)
             bar(BX(3), 34, "DTIME", set.delay_time, 0, 127, C_TXT, 0);
         } else for (i = 0; i < NENG; i++) {
             int muted = !lane_audible(PAT, (uint8_t)i);
-            int32_t m = (int32_t)(meter[i] * 52.0f); if (m > 52) m = 52;
-            bar(BX(i), 34, ENG[i]->name, set.level[i], 0, 127, muted ? C_MUTED : ENG_RGB[i], muted ? (seq.solo && !(seq.solo >> i & 1u) ? "-" : "MUTE") : seq.solo >> i & 1u ? "SOLO" : 0);
-            cv_rect(BX(i) + 48, 34 + 54 - m, 2, m, C_TXT);                         /* the meter */
+            int32_t m = (int32_t)(meter[i] * 106.0f);
+            rowbar((int32_t)i, ENG[i]->name, set.level[i], 0, 127, muted ? C_MUTED : ENG_RGB[i], muted ? (seq.solo && !(seq.solo >> i & 1u) ? "-" : "MUTE") : seq.solo >> i & 1u ? "SOLO" : 0, m);
         }
     }
     cv_blit(0, 36);
@@ -1067,7 +1137,7 @@ static void draw(void)
         if (body == PG_SEQ) { if (i <= 3u) c = C_SHIP; else if (i >= 5u && i <= 8u) c = (PAT->mute >> (i - 5u) & 1u) ? C_REC : ENG_DARK[i - 5u]; else if (i == 10u) c = seq.solo ? ENG_RGB[3] : C_RULE; else if (i == 4u || i == 9u) c = C_BRAND; if (ui.keys >> BK[i] & 1u) c = C_TXT; }
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 10, 11, 18, c);
     }
-    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "KEYS 1-6 JUMP  7 = NEW SIGNAL" : body == PG_SEQ ? "STEP+BEING=LOCK  GEN+K=EUCLID  OCT" : body == PG_MIX ? "SCENES: TAP / HOLD" : seq.stepin && !seq.playing ? "STEP ENTRY: KEYS WRITE  OCT+ REST" : "REC=STEP  ARP=NORDIC ARP  HOLD+K1", C_SUB);
+    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "KEYS 1-6 JUMP  7 = NEW SIGNAL" : body == PG_SEQ ? "STEP+BEING LOCK  GEN+K EUCLID" : body == PG_MIX ? "SCENES: TAP / HOLD" : seq.stepin && !seq.playing ? "STEP ENTRY: KEYS WRITE  OCT+ REST" : "REC=STEP  ARP=NORDIC ARP  HOLD+K1", C_SUB);
     int_text((int32_t)(plat_master() * 100u / 4096u), t); text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_TXT);
     if (body == PG_MIX) {                                              /* the mixer shows the audio load and any xruns */
@@ -1122,6 +1192,8 @@ int app_expect(const char *what, int *got)
     else if (!strcmp(what, "cat_hits")) { uint32_t i, c = 0; for (i = 0; i < NSTEP; i++) c += LMASK(&PAT->lane[E_CAT], i) != 0; *got = (int)c; }
     else if (!strcmp(what, "step_16on")) *got = seq_lane_has(PAT, set.focus, 16);
     else if (!strcmp(what, "steps")) *got = PAT->steps;
+    else if (!strcmp(what, "tr_rep")) *got = set.transpose[E_FOX];
+    else if (!strcmp(what, "fill")) *got = ui.fill_on;
     else if (!strcmp(what, "llen2")) *got = PAT->llen[2];
     else if (!strcmp(what, "fox_p0")) *got = ENG[E_FOX]->params[0][0];
     else if (!strcmp(what, "cursor")) *got = seq.cursor;
