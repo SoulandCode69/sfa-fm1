@@ -80,6 +80,7 @@ Rules: one unit at a time; never flash a build that hasn't run in fm1-emu/host s
 | 2026-11-07 | A | SFA v2..v6 | FM-1_5700 | groovebox, sound overhauls, Beaver. OK. v5 fixed a NaN-silence bug (Chamberlin SVF) |
 | 2026-11-08 | A | ECB Build 1 (v1.0 step 1) | FM-1_5700 | Earth Creature Beats: sample Cat, Fox 808, Hopper, Beaver 4 lanes, mixer |
 | 2026-11-08 | A | ECB Build 2 | FM-1_5700 | workflow: hold=mute, REC arms, step edit (hold+knobs), copy/paste/chain, mute/solo, new palette |
+| 2026-11-08 | A | ECB Build 8 | FM-1_5700 | the big one: 8 patterns (compact lanes, patterns E-H + 8 kits' pads in a 2nd store object OBJ_USER at 0xDE000), 16-slot song, 8 scenes on mixer keys 5-8/13-16, 5 sample kits (TECHNO + HOUSE new; kick/snare DSP: harmonic layer, beater, crack; LF sounds at 11.025 kHz) + 3 built kits (TRAP DNB HIPHOP via tools/vkits.py) = 96 samples 366 KB, Hopper sources on ALGO (BUILT-IN / OWN / user bank SFA2 up to 16 named samples via tools/sfa_sample.py, demo bank break/chord/vox), hold-to-mute removed; settings magic ECB5; 118 sim checks |
 | 2026-11-08 | A | ECB Build 7 | FM-1_5700 | TRAP kit (built from the pool: 808 kicks/toms, snap rim), Hopper sample -> transient chop -> slice page, Beaver ratchets x1-x4 (len byte bits 5-6) + 8-slot song chain, 64 Otter presets / 24 Fox basses (trim table re-measured: peaks -7.3..-2.7), settings magic ECB4 (resets saves); 104 sim checks |
 | 2026-11-08 | A | ECB Build 6 | FM-1_5700 | refinement: tools/audit.py sound audit (no harshness found: HF share <8% everywhere); Otter per-preset trim table (peak spread 24 -> 4.6 dB), Fox synth basses +3 dB, SNAP = highpassed tick, 808 CLICK = lowpassed knock, 808 default decay 105, master defaults eased (30/20/14), ARMED/REC/MUTED/STEP badge on engine pages |
 | 2026-11-08 | A | ECB Build 5 | FM-1_5700 | Cat PAD+ page (SAMPLE any of 64 per pad, PUNCH, SNAP, CRUSH; pads blob 512 B, settings magic ECB3 resets saves), Fox 808 CLICK+PUNCH, MASTER mixer page (GLUE, LOWEND, AIR, DRIVE), 48 Otter presets, 16 Fox basses, hold creature + K1/K2 = level/pan anywhere (mute now at 600 ms); 86 sim checks; beat peaks -1.5 dBFS, 0 clipped |
@@ -163,3 +164,7 @@ Sound audit (tools/audit.py): every Otter preset played as a 3-note chord for 1 
 peak / RMS / crest / share of energy above 5 kHz. Rerun after any engine change: `python3 tools/audit.py gen`,
 the two scripts in the simulator, `python3 tools/audit.py report`. Build 6 numbers: Otter peaks -7.2..-2.6 dBFS,
 Fox RMS spread 7.4 dB, HF share under 8% on all 80 sounds.
+
+Build 8 image size: not measured here (no toolchain in the cloud container); Build 7 was 511748 B of 581564 with
+349 KB of samples, Build 8 has 366 KB plus ~6 KB of code, so about 535 KB expected. The build's own check refuses an
+image over the slot.

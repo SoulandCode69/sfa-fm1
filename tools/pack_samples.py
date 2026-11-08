@@ -66,10 +66,11 @@ def main():
     data = bytearray(); table = []; kit_tab = []
     for kit in kits:
         is808 = kit.name.lower() == "808"
-        rate = 11025 if is808 else 22050
         files = sorted(kit.glob("*.wav"))[:16]
         first = len(table)
         for f in files:
+            low = is808 or any(k in f.stem.lower() for k in ("kick", "boom", "tom", "conga", "bongo", "tabla", "subdrop", "tek", "impact", "stab"))
+            rate = 11025 if low else 22050               # low sounds at 11.025 kHz: half the flash, nothing lost
             pcm = load(f, rate)
             m = re.search(r"_r(\d+)", f.stem); rootn = int(m.group(1)) if m else 36
             name = re.sub(r"^\d+_", "", f.stem); name = re.sub(r"_r\d+$", "", name)[:12].upper()

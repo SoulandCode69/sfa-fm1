@@ -102,6 +102,13 @@ wait 500
 wavstop
 spin ALGO 1
 wait 30
+expect kit 4
+shot cat_techno.png
+spin ALGO 1
+wait 30
+expect kit 5
+spin ALGO 3
+wait 30
 expect kit 0
 # Otter: a chord, presets
 tap FX
@@ -267,14 +274,9 @@ expect armed 0
 wait 600
 wavstop
 shot beaver_playing.png
-# hold the Cat button: mute
+# a long hold of the Cat button does nothing (no mute, no page flip)
 press SEL
-wait 600
-release SEL
-wait 30
-expect mute 2
-press SEL
-wait 600
+wait 700
 release SEL
 wait 30
 expect mute 0
@@ -336,7 +338,7 @@ expect playing 0
 tap SAVE
 wait 30
 expect dirty 0
-expect store_writes 1
+expect store_writes 2
 reboot
 wait 600
 expect bpm 120
@@ -479,3 +481,44 @@ expect hop_rec 0
 expect page 3
 expect focus 3
 shot hopper_sampled_slices.png
+# Build 8: 8 patterns, scenes on the mixer keys (hold = store, tap = recall)
+tap HOME
+wait 50
+tapkey w5
+wait 50
+expect body 2
+expect mixpage 0
+key w4 down
+wait 900
+key w4 up
+wait 50
+expect scene0 1
+tapkey w0
+wait 50
+expect mute 1
+tapkey w4
+wait 50
+expect mute 0
+shot mixer_scenes.png
+tap SEQ
+wait 50
+spin ALGO 5
+wait 50
+expect pattern 6
+spin ALGO -5
+wait 50
+expect pattern 1
+# Build 8: Hopper sources on ALGO: BUILT-IN, OWN, then the user bank (break, chord, vox)
+tap HOME
+wait 50
+tapkey w3
+wait 50
+expect focus 3
+spin ALGO 1
+wait 200
+shot hopper_source.png
+expect hop_secs 20
+tapkey w0
+wait 400
+tap HOME
+wait 50

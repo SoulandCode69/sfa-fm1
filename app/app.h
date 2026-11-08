@@ -11,11 +11,11 @@
 #define APP_TOUCH                        /* velocity from the keys (lib/touch.h) */
 
 /* the store: settings, the panel calibration (the platform's) */
-enum { OBJ_SETTINGS, OBJ_PANEL, OBJ_NOBJ };
-#define APP_STORE_MAP {0xFC000u, 0xDC000u}
+enum { OBJ_SETTINGS, OBJ_PANEL, OBJ_USER, OBJ_NOBJ };   /* OBJ_USER: patterns E-H and the kits' pads */
+#define APP_STORE_MAP {0xFC000u, 0xDC000u, 0xDE000u}
 
 /* backup and restore over USB (device/backup.c): the settings */
-#define APP_BACKUP_OBJS {OBJ_SETTINGS}
+#define APP_BACKUP_OBJS {OBJ_SETTINGS, OBJ_USER}
 #define APP_BACKUP_MAGIC 0x31414653u     /* "SFA1" */
 #define APP_BACKUP_VERSION 1
 #define APP_BACKUP_WHAT "replaces the settings"

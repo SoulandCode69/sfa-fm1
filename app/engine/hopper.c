@@ -143,27 +143,77 @@ int hop_save(void)                       /* main loop: write the bank to the app
     return 0;
 }
 
-static int load_res(void)
+/* the user bank in the resource region (tools/sfa_sample.py): "SFA1" + len24 + PCM = one sample, or
+ * "SFA2" + count + 3 pad + count x { off u32, len u32, name[12] } + PCM = up to 16 named samples, all 22.05 kHz 16-bit */
+static uint32_t u32(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
+static uint32_t res_count(void)
 {
-    uint32_t rlen = 0, len, i;
+    uint32_t rlen = 0; const uint8_t *h = plat_res(&rlen);
+    if (!h || rlen < 8u || h[0] != 'S' || h[1] != 'F' || h[2] != 'A') return 0;
+    if (h[3] == '1') return 1;
+    if (h[3] == '2') return h[4] > 16u ? 16u : h[4];
+    return 0;
+}
+static const char *res_name(uint32_t i, char *buf)
+{
+    uint32_t rlen = 0; const uint8_t *h = plat_res(&rlen);
+    if (!h || h[3] != '2' || i >= res_count()) return "USER";
+    { uint32_t k; const uint8_t *e = h + 8u + i * 20u; for (k = 0; k < 12u && e[8 + k]; k++) buf[k] = (char)e[8 + k]; buf[k] = 0; }
+    return buf;
+}
+static int load_res(uint32_t which)
+{
+    uint32_t rlen = 0, len, i, off;
     const uint8_t *hdr = plat_res(&rlen);
     const int16_t *src;
-    if (!hdr || rlen < 8u || hdr[0] != 'S' || hdr[1] != 'F' || hdr[2] != 'A' || hdr[3] != '1') return 0;
-    len = (uint32_t)hdr[4] | (uint32_t)hdr[5] << 8 | (uint32_t)hdr[6] << 16;
-    src = (const int16_t *)(hdr + 8);
+    if (!hdr || rlen < 8u || hdr[0] != 'S' || hdr[1] != 'F' || hdr[2] != 'A') return 0;
+    if (hdr[3] == '1') { len = (uint32_t)hdr[4] | (uint32_t)hdr[5] << 8 | (uint32_t)hdr[6] << 16; off = 8u; }
+    else if (hdr[3] == '2') {
+        const uint8_t *e;
+        if (which >= res_count()) return 0;
+        e = hdr + 8u + which * 20u; off = u32(e); len = u32(e + 4);
+    } else return 0;
     if (len > BANK_MAX) len = BANK_MAX;
-    if (!len || len * 2u + 8u > rlen) return 0;
+    if (!len || off + len * 2u > rlen || off & 1u) return 0;
+    src = (const int16_t *)(hdr + off);
     for (i = 0; i < len; i++) bank[i] = src[i];
     bank_len = len;
     return 1;
 }
+static uint8_t source;                      /* 0 built-in, 1 own, 2.. the user bank's samples */
+static uint32_t sources(void) { return 2u + res_count(); }
+static int load_source(uint32_t s)
+{
+    if (s == 0u) { gen_builtin(); return 1; }
+    if (s == 1u) return load_own();
+    return load_res(s - 2u);
+}
+/* the app: ALGO browses the sources; loads it and chops it afresh */
+const char *hop_source_name(char *buf)
+{
+    if (source == 0u) return "BUILT-IN";
+    if (source == 1u) return "OWN";
+    return res_name(source - 2u, buf);
+}
+int hop_source(int32_t step)
+{
+    uint32_t n = sources(), tries = n;
+    while (tries--) {
+        source = (uint8_t)(((int32_t)source + step + (int32_t)n) % (int32_t)n);
+        if (load_source(source)) { nslice_pt = 0; return 1; }
+        if (step == 0) step = 1;
+    }
+    return 0;
+}
+int hop_source_index(void) { return source; }
+void hop_source_set(int s) { source = (uint8_t)s; if (!load_source(source)) { source = 0; gen_builtin(); } nslice_pt = 0; }
 
 static void f_init(void)
 {
     uint32_t i;
     for (i = 0; i < NV; i++) v[i].on = 0;
     rec_on = 0;
-        if (!load_own() && !load_res()) gen_builtin();
+    if (load_own()) source = 1; else if (load_res(0)) source = 2; else { gen_builtin(); source = 0; }
     {   /* a silent bank (a bad transfer, an empty region) is no use: the built-in one instead */
         int32_t pk = 0;
         for (i = 0; i < bank_len; i += 7u) { int32_t a = bank[i] < 0 ? -bank[i] : bank[i]; if (a > pk) pk = a; }
@@ -227,7 +277,7 @@ void hop_record_stop(void)
 {
     if (!rec_on) return;
     rec_on = 0;
-    if (rec_pos > 2205u) { bank_len = rec_pos; own_dirty = 1; nslice_pt = 0; }       /* at least 0.1 s, else keep the old bank */
+    if (rec_pos > 2205u) { bank_len = rec_pos; own_dirty = 1; nslice_pt = 0; source = 1; }   /* at least 0.1 s, else keep the old bank */
 }
 void hop_record_feed(const float *mix, uint32_t n)                    /* audio irq: the master mix, halved in rate */
 {

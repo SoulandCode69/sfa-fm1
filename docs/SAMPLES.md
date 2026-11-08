@@ -16,3 +16,8 @@ to a production standard. Drop any licensed pack into `assets/pack/<KIT>/` (16 W
 Packed as IMA ADPCM 4-bit into the firmware image (`app/samples_data.c`, ~350 KB), decoded as they play; every
 sample normalised to -1 dBFS, trailing silence trimmed. Hopper's bank (user samples) lives in the flash data area
 instead, written by SAMPLE + SAVE or `tools/sfa_sample.py`.
+
+## Build 8
+Two more kits, TECHNO and HOUSE, rendered by tools/render_pack.py like the others (original synthesis, CC0). The
+built kits TRAP, DNB and HIPHOP use no new audio: tools/vkits.py assembles them from the pool by name. The demo user
+bank (assets/user: a one-bar break built from the HOUSE kit, a chord stab, a vowel sweep) is tools/demo_bank.py, CC0.
