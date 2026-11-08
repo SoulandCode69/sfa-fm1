@@ -98,7 +98,8 @@ def skin(html, active, depth=1):
         html = html[:m.end()] + '<div style="max-width:1100px;margin:0 auto;padding:0 16px">' + nav(active, depth) + "</div>" + html[m.end():]
     return html
 
-def landing(version, pkg_name, has_install=True):
+def landing(version, pkg_name, has_install=True, title=None):
+    if title == "VISITORS": return landing_visitors(version, pkg_name, has_install)
     cards = "".join(f'''
       <article class="card" style="--c:{COLORS[n]}">
         <div class="art">{svg(n, 120)}</div>
@@ -205,3 +206,36 @@ h1 {{ margin: 10px 0 6px; }} p {{ color: var(--muted); }}
 <h2>Flashing</h2><p>In the Claude session's workflow: <code>wsl -d Ubuntu -e bash -lc "cd ~/sfa-fm1 &amp;&amp; git pull &amp;&amp; tools/go.sh"</code> with the FM-1 alone on USB.
 From this site: <a href="install/">Install</a> works in Chrome or Edge over Web MIDI. Your own samples: <code>python3 tools/sfa_sample.py mydir/</code>, then flash.</p>
 </div></body></html>'''
+
+def landing_visitors(version, pkg_name, has_install=True):
+    """VISITORS' front page: the same bones, a cosmic skin, the beings named (their art comes with the visitors site pass)"""
+    beings = [("NORDICS", "Poly synth", "#ffd86a", "A 4-voice polysynth of pads, choirs, leads and arps."),
+              ("MANTIS", "Drum synth", "#38e0c0", "Sixteen synthesized drum voices, eight kits, every voice shaped per pad. No samples."),
+              ("REPTILES", "Bass & lead", "#58ff7a", "Sixteen chromatic alien one-shots: growls, folded subs, lasers, vowels; plus 24 synth basses."),
+              ("GREYS", "Sampler", "#c8d0e8", "Sample the output or load your own; chop by transients; play the slices. Drone, transmission, sweep and choir on board."),
+              ("SHIP", "Sequencer", "#c05cff", "8 patterns, scenes, a 16-slot song, ratchets, probability, groove generators, step entry and live record.")]
+    cards = "".join(f'<article class="card" style="--c:{c}"><h3><span>{n}</span> {r}</h3><p>{b}</p></article>' for n, r, c, b in beings)
+    install = (f'<a class="btn primary" href="install/">Install on your FM-1</a>' if has_install else "") + f'<a class="btn" href="firmware/{pkg_name}">Download {pkg_name}</a>'
+    return f"""<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISITORS</title><style>{THEME_CSS}
+:root {{ --ground: #07071a; --accent: #ff3ef0; --card: #1c1838; --rule: #3e366e; }}
+body {{ margin: 0; padding: 0 16px 60px; background: radial-gradient(900px 500px at 70% -10%, #2a1a5a 0%, #07071a 60%) fixed, #07071a; }}
+.wrap {{ max-width: 1100px; margin: 0 auto; }} h1 {{ font-size: clamp(40px, 7vw, 76px); line-height: .95; margin: 30px 0 12px; }} h1 em {{ font-style: normal; color: var(--accent); }}
+p.lead {{ font-size: 19px; color: var(--muted); max-width: 60ch; }}
+.actions {{ display: flex; gap: 12px; flex-wrap: wrap; margin: 22px 0; }}
+.btn {{ display: inline-block; padding: 12px 18px; border-radius: 12px; border: 1px solid var(--rule); color: var(--ink); text-decoration: none; font-weight: 700; background: var(--card); }}
+.btn.primary {{ background: var(--accent); border-color: var(--accent); color: #1a0a18; }}
+.grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 30px 0; }}
+.card {{ background: linear-gradient(180deg, #241e48, #171334); border: 1px solid var(--rule); border-top: 3px solid var(--c); border-radius: 18px; padding: 18px; }}
+.card h3 {{ margin: 0 0 8px; font-size: 16px; }} .card h3 span {{ color: var(--c); margin-right: 6px; }} .card p {{ color: var(--muted); font-size: 14px; line-height: 1.45; margin: 0; }}
+footer {{ color: var(--muted); font-size: 13px; margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 14px; }}
+</style></head><body><div class="wrap">
+<h1>They came for the <em>low end.</em></h1>
+<p class="lead">VISITORS is a second firmware for the M-VAVE FM-1 from the people behind Earth Creature Beats: a synthesized
+drum machine, an alien bass bank, a polysynth, a sampler that samples itself, and a ship that sequences them all, with
+scenes and a song. Same hardware, another world.</p>
+<div class="actions">{install}<a class="btn" href="quickstart.html">Quick start</a><a class="btn" href="mirror/">Open the mirror</a></div>
+<p style="color:var(--muted);font-size:13px">Version {version} · for the FM-1 · built on fm1-base · all audio original, CC0</p>
+<section class="grid">{cards}</section>
+<footer>VISITORS by Sin Fetish Audio · GPL-3.0 (the app) on fm1-base (MPL-2.0) · not affiliated with M-VAVE. One firmware per unit.</footer>
+</div></body></html>"""

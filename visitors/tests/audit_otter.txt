@@ -1,0 +1,648 @@
+wait 600
+master 4096
+tap HOME
+wait 50
+tap FX
+wait 100
+wav audit_otter.wav
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+wavstop

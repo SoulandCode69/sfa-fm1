@@ -1,0 +1,25 @@
+# VISITORS build settings (fm1-base tools/build.py)
+name = "VIS"
+id_prefix = "FM-1_58"          # VISITORS: dev FM-1_5800
+usb_manufacturer = "Sin Fetish Audio"
+usb_product = "VISITORS"
+o2 = ["engine/*.c", "samples_data.c"]   # the engines at -O2, the factory samples
+words = "words.tsv"
+ble = false                    # no radio for now: smallest, fastest build; USB MIDI + USB audio stay on
+mirror = true
+cpu2 = true                    # the second core renders Nordics and Reptilians
+cpu2_fallback = true           # one core after any failure, no restart
+cpu2_stack = 4096              # (mirror: the screen and panel live in Chrome too: site/mirror, tools/fm1_mirror.py)
+backup = true                  # settings backup/restore over USB (needed by resources)
+resources = "samples.bin"      # the Greys' user sample bank: tools/sfa_sample.py
+resources_what = "the Greys sample bank"
+tagline = "VISITORS: Greys, Reptilians, Nordics, Mantis and the Ship"
+repo = "https://github.com/sinfetishaudio/sfa-fm1"
+licence = "GPL-3.0-only"
+credits = "Built on fm1-base by Charles Vestal and felucca-bsp from Felucca by Leo Kuroshita (Hügelton Instruments)."
+author = "Sin Fetish Audio"
+description = "Five visitors in one groovebox: Nordics (poly synth), Mantis (synthesized drums), Reptilians (bass and lead), Greys (sampler, granular to come), and the Ship (sequencer with scenes and a song). MIDI channels 1-4 play Nordics, Mantis, Reptilians, Greys."
+tags = ["groovebox", "drum-machine", "synth", "sampler", "sequencer", "experimental"]
+install = "https://sinfetishaudio.github.io/sfa-fm1/visitors/install/"
+site = "https://sinfetishaudio.github.io/sfa-fm1/visitors/"
+screenshot = "docs/img/screen.png"

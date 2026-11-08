@@ -6,6 +6,8 @@
 # Needs: the toolchain and SDK (README), Windows Python with mido + python-rtmidi (the installer runs on Windows:
 # WSL has no USB MIDI), Chrome or Edge. The mirror page is served from WSL at http://localhost:8577/mirror/.
 set -e
+APP="${1:-app}"                                              # which firmware: app (ECB, default) or visitors (VISITORS)
+case "$APP" in app|visitors) ;; *) echo "usage: tools/go.sh [app|visitors]"; exit 2;; esac
 cd "$(dirname "$0")/.."
 PORT=8577
 # the toolchain and SDK, wherever the README put them (a non-interactive shell skips ~/.bashrc)
@@ -14,21 +16,21 @@ PORT=8577
 for a in "$@"; do case "$a" in --pull) git pull --recurse-submodules;; --no-flash) NOFLASH=1;; esac; done
 
 echo "== build"
-python3 base/tools/build.py app
+python3 base/tools/build.py "$APP"
 python3 tools/make_pages.py app/build/site >/dev/null
 
 if [ -z "$NOFLASH" ]; then
     echo "== install (Windows Python; the FM-1 on USB; close the hub / mirror tabs first)"
     WPY=$(command -v python.exe || true)
     if [ -z "$WPY" ]; then echo "python.exe not found: install Python on Windows (winget install Python.Python.3.12)"; exit 1; fi
-    rm -f app/build/sfa.fwsc                                # (an old SFA package must never be flashed again)
-    PKG=$(ls -t app/build/*.fwsc | head -1)                 # the package this build just wrote (ECB.fwsc)
+    rm -f "$APP"/build/sfa.fwsc                                # (an old SFA package must never be flashed again)
+    PKG=$(ls -t "$APP"/build/*.fwsc | head -1)                 # the package this build just wrote (ECB.fwsc)
     echo "== package: $PKG ($(date -r "$PKG" +%H:%M:%S))"
     "$WPY" "$(wslpath -w "$PWD/base/tools/fm1_install.py")" "$(wslpath -w "$PWD/$PKG")" --yes
 fi
 
 echo "== release package (dist/)"
-python3 tools/release.py || echo "release: skipped"
+python3 tools/release.py --app "$APP" || echo "release: skipped"
 
 echo "== laptop UI"
 if ! (ss -ltn 2>/dev/null | grep -q ":$PORT "); then

@@ -18,8 +18,10 @@ import ecb_site   # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", default=None)
+    ap.add_argument("--app", default="app", help="app (ECB) or visitors (VISITORS)")
     a = ap.parse_args()
-    app, build = ROOT / "app", ROOT / "app" / "build"
+    app, build = ROOT / a.app, ROOT / a.app / "build"
+    slug = "ecb" if a.app == "app" else a.app
     conf = make_site.read_conf(app / "fm1.toml")
     pkgs = sorted(build.glob("*.fwsc"), key=lambda p: p.stat().st_mtime)
     if not pkgs: sys.exit("no app/build/*.fwsc: run tools/go.sh (or base/tools/build.py app) first")
@@ -28,13 +30,13 @@ def main():
     version = a.version or fw.get("version") or "dev"
     raw = pkg.read_bytes()
     product = make_site.product_of(raw)
-    out = ROOT / "dist" / f"ecb-{version}"
+    out = ROOT / "dist" / f"{slug}-{version}"
     if out.exists(): shutil.rmtree(out)
     (out / "firmware").mkdir(parents=True); (out / "install").mkdir()
-    name = f"ecb-{version}.fwsc"
+    name = f"{slug}-{version}.fwsc"
     shutil.copy(pkg, out / "firmware" / name)
     res_src = build / f"{pkg.stem}-res.bin"
-    res_name = f"ecb-{version}-res.bin"
+    res_name = f"{slug}-{version}-res.bin"
     if res_src.exists(): shutil.copy(res_src, out / "firmware" / res_name)
     if (build / "firmware.json").exists(): shutil.copy(build / "firmware.json", out / "firmware" / "firmware.json")
     # m-bootloader, offered by the installer, with its licence; the other licences beside the package
@@ -62,15 +64,15 @@ def main():
         (out / rel).parent.mkdir(parents=True, exist_ok=True)
         (out / rel).write_text(ecb_site.skin(h, rel.split("/")[0], 1), encoding="utf-8")
     if (app / "web" / "words").is_dir(): shutil.copytree(app / "web" / "words", out / "words")
-    (out / "index.html").write_text(ecb_site.landing(version, name), encoding="utf-8")
+    (out / "index.html").write_text(ecb_site.landing(version, name) if a.app == "app" else ecb_site.landing(version, name, title="VISITORS"), encoding="utf-8")
     (out / "quickstart.html").write_text(ecb_site.quickstart(), encoding="utf-8")
     # the zip: the site plus the docs and the sample tool
-    z = ROOT / "dist" / f"EarthCreatureBeats-{version}.zip"
+    z = ROOT / "dist" / f"{"EarthCreatureBeats" if a.app == "app" else "Visitors"}-{version}.zip"
     with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in out.rglob("*"):
-            if p.is_file(): zf.write(p, f"EarthCreatureBeats-{version}/site/{p.relative_to(out)}")
+            if p.is_file(): zf.write(p, f"{z.stem}/site/{p.relative_to(out)}")
         for p in [ROOT / "README.md", ROOT / "tools" / "sfa_sample.py", *sorted((ROOT / "docs").glob("*.md"))]:
-            zf.write(p, f"EarthCreatureBeats-{version}/{p.relative_to(ROOT)}")
+            zf.write(p, f"{z.stem}/{p.relative_to(ROOT)}")
     print(f"{out}  ({product}, {len(raw)} B)\n{z}  ({z.stat().st_size // 1024} KB)")
 
 if __name__ == "__main__":

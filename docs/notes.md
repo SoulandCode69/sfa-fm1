@@ -174,3 +174,9 @@ image over the slot.
 landing + quick start, a skin for fm1-base's mirror / backup / installer pages), tools/make_pages.py uses it for the
 local pages, tools/release.py builds dist/ecb-<version>/ + a zip from a finished build; go.sh runs it after the build.
 The resource bank fix: 64 bytes of room for the 32-byte commit record.
+
+## VISITORS
+
+| date | unit | build | identity | notes |
+|---|---|---|---|---|
+| 2026-11-08 | (the new unit) | VIS Build 1 | FM-1_5800 | scaffold from ECB: cosmic palette, five alien icons (Nordic, Mantis, Reptilian, Grey, Ship), starfield HOME; MANTIS synthesized drum engine (16 voices, 8 kits); REPTILE bank 16 one-shots (82 KB); Greys default bank (drone, transmission, sweep, choir); tools: go.sh [app|visitors], release.py --app, render_visitors.py; 118 sim checks pass |

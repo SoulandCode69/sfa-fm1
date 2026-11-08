@@ -65,7 +65,7 @@ def main():
     kits = sorted(p for p in a.pack.iterdir() if p.is_dir())
     data = bytearray(); table = []; kit_tab = []
     for kit in kits:
-        is808 = kit.name.lower() == "808"
+        is808 = kit.name.lower() in ("808", "reptile")      # the chromatic bass bank
         files = sorted(kit.glob("*.wav"))[:16]
         first = len(table)
         for f in files:
