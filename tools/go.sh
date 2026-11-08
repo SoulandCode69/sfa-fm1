@@ -27,6 +27,9 @@ if [ -z "$NOFLASH" ]; then
     "$WPY" "$(wslpath -w "$PWD/base/tools/fm1_install.py")" "$(wslpath -w "$PWD/$PKG")" --yes
 fi
 
+echo "== release package (dist/)"
+python3 tools/release.py || echo "release: skipped"
+
 echo "== laptop UI"
 if ! (ss -ltn 2>/dev/null | grep -q ":$PORT "); then
     nohup python3 -m http.server "$PORT" --bind 127.0.0.1 --directory app/build/site >/dev/null 2>&1 &

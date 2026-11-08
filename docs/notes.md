@@ -168,3 +168,8 @@ Fox RMS spread 7.4 dB, HF share under 8% on all 80 sounds.
 Build 8 image size: not measured here (no toolchain in the cloud container); Build 7 was 511748 B of 581564 with
 349 KB of samples, Build 8 has 366 KB plus ~6 KB of code, so about 535 KB expected. The build's own check refuses an
 image over the slot.
+
+2026-11-08 — web look and distribution: tools/ecb_site.py (the creatures as SVG from icons.c's shapes, the theme,
+landing + quick start, a skin for fm1-base's mirror / backup / installer pages), tools/make_pages.py uses it for the
+local pages, tools/release.py builds dist/ecb-<version>/ + a zip from a finished build; go.sh runs it after the build.
+The resource bank fix: 64 bytes of room for the 32-byte commit record.

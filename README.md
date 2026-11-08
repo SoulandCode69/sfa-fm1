@@ -32,6 +32,15 @@ installer flashes with the firmware; Hopper's ALGO reaches them by name. The fac
 tools/pack_samples.py → tools/vkits.py (the built kits, by sample name).
 Sound audit: tools/audit.py (every preset measured in the simulator). Samples: docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
 
+## Distribution
+
+`tools/go.sh` (or `python3 tools/release.py` after any build) writes `dist/ecb-<version>/`, a static site in ECB's
+look: the landing page, **install/** (the web installer: Chrome or Edge over Web MIDI, with the FM-1 on USB),
+**firmware/** (the .fwsc, the user sample bank, firmware.json, licences), **mirror/**, **backup/** and the quick
+start; and `dist/EarthCreatureBeats-<version>.zip` with the site, README, docs and tools/sfa_sample.py. Serve the
+folder from anywhere static (GitHub Pages, or `python3 -m http.server` beside it); Web MIDI needs https or localhost.
+The laptop pages at http://localhost:8577/ share the same look.
+
 ## Everyday loop (WSL/Ubuntu)
 ```
 tools/go.sh            # build -> flash Unit A -> write the sample bank -> open the laptop UI in Chrome
