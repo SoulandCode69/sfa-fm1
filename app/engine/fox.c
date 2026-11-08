@@ -104,7 +104,7 @@ static void e8_render(float *out, uint32_t n)
 {
     uint32_t i;
     float filt = p01(par1[0]), dec = p01(par1[1]), glide = par1[2] ? 0.03f * fm_exp2f(-p01(par1[2]) * 6.0f) : 1.0f;
-    float drive = p01(par1[3]), dgain = 1.0f + drive * drive * 5.0f, dnorm = drive > 0.0f ? 1.0f / fm_tanhf(dgain * 0.7f) : 1.0f;
+    float drive = p01(par1[3]), dgain = 1.0f + drive * drive * 5.0f, dnorm = drive > 0.0f ? 1.0f / fm_soft(dgain * 0.7f) : 1.0f;
     float att = par2[0] ? 1.0f / ((0.002f + p01(par2[0]) * 0.3f) * SR) : 1.0f, rel = decay_coef(0.004f + p01(par2[1]) * 0.6f);
     float sub = p01(par2[2]) * 0.6f, penv = p01(par2[3]) * 1.5f, tone = p01(par3[0]);
     float dcoef = dec >= 0.99f ? 1.0f : decay_coef(0.02f + dec * dec * 1.5f);
@@ -126,7 +126,7 @@ static void e8_render(float *out, uint32_t n)
         if (e8.gate) { if (e8.aenv < 1.0f) { e8.aenv += att; if (e8.aenv > 1.0f) e8.aenv = 1.0f; } } else e8.aenv *= rel;
         e8.env *= dcoef;
         x *= e8.env * e8.aenv;
-        if (drive > 0.0f) x = fm_tanhf(x * 0.7f * dgain) * dnorm;
+        if (drive > 0.0f) x = fm_soft(x * 0.7f * dgain) * dnorm;
         out[i] += x * 1.1f;
         if ((adpcm_done(&e8.a) && sub <= 0.0f) || e8.aenv < 0.0005f || e8.env < 0.0005f) { e8.on = 0; break; }
     }
@@ -162,7 +162,7 @@ static void bass_render(float *out, uint32_t n)
     uint32_t i;
     float cut = p01(par1[0]), res = p01(par1[1]) * 0.97f, envmod = p01(par1[2]), dec = decay_coef(0.03f + p01(par1[3]) * p01(par1[3]) * 2.0f);
     int sqr = par2[0] >= 64; float sub = p01(par2[1]) * 0.8f, glide = par2[2] ? 0.03f * fm_exp2f(-p01(par2[2]) * 6.0f) : 1.0f;
-    float drive = 1.0f + p01(par2[3]) * p01(par2[3]) * 8.0f, dnorm = 1.0f / fm_tanhf(drive * 0.7f);
+    float drive = 1.0f + p01(par2[3]) * p01(par2[3]) * 8.0f, dnorm = 1.0f / fm_soft(drive * 0.7f);
     float lfo_inc = (0.2f + p01(par3[0]) * p01(par3[0]) * 14.0f) / SR, wob = p01(par3[1]), acc = p01(par3[2]);
     float rel = decay_coef(0.005f + p01(par3[3]) * 0.4f);
     float lfo, dt, dts, fbase, accg = bs.accent ? 1.0f + acc : 1.0f;
@@ -184,7 +184,7 @@ static void bass_render(float *out, uint32_t n)
         o = o * 0.8f + fm_sinf(bs.phs * 6.2831853f) * sub;
         if ((i & 15u) == 0u) svf_coef(&fc, fbase * (1.0f + envmod * envmod * 24.0f * bs.env * accg), res);
         s = svf_lp(&bs.flt, &fc, o);
-        s = fm_tanhf(s * (1.0f + res * 0.8f) * 0.7f * drive) * dnorm;
+        s = fm_soft(s * (1.0f + res * 0.8f) * 0.7f * drive) * dnorm;
         out[i] += s * bs.aenv * (bs.accent ? 1.0f + acc * 0.4f : 1.0f) * 0.42f;
     }
     if (!bs.gate && bs.aenv < 0.0005f) bs.flt.ic1 = bs.flt.ic2 = 0;

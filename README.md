@@ -16,7 +16,15 @@ REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = m
 keys 1-4 mute, 9-12 solo). **HOME = the home screen**: the five creatures as tiles (preset / kit / level / meter /
 REC / MUTE), white keys 1-5 jump straight to one, K1-K4 are the four track levels. The device boots there.
 Every engine page shows its title (OTTER · ENVELOPE, HOPPER · SLICE) and the header shows patterns A-D with the
-live one lit. SAVE keeps everything. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
+live one lit. SAVE keeps everything.
+
+**Making a beat fast**: HOME key 7 (or BEAT on the Beaver's black keys) writes a fresh groove on all four tracks and
+plays it; GEN rewrites the focused track only, a new one every press. **REC while stopped = step entry**: play the
+keys and each one lands on the next step of the focused track (OCT+ = a rest, OCT- = back); PLAY to hear it. While
+playing, REC arms the track for live record. The mixer shows the audio load (CPU %) and flags xruns.
+
+**Two FM-1s**: the installer flashes whichever FM-1 answers, so plug in Unit A alone when running tools/go.sh
+(or pass `--port` to base/tools/fm1_install.py). Unit B stays stock. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
 Samples: docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
 
 ## Everyday loop (WSL/Ubuntu)

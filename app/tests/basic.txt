@@ -321,3 +321,47 @@ wait 30
 expect focus 1
 midi 91 24 64
 wait 100
+# Build 4: step entry (REC while stopped), the groove generators, NEW BEAT from home
+expect playing 0
+tap ENV
+wait 50
+expect focus 2
+tap REC
+wait 50
+expect stepin 1
+expect cursor 0
+tapkey w0
+wait 60
+tapkey w2
+wait 60
+tap OCT+
+wait 30
+expect cursor 3
+tapkey w4
+wait 60
+expect cursor 4
+expect fox_steps 3
+tap REC
+wait 50
+expect stepin 0
+tap SEQ
+wait 50
+expect body 1
+tapkey b9
+wait 50
+shot beaver_gen.png
+tap HOME
+wait 50
+expect body 3
+wav beat.wav
+tapkey w6
+wait 4200
+expect playing 1
+shot home_beat.png
+wavstop
+tap SEL
+wait 100
+shot cat_beat.png
+tap PLAY
+wait 50
+expect playing 0

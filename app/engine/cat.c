@@ -52,7 +52,7 @@ void cat_sync(void)                                     /* main loop, every fram
 typedef struct { adpcm_t a; float env, dcoef, gain, inc; svf_t flt; svfc_t fc; uint8_t on, filt; } voice_t;
 static voice_t v[NPADS];
 static volatile uint8_t trig[NPADS], trig_vel[NPADS];
-static float comp_env, hp_x, hp_y;
+static float comp_env, comp_g = 1.0f, hp_x, hp_y;
 
 static void c_init(void) { uint32_t i; for (i = 0; i < NPADS; i++) v[i].on = 0; comp_env = 0; pad_view_load(); }
 static void c_panic(void) { c_init(); }
@@ -92,7 +92,7 @@ static void c_render(float *out, uint32_t n)
     float level = p01(par2[3]) * 1.1f;
     float hpc = lowcut > 0.0f ? 1.0f - fm_exp2f(-6.2831853f * (20.0f + lowcut * 200.0f) / SR) : 0.0f;
     float thr = 1.0f - comp * 0.7f, slope = comp * 0.75f, makeup = 1.0f + comp * 0.6f;
-    float dgain = 1.0f + drive * drive * 4.0f, dnorm = drive > 0.0f ? 1.0f / fm_tanhf(dgain * 0.7f) : 1.0f;
+    float dgain = 1.0f + drive * drive * 4.0f, dnorm = drive > 0.0f ? 1.0f / fm_soft(dgain * 0.7f) : 1.0f;
     for (p = 0; p < NPADS; p++)
         if (trig[p]) { trig[p] = 0; start(p, (float)trig_vel[p] * (1.0f / 127.0f)); }
     for (i = 0; i < n; i++) {
@@ -113,10 +113,11 @@ static void c_render(float *out, uint32_t n)
         {
             float a = fm_fabsf(s);
             comp_env += (a > comp_env ? 0.4f : 0.0002f) * (a - comp_env);
-            g = comp_env > thr ? fm_powf(comp_env / thr, -slope) : 1.0f;
+            if ((i & 7u) == 0u) comp_g = comp_env > thr ? fm_powf(comp_env / thr, -slope) : 1.0f;   /* the gain every 8 samples */
+            g = comp_g;
             s *= g * makeup;
         }
-        if (drive > 0.0f) s = fm_tanhf(s * 0.7f * dgain) * dnorm;
+        if (drive > 0.0f) s = fm_soft(s * 0.7f * dgain) * dnorm;
         s *= level;
         if (s > 1.5f) s = 1.5f - fm_tanhf(1.5f - s) * 0.0f; else if (s < -1.5f) s = -1.5f;   /* the ceiling (the master limits) */
         out[i] += s;

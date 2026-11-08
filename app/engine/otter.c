@@ -250,10 +250,10 @@ static void o_render(float *out, uint32_t n)
                 fhz = fbase * (0.2f + 0.8f * w->env) * (1.0f + fenv_amt * w->fenv);
                 svf_coef(&fc, fhz, sm_res * 0.98f);
             }
-            s = fm_tanhf(s * drive);
+            s = fm_soft(s * drive);
             f = svf_lp(&w->flt, &fc, s);
             if (sm_cut > 0.7f) f += s * (sm_cut - 0.7f) * 0.6f;      /* presence: some of the raw wave at high TONE */
-            out[i] += fm_tanhf(f * (0.9f + sm_res * 0.6f)) * w->env * vl * tilt * (wave == 4u ? 1.2f : 0.95f);
+            out[i] += fm_soft(f * (0.9f + sm_res * 0.6f)) * w->env * vl * tilt * (wave == 4u ? 1.2f : 0.95f);
         }
     }
 }

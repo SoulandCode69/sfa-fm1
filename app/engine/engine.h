@@ -53,6 +53,15 @@ static inline float svf_bp(svf_t *f, const svfc_t *c, float in)
     return v1;
 }
 
+/* a cheap soft clip (a Padé tanh: within 2% of tanh, no exp): for every per-sample saturation */
+static inline float fm_soft(float x)
+{
+    float x2;
+    if (x > 3.0f) x = 3.0f; else if (x < -3.0f) x = -3.0f;
+    x2 = x * x;
+    return x * (27.0f + x2) / (27.0f + 9.0f * x2);
+}
+
 /* seconds -> a per-sample multiplier that decays to 1/e in that time */
 static inline float decay_coef(float sec) { return fm_exp2f(-1.4427f / (sec * SR)); }
 

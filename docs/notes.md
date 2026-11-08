@@ -80,6 +80,7 @@ Rules: one unit at a time; never flash a build that hasn't run in fm1-emu/host s
 | 2026-11-07 | A | SFA v2..v6 | FM-1_5700 | groovebox, sound overhauls, Beaver. OK. v5 fixed a NaN-silence bug (Chamberlin SVF) |
 | 2026-11-08 | A | ECB Build 1 (v1.0 step 1) | FM-1_5700 | Earth Creature Beats: sample Cat, Fox 808, Hopper, Beaver 4 lanes, mixer |
 | 2026-11-08 | A | ECB Build 2 | FM-1_5700 | workflow: hold=mute, REC arms, step edit (hold+knobs), copy/paste/chain, mute/solo, new palette |
+| 2026-11-08 | A | ECB Build 4 | FM-1_5700 | vector cartoon creatures (AA, cached), brighter palette + gradient panels, step entry (REC stopped), GEN/BEAT groove generators, second core renders Otter+Fox (cpu2_fallback), fm_soft replaces per-sample tanh, Cat comp gain every 8 samples, CPU/xrun readout in mixer; 80 sim checks pass, generated beat peaks -2.4 dBFS no clipping |
 | 2026-11-08 | A | ECB Build 3 | FM-1_5700 | HOME screen (5 tiles, keys 1-5 jump, K1-K4 levels), page titles, outlined icons, Hopper slice grid, header pattern strip; 69 sim checks pass |
 
 ---
@@ -146,3 +147,7 @@ After flashing Felucca on Unit A:
 3. Put it on a track, play it chromatically on the keys, 2 octaves down → it becomes a growly bass. Add Felucca's delay, short.
 4. On a second track, a 4-op FM pluck with fast decay for the "claw" hat.
 That's Cat Kit voice #1 and Fox's first sample in the same session. Note what sounded good; the Fox engine should make exactly that workflow one knob.
+
+Distortion report (Build 2/3 on device, sequencer playing): the simulator shows no clipping, so the likely cause is
+CPU overrun (xruns) with four engines at once. Build 4: cheaper saturation, the synths on the second core, and a CPU %
+/ XRUN readout on the mixer page so the next report can say which it is.
