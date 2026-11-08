@@ -1,0 +1,25 @@
+# SFA PROTO build settings: the Alien Stack platform with our own engine, SFA ONE, in the fourth slot (fm1-base tools/build.py)
+name = "PROTO"
+id_prefix = "FM-1_59"          # SFA PROTO: dev FM-1_5900
+usb_manufacturer = "Sin Fetish Audio"
+usb_product = "SFA Proto"
+o2 = ["engine/*.c", "samples_data.c"]   # the engines at -O2, the factory samples
+words = "words.tsv"
+ble = false                    # no radio for now: smallest, fastest build; USB MIDI + USB audio stay on
+mirror = true
+cpu2 = true                    # the second core renders the Nordics and SFA ONE
+cpu2_fallback = true           # one core after any failure, no restart
+cpu2_stack = 4096              # (mirror: the screen and panel live in Chrome too: site/mirror, tools/fm1_mirror.py)
+backup = true                  # settings backup/restore over USB (needed by resources)
+resources = "samples.bin"      # the Greys' user sample bank: tools/sfa_sample.py
+resources_what = "the Greys sample bank"
+tagline = "SFA Proto: Nordics, Mantis, Reptiles and SFA ONE, our own engine"
+repo = "https://github.com/sinfetishaudio/sfa-fm1"
+licence = "GPL-3.0-only"
+credits = "Built on fm1-base by Charles Vestal and felucca-bsp from Felucca by Leo Kuroshita (Hügelton Instruments)."
+author = "Sin Fetish Audio"
+description = "SFA Proto: the test bed for Sin Fetish Audio's own engine. SFA ONE: an exciter into a tuned waveguide resonator, a folder and a ladder, with four macros; beside the Alien Stack beings and the Ship sequencer."
+tags = ["groovebox", "drum-machine", "synth", "sampler", "sequencer", "experimental"]
+install = "https://sinfetishaudio.github.io/sfa-fm1/visitors/install/"
+site = "https://sinfetishaudio.github.io/sfa-fm1/visitors/"
+screenshot = "docs/img/screen.png"

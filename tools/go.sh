@@ -6,11 +6,12 @@
 # Needs: the toolchain and SDK (README), Windows Python with mido + python-rtmidi (the installer runs on Windows:
 # WSL has no USB MIDI), Chrome or Edge. The mirror page is served from WSL at http://localhost:8577/mirror/.
 set -e
-APP="${1:-app}"                                              # which firmware: app (ECB, default) or visitors (VISITORS)
-case "$APP" in app|visitors) ;; *) echo "usage: tools/go.sh [app|visitors]"; exit 2;; esac
+APP="${1:-app}"                                              # which firmware: app (ECB, default), visitors (Alien Stack) or proto (SFA Proto)
+case "$APP" in app|visitors|proto) ;; *) echo "usage: tools/go.sh [app|visitors|proto]"; exit 2;; esac
 cd "$(dirname "$0")/.."
 PORT=8577
 [ "$APP" = visitors ] && PORT=8578                          # Alien Stack's pages on their own port
+[ "$APP" = proto ] && PORT=8579
 # the toolchain and SDK, wherever the README put them (a non-interactive shell skips ~/.bashrc)
 [ -n "$JIELI_TOOLCHAIN" ] || { [ -d "$HOME/.jieli/toolchain" ] && export JIELI_TOOLCHAIN="$HOME/.jieli/toolchain"; }
 [ -n "$AC79_SDK" ] || { [ -d "$HOME/fw-AC79_AIoT_SDK" ] && export AC79_SDK="$HOME/fw-AC79_AIoT_SDK"; }

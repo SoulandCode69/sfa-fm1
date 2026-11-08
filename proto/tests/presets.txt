@@ -1,0 +1,409 @@
+wait 600
+master 4096
+wav otter_presets.wav
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+key 7 down
+key 11 down
+key 14 down
+wait 500
+key 7 up
+key 11 up
+key 14 up
+wait 500
+spin ALGO 1
+wait 20
+wavstop
+tap ENV
+wait 30
+wav fox_presets.wav
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+spin ALGO 1
+wait 20
+key 7 down
+wait 400
+key 7 up
+key 2 down
+wait 400
+key 2 up
+wait 220
+wavstop

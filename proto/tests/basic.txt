@@ -1,0 +1,625 @@
+# Earth Creature Beats in the host simulator: base/tools/build.py app --host, then
+#   app/build/host/ecb_host app/tests/basic.txt app/build/host/out
+wait 600
+master 4096
+# HOME first: five tiles, K1-K4 are the track levels, keys 1-5 jump
+expect body 3
+shot home.png
+spin K1 -10
+wait 30
+expect param0 62
+spin K1 10
+wait 30
+tapkey w2
+wait 100
+expect body 0
+expect focus 2
+tap HOME
+wait 100
+expect body 3
+tapkey w4
+wait 100
+expect body 1
+tap HOME
+wait 100
+tapkey w1
+wait 100
+expect focus 1
+expect body 0
+shot cat.png
+# Cat: the sample kit, 16 pads, then the next kits
+wav cat.wav
+key w0 down
+wait 30
+key w0 up
+wait 370
+key w2 down
+wait 30
+key w2 up
+wait 370
+key w5 down
+wait 30
+key w5 up
+wait 200
+key w6 down
+wait 30
+key w6 up
+wait 400
+key w4 down
+wait 30
+key w4 up
+wait 500
+wavstop
+# pad edit: hit pad 1, turn PITCH; the pad's page follows the pad
+key w0 down
+wait 30
+key w0 up
+wait 30
+expect param0 64
+turn K1 -4
+wait 30
+expect param0 52
+key w2 down
+wait 30
+key w2 up
+wait 60
+expect param0 64
+turn K1 4
+wait 30
+spin ALGO 1
+wait 30
+expect kit 1
+shot cat_kit2.png
+wav cat2.wav
+strum 0 15 200
+wait 800
+wavstop
+spin ALGO 1
+wait 30
+expect kit 2
+spin ALGO 1
+wait 30
+expect kit 3
+shot cat_trap.png
+wav trap.wav
+tapkey w0 110
+wait 150
+tapkey w1 110
+wait 150
+tapkey w2 110
+wait 150
+tapkey w3 110
+wait 150
+tapkey w4 110
+wait 150
+tapkey w5 110
+wait 150
+tapkey w6 110
+wait 150
+tapkey w7 110
+wait 150
+wait 500
+wavstop
+spin ALGO 1
+wait 30
+expect kit 4
+shot cat_techno.png
+spin ALGO 1
+wait 30
+expect kit 5
+spin ALGO 3
+wait 30
+expect kit 0
+# Otter: a chord, presets
+tap FX
+wait 30
+expect focus 0
+wav otter.wav
+key 7 down
+key 11 down
+key 14 down
+wait 600
+key 7 up
+key 11 up
+key 14 up
+wait 500
+wavstop
+shot otter.png
+spin ALGO 2
+wait 30
+shot otter_p3.png
+spin ALGO -2
+wait 30
+# Fox: an 808 (chromatic, glide), then a synth bass
+tap ENV
+wait 30
+expect focus 2
+expect fox_mode 0
+shot fox808.png
+wav fox808.wav
+key 7 down
+wait 500
+key 7 up
+key 10 down
+wait 500
+key 10 up
+wait 400
+wavstop
+spin ALGO 16
+wait 30
+expect fox_mode 1
+shot foxbass.png
+wav foxbass.wav
+key 2 down
+wait 400
+key 2 up
+wait 300
+wavstop
+spin ALGO -16
+wait 30
+expect fox_mode 0
+# Hopper: built-in bank, chromatic, chop, transient chop
+tap LFO
+wait 30
+expect focus 3
+shot hopper.png
+wav hopper.wav
+tapkey 7
+wait 500
+turn K3 4
+wait 30
+tapkey w0
+wait 300
+tapkey w3
+wait 400
+wavstop
+tap LFO
+tap LFO
+tap LFO
+wait 30
+expect page 3
+tapkey w2
+wait 200
+shot hopper_slices.png
+tap LFO
+wait 30
+expect page 4
+turn K1 30
+wait 30
+shot hopper_transient.png
+tap LFO
+wait 30
+expect page 0
+# the Beaver: starter beat plays; patterns; step toggles; held-step editing; copy / paste / chain; mute / solo
+tap SEQ
+wait 30
+expect body 1
+shot beaver.png
+tap PLAY
+wait 30
+expect playing 1
+wav beat.wav
+wait 700
+expect step >3
+wait 1400
+spin SELECT 1
+wait 30
+expect focus 0
+tapkey w0
+tapkey w8
+wait 30
+expect otter_steps 2
+key w0 down
+wait 30
+spin K2 -5
+spin K3 2
+spin K4 -10
+wait 30
+expect step_0vel 80
+expect step_0len 2
+expect step_0prob 87
+key w0 up
+wait 30
+expect otter_steps 2
+shot beaver_step.png
+tapkey b0
+wait 30
+spin ALGO 1
+wait 30
+expect pattern 1
+expect otter_steps 0
+tapkey b1
+wait 30
+expect otter_steps 2
+tapkey b3
+wait 30
+expect chain 1
+tapkey b3
+wait 30
+expect chain 0
+spin ALGO -1
+wait 30
+expect pattern 0
+tapkey b6
+wait 30
+expect mute 2
+tapkey b6
+wait 30
+expect mute 0
+tapkey b10
+wait 30
+expect solo 1
+tapkey b10
+wait 30
+expect solo 0
+# arm Otter, record a note live
+tap REC
+wait 30
+expect armed 1
+expect rec 1
+tap FX
+wait 30
+key 14 down
+wait 100
+key 14 up
+wait 260
+key 16 down
+wait 100
+key 16 up
+wait 300
+expect otter_steps >2
+tap REC
+wait 30
+expect armed 0
+wait 600
+wavstop
+shot beaver_playing.png
+# a long hold of the Cat button does nothing (no mute, no page flip)
+press SEL
+wait 700
+release SEL
+wait 30
+expect mute 0
+# ARP toggles the Nordics' arpeggiator (Alien Stack has no slicer)
+tap ARP
+wait 30
+tap ARP
+wait 30
+# mixer: levels, pans, fx, key mutes
+tap EDIT
+wait 30
+expect body 2
+tapkey w1
+wait 30
+expect mute 2
+tapkey w1
+wait 30
+expect mute 0
+shot mixer.png
+turn PRESET 1
+wait 30
+expect mixpage 1
+turn K2 -8
+wait 30
+shot pans.png
+turn PRESET 1
+wait 30
+expect mixpage 2
+turn K1 10
+wait 30
+shot fx.png
+turn PRESET 1
+wait 30
+expect mixpage 3
+shot master.png
+turn PRESET 1
+wait 30
+expect mixpage 4
+shot sends.png
+turn PRESET 1
+wait 30
+expect mixpage 0
+# tap tempo
+tap GLO
+wait 420
+tap GLO
+wait 420
+tap GLO
+wait 420
+tap GLO
+wait 30
+expect bpm 120
+tap PLAY
+wait 30
+expect playing 0
+# save, reboot, everything back
+tap SAVE
+wait 30
+expect dirty 0
+expect store_writes 2
+reboot
+wait 600
+expect bpm 120
+expect otter_steps 4
+expect cat_steps 8
+expect mixpage 0
+tap SEL
+wait 30
+expect focus 1
+midi 91 24 64
+wait 100
+# Build 4: step entry (REC while stopped), the groove generators, NEW BEAT from home
+expect playing 0
+tap ENV
+wait 50
+expect focus 2
+tap REC
+wait 50
+expect stepin 1
+expect cursor 0
+tapkey w0
+wait 60
+tapkey w2
+wait 60
+tap OCT+
+wait 30
+expect cursor 3
+tapkey w4
+wait 60
+expect cursor 4
+expect fox_steps 3
+tap REC
+wait 50
+expect stepin 0
+tap SEQ
+wait 50
+expect body 1
+tapkey b9
+wait 50
+shot beaver_gen.png
+tap HOME
+wait 50
+expect body 3
+wav beat.wav
+tapkey w6
+wait 4200
+expect playing 1
+shot home_beat.png
+wavstop
+tap SEL
+wait 100
+shot cat_beat.png
+tap PLAY
+wait 50
+expect playing 0
+# Build 5: hold a creature + K1 = its level (no mute, no focus change); Cat PAD+ page; master page
+tap SEL
+wait 50
+expect focus 1
+press FX
+wait 100
+spin K1 -5
+wait 50
+release FX
+wait 100
+expect focus 1
+expect mute 0
+tap HOME
+wait 50
+expect param0 77
+tap HOME
+wait 50
+tap SEL
+wait 50
+spin PRESET -2
+wait 50
+expect page 1
+tapkey w2
+wait 100
+spin K1 20
+wait 50
+shot cat_padplus.png
+spin PRESET -1
+wait 50
+# Build 7: ratchet (held step + GEN), the song chain (CHAIN held + keys 1-4), Hopper sample -> chopped slices
+tap SEL
+wait 50
+expect focus 1
+tap SEQ
+wait 50
+expect body 1
+key w0 down
+wait 100
+tapkey b9
+wait 50
+key w0 up
+wait 50
+expect step_0len 32
+key w0 down
+wait 100
+tapkey b9
+wait 50
+tapkey b9
+wait 50
+key w0 up
+wait 50
+expect step_0len 96
+key b3 down
+wait 100
+tapkey w0
+wait 50
+tapkey w1
+wait 50
+tapkey w0
+wait 50
+key b3 up
+wait 50
+expect song_len 3
+expect chain 0
+tapkey b3
+wait 50
+expect chain 1
+shot beaver_song.png
+tap PLAY
+wait 2500
+tap PLAY
+wait 50
+tapkey b3
+wait 50
+expect chain 0
+tap LFO
+wait 50
+expect focus 3
+# Build 8: 8 patterns, scenes on the mixer keys (hold = store, tap = recall)
+tap HOME
+wait 50
+tapkey w5
+wait 50
+expect body 2
+expect mixpage 0
+key w4 down
+wait 900
+key w4 up
+wait 50
+expect scene0 1
+tapkey w0
+wait 50
+expect mute 1
+tapkey w4
+wait 50
+expect mute 0
+shot mixer_scenes.png
+tap SEQ
+wait 50
+spin ALGO 5
+wait 50
+expect pattern 6
+spin ALGO -5
+wait 50
+expect pattern 1
+# GREYS: the wavetable synth; ALGO browses 24 presets; a chord renders without clipping
+tap HOME
+wait 50
+tapkey w3
+wait 50
+expect focus 3
+spin ALGO 2
+wait 100
+expect hop_source 2
+shot greys.png
+wav greys.wav
+key w0 down
+key w4 down
+key w7 down
+wait 900
+key w0 up
+key w4 up
+key w7 up
+wait 700
+wavstop
+spin ALGO -2
+wait 50
+tap HOME
+wait 50
+# Alien Stack: a parameter lock (hold step + the being's button + K1), lane lengths (PRESET on the Ship), the reverb
+tapkey w2
+wait 50
+expect focus 2
+tap SEQ
+wait 50
+expect body 1
+key w0 down
+wait 100
+tap ENV
+wait 50
+spin K1 -10
+wait 50
+key w0 up
+wait 50
+expect lock0 149
+spin PRESET 1
+wait 50
+spin K3 12
+wait 50
+expect llen2 12
+spin K3 -12
+wait 50
+expect llen2 0
+spin PRESET -1
+wait 50
+shot ship_lengths.png
+tap PLAY
+wait 1200
+expect fox_p0 86
+tap PLAY
+wait 50
+tap EDIT
+wait 50
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 50
+expect mixpage 2
+spin K1 10
+wait 50
+shot fx_verb.png
+wav verb.wav
+tap ENV
+wait 50
+tapkey w0 110
+wait 1500
+wavstop
+# Mothership: GEN held + K1/K2 = Euclid on the focused lane; OCT+ = steps 17-32 on the keys
+tap SEL
+wait 50
+tap SEQ
+wait 50
+expect body 1
+key b9 down
+wait 100
+spin K2 -4
+wait 50
+spin K1 1
+wait 50
+key b9 up
+wait 50
+expect cat_hits 5
+tap OCT+
+wait 50
+expect steps 32
+tapkey w0
+wait 50
+expect step_16on 1
+tap OCT-
+wait 50
+shot ship_euclid.png
+# Build 4: transpose page, SIGNAL hold = fill then back, sends page
+tap HOME
+wait 50
+tapkey w4
+wait 50
+expect body 1
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 50
+spin K3 7
+wait 50
+expect tr_rep 7
+spin K3 -7
+wait 50
+expect tr_rep 0
+spin PRESET 1
+wait 50
+tap PLAY
+wait 300
+key b4 down
+wait 600
+expect fill 1
+wait 400
+key b4 up
+wait 100
+expect fill 0
+tap PLAY
+wait 50
+shot ship_fill.png

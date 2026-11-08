@@ -184,3 +184,9 @@ The resource bank fix: 64 bytes of room for the 32-byte commit record.
 | 2026-11-08 | Alien unit | ALIEN Build 3 | FM-1_5800 | GREYS wavetable/FM synth replaces the slicer (greys.c also answers the hop_* API as stubs), Ship: OCT step pages + GEN-held Euclid, Mantis LAYER (PP 9, ABDUCT pack 16 hits, samples 142 KB), 48 Nordics + 24 Reptile presets, audit --app visitors (peaks: Nordics -9.1..-2.8, Reptiles -8.5..-1.7, Greys -4.8..-3.2); 134 sim checks |
 | 2026-11-08 | Alien unit | ALIEN Build 2 | FM-1_5800 | renamed Alien Stack (name ALIEN, USB Alien Stack, magic ALI1/ALIU); parameter locks in the melodic lanes' spare byte (0x80|knob<<5|val>>2, applied in lane_hit), polymeter (pattern llen[4], seq.count, per-lane steps), half-rate Schroeder reverb in the pool (4 combs + 2 allpass, int16, ~11 KB) on the FX page (VERB SIZE DELAY DTIME; crusher removed), stack bars, brand-aware site (port 8578); 126 sim checks |
 | 2026-11-08 | (the new unit) | VIS Build 1 | FM-1_5800 | scaffold from ECB: cosmic palette, five alien icons (Nordic, Mantis, Reptilian, Grey, Ship), starfield HOME; MANTIS synthesized drum engine (16 voices, 8 kits); REPTILE bank 16 one-shots (82 KB); Greys default bank (drone, transmission, sweep, choir); tools: go.sh [app|visitors], release.py --app, render_visitors.py; 118 sim checks pass |
+
+## SFA core / SFA PROTO
+
+| date | unit | build | identity | notes |
+|---|---|---|---|---|
+| 2026-11-08 | (any) | PROTO Build 1 | FM-1_5900 | core/sfa_one.c: our own engine (exciter -> 3 waveguide combs -> folder -> ladder, 2 env, 2 LFO, 4 macros, 16 presets), portable C99 with host-provided sin/exp2; host renderer + bench (4 voices ~1.8% host = ~2x ECB's render); proto/ = Alien Stack body with SFA ONE in slot 4 via one_adapter.c; the full AS test script passes |

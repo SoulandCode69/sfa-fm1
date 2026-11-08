@@ -22,7 +22,7 @@ def main():
     a = ap.parse_args()
     app, build = ROOT / a.app, ROOT / a.app / "build"
     ecb_site.set_brand(a.app)
-    slug = "ecb" if a.app == "app" else "alien"
+    slug = {"app": "ecb", "visitors": "alien", "proto": "proto"}.get(a.app, a.app)
     conf = make_site.read_conf(app / "fm1.toml")
     pkgs = sorted(build.glob("*.fwsc"), key=lambda p: p.stat().st_mtime)
     if not pkgs: sys.exit("no app/build/*.fwsc: run tools/go.sh (or base/tools/build.py app) first")
@@ -68,7 +68,7 @@ def main():
     (out / "index.html").write_text(ecb_site.landing(version, name) if a.app == "app" else ecb_site.landing(version, name, title="VISITORS"), encoding="utf-8")
     (out / "quickstart.html").write_text(ecb_site.quickstart(), encoding="utf-8")
     # the zip: the site plus the docs and the sample tool
-    z = ROOT / "dist" / f"{"EarthCreatureBeats" if a.app == "app" else "AlienStack"}-{version}.zip"
+    z = ROOT / "dist" / f"{ {"app": "EarthCreatureBeats", "visitors": "AlienStack", "proto": "SFAProto"}.get(a.app, a.app) }-{version}.zip"
     with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in out.rglob("*"):
             if p.is_file(): zf.write(p, f"{z.stem}/site/{p.relative_to(out)}")

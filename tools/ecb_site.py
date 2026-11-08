@@ -83,7 +83,7 @@ BRAND = {"name": "EARTH CREATURE BEATS", "icon": "CAT", "beings": None}
 def set_brand(app):
     """the ECB look (app) or Alien Stack's (visitors): the nav's name and colours"""
     global BRAND
-    BRAND = {"name": "EARTH CREATURE BEATS", "icon": "CAT", "alien": False} if app == "app" else {"name": "ALIEN STACK", "icon": None, "alien": True}
+    BRAND = {"name": "EARTH CREATURE BEATS", "icon": "CAT", "alien": False} if app == "app" else {"name": "SFA PROTO" if app == "proto" else "ALIEN STACK", "icon": None, "alien": True}
 
 ALIEN_CSS = """
 :root, :root[data-theme="dark"], :root:not([data-theme="light"]) { --ground: #07071a; --accent: #ff3ef0; --card: #1c1838; --rule: #3e366e; --muted: #bebae4; }
