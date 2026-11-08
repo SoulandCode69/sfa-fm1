@@ -1,29 +1,18 @@
-# SFA Suite — Sin Fetish Audio firmware for the M-VAVE FM-1
+# Earth Creature Beats — Sin Fetish Audio firmware for the M-VAVE FM-1
 
-Three engines in one firmware, playing together. Built on [fm1-base](https://github.com/charlesvestal/fm1-base) (MPL-2.0).
+A groovebox of five creatures that play together. Built on [fm1-base](https://github.com/charlesvestal/fm1-base) (MPL-2.0).
 
-Four animals in the header: OTTER (synth), CAT (drums), FOX (bass + sampler), BEAVER (sequencer).
+| Creature | Button | What |
+|---|---|---|
+| OTTER Synth | FX | 4-voice polysynth, 32 presets (ALGO), ADSR, filter env, LFO, arpeggiator |
+| CAT Kit | SEL | sample drum machine: 3 factory kits x 16 pads, per-pad PITCH DECAY FILTER LEVEL, bus compressor |
+| FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive) + 8 synth basses |
+| HOPPER Cut | LFO | slicer: SAMPLE the output (ARP), chop EQUAL or at TRANSIENTS, per-slice pitch / reverse / decay / level, chromatic play |
+| BEAVER | SEQ | sequencer: 4 lanes, up to 32 steps, swing, patterns A-D (ALGO), live record (REC) and step entry (keys), tap tempo (GLO) |
 
-| Button / knob | Does |
-|---|---|
-| FX / SEL / ENV | focus OTTER / CAT / FOX; press again for the next page (PRESET knob too) |
-| ALGO knob | Otter: 32 presets · Cat: 6 kits · Fox: SAMPLER or 8 bass presets · Beaver: pattern A-D |
-| SEQ | the Beaver: TEMPO SWING STEPS GATE, the three lanes; white keys toggle the focused lane's steps; SELECT picks the lane |
-| LFO | mix page (PRESET knob flips to FX): OTTER CAT FOX DELAY · DTIME DFEEDB CRUSH DRIVE |
-| ARP | SAMPLE: Fox records the groovebox's own output (up to 2 s) until ARP again |
-| PLAY / REC | run the pattern / record what you play onto it (hold REC 1 s: clear the focused lane) |
-| HOME | stop, back to the engine page |
-| SAVE | keep everything: settings, presets, four patterns, the sampled bank |
-
-| Engine | Pages |
-|---|---|
-| OTTER polysynth, 32 presets: leads (saw, bright, supersaw, trance, square, pulse, chip, sync, screamer), basses (pulse, sub, acid, reese, FM, wobble), pads/strings/brass, plucks, FM bell/piano/marimba, organ, keys, five arps, drone | TONE RES WAVE DETUNE · ATTACK DECAY SUSTAIN RELEASE · FENV FDECAY VEL>F SUB · LFO VIBRATO WOBBLE GLIDE · ARP ARPRATE ARPOCT MONO |
-| CAT: 6 kits x 16 drums, nine drum algorithms (808/909-style kick, snare, metal hats, clap, toms, cowbell/bells, clicks, noise, zaps), bus compressor | TUNE DECAY SNAP DRIVE · KIT HATS TONE LEVEL · PENV NDECAY PUNCH COMP |
-| FOX BASS (ACID 303, SQR ACID, SUB, REESE, PLUCK, WOBBLE, GROWL, DEEP HOUSE): mono, 303-style filter envelope, accent, legato glide, drive, wobble | CUTOFF RES ENVMOD DECAY · WAVE SUB GLIDE DRIVE · LFO WOBBLE ACCENT RELEASE |
-| FOX SAMPLER: a 4 s bank drawn as a waveform; chromatic or chopped, 4 voices | START END CHOPS PITCH · REV LOOP FILTER RES · ATTACK DECAY GATE ROLL |
-
-Dry by default: delay, bitcrusher and drive are off until you turn them up on the FX page. Master: DC block, limiter.
-USB MIDI in: ch 1 Otter, ch 2 Cat (notes 36-51), ch 3 Fox; recorded while REC is lit.
+EDIT = the mixer (levels, pans, FX: delay, bitcrusher). Press a creature's button again for its next page; PRESET knob
+turns pages; SELECT knob changes focus. SAVE keeps everything. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
+Samples: see docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
 
 ## Everyday loop (WSL/Ubuntu)
 ```
@@ -40,7 +29,7 @@ Your own sample: `python3 tools/sfa_sample.py /mnt/c/Users/<you>/Downloads/x.wav
 ```
 git clone --recursive <this repo>           # base/ = fm1-base + felucca-bsp
 python3 base/tools/build.py app --host      # host simulator, needs only cc
-app/build/host/sfa_host app/tests/basic.txt app/build/host/out   # 11 checks, screenshots + WAVs in out/
+app/build/host/ecb_host app/tests/basic.txt app/build/host/out   # 11 checks, screenshots + WAVs in out/
 sh base/tools/get_toolchain.sh              # once: JieLi pi32v2 toolchain -> ~/.jieli
 python3 base/tools/build.py app             # device: app/build/sfa-dev+<commit>.fwsc (identity FM-1_5700)
 python3 base/tools/build.py app --web       # browser emulator (needs emcc)

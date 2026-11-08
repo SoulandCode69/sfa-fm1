@@ -1,83 +1,119 @@
-# SFA Suite in the host simulator: base/tools/build.py app --host, then
-#   app/build/host/sfa_host app/tests/basic.txt app/build/host/out
+# Earth Creature Beats in the host simulator: base/tools/build.py app --host, then
+#   app/build/host/ecb_host app/tests/basic.txt app/build/host/out
 wait 600
 master 4096
-shot otter.png
-expect focus 0
+expect focus 1
 expect body 0
-# Otter: a chord (4 voices), saw
+shot cat.png
+# Cat: the sample kit, 16 pads, then the next kits
+wav cat.wav
+key w0 down
+wait 30
+key w0 up
+wait 370
+key w2 down
+wait 30
+key w2 up
+wait 370
+key w5 down
+wait 30
+key w5 up
+wait 200
+key w6 down
+wait 30
+key w6 up
+wait 400
+key w4 down
+wait 30
+key w4 up
+wait 500
+wavstop
+# pad edit: hit pad 1, turn PITCH; the pad's page follows the pad
+key w0 down
+wait 30
+key w0 up
+wait 30
+expect param0 64
+turn K1 -4
+wait 30
+expect param0 52
+key w2 down
+wait 30
+key w2 up
+wait 60
+expect param0 64
+turn K1 4
+wait 30
+spin ALGO 1
+wait 30
+expect kit 1
+shot cat_kit2.png
+wav cat2.wav
+strum 0 15 200
+wait 800
+wavstop
+spin ALGO 1
+wait 30
+expect kit 2
+spin ALGO 1
+wait 30
+expect kit 0
+# Otter: a chord, presets
+tap FX
+wait 30
+expect focus 0
 wav otter.wav
 key 7 down
-wait 30
-expect note 60
-expect midi_out 1
 key 11 down
 key 14 down
-wait 40
-shot otter_keys.png
-wait 500
+wait 600
 key 7 up
 key 11 up
 key 14 up
 wait 500
 wavstop
-# page 2 (FX again), then WAVE to FM on page 1 via PRESET
-tap FX
+shot otter.png
+spin ALGO 2
 wait 30
-expect page 1
-expect param0 3
-turn PRESET -1
+shot otter_p3.png
+spin ALGO -2
 wait 30
-expect page 0
-turn K3 30
-wait 30
-expect param2 90
-wav otter_fm.wav
-tapkey 7
-wait 600
-wavstop
-shot otter_fm.png
-turn K3 -30
-wait 30
-# Cat: 16 pads, four kits
-tap SEL
-wait 30
-expect focus 1
-shot cat.png
-wav cat.wav
-strum 0 15 180
-wait 600
-tap SEL
-wait 30
-expect page 1
-turn K1 11
-wait 30
-strum 0 15 180
-wait 600
-turn K1 11
-wait 30
-strum 0 15 180
-wait 600
-turn K1 11
-wait 30
-shot cat_fx.png
-strum 0 15 180
-wait 800
-wavstop
-turn K1 -33
-turn PRESET -1
-wait 30
-expect page 0
-# Fox: chromatic, then chop, then reverse + loop on page 2
+# Fox: an 808 (chromatic, glide), then a synth bass
 tap ENV
 wait 30
 expect focus 2
-shot fox.png
-wav fox.wav
+expect fox_mode 0
+shot fox808.png
+wav fox808.wav
+key 7 down
+wait 500
+key 7 up
+key 10 down
+wait 500
+key 10 up
+wait 400
+wavstop
+spin ALGO 16
+wait 30
+expect fox_mode 1
+shot foxbass.png
+wav foxbass.wav
+key 2 down
+wait 400
+key 2 up
+wait 300
+wavstop
+spin ALGO -16
+wait 30
+expect fox_mode 0
+# Hopper: built-in bank, chromatic, chop, transient chop
+tap LFO
+wait 30
+expect focus 3
+shot hopper.png
+wav hopper.wav
 tapkey 7
-wait 600
-tapkey 14
-wait 600
+wait 500
 turn K3 4
 wait 30
 tapkey w0
@@ -85,42 +121,35 @@ wait 300
 tapkey w3
 wait 400
 wavstop
-shot fox_chop.png
-tap ENV
+tap LFO
+tap LFO
+tap LFO
+tap LFO
 wait 30
-expect page 1
+expect page 4
 turn K1 30
-turn K2 30
 wait 30
-expect param0 90
-shot fox2.png
-# Fox bass: ALGO to ACID 303, a note
-tap ENV
+shot hopper_transient.png
+tap LFO
 wait 30
-spin ALGO 1
-wait 30
-expect fox_mode 1
-shot fox_bass.png
-wav fox_bass.wav
-key 2 down
-wait 400
-key 2 up
-wait 300
-wavstop
-spin ALGO -1
-wait 30
-expect fox_mode 0
-# the sequencer: the starter beat plays; record an Otter line; mix page
+expect page 0
+# the Beaver: starter beat plays; patterns; step toggles
 tap SEQ
 wait 30
 expect body 1
-shot seq.png
-# the Beaver: SELECT picks the lane, keys toggle steps, ALGO picks the pattern
+shot beaver.png
+tap PLAY
+wait 30
+expect playing 1
+wav beat.wav
+wait 700
+expect step >3
+wait 1400
 spin SELECT 1
 wait 30
 expect focus 0
 tapkey w0
-tapkey w4
+tapkey w8
 wait 30
 expect otter_steps 2
 spin ALGO 1
@@ -131,56 +160,50 @@ spin ALGO -1
 wait 30
 expect pattern 0
 expect otter_steps 2
-shot beaver.png
-tapkey w0
-tapkey w4
-wait 30
-expect otter_steps 0
-tap PLAY
-wait 30
-expect playing 1
-wav beat.wav
-wait 700
-expect step >3
-wait 1400
-tap FX
-wait 30
-tap REC
-wait 30
-expect rec 1
-tapkey 7
-wait 500
-tapkey 11
-wait 500
-tapkey 14
-wait 1200
-expect otter_steps >2
-tap REC
-wait 30
-expect rec 0
-wait 2200
+wait 1000
 wavstop
-shot playing.png
+shot beaver_playing.png
+# sample the output into Hopper
 tap ARP
 wait 30
-expect fox_rec 1
+expect hop_rec 1
 wait 1200
 tap ARP
 wait 30
-expect fox_rec 0
-expect fox_secs >9
-expect fox_peak >3000
-shot fox_sampled.png
-wav fox_resampled.wav
-tapkey 7
-wait 1300
-wavstop
-tap LFO
+expect hop_rec 0
+expect hop_secs >9
+expect hop_peak >3000
+shot hopper_sampled.png
+# mixer: levels, pans, fx
+tap EDIT
 wait 30
 expect body 2
-shot mix.png
-turn K4 20
+shot mixer.png
+turn PRESET 1
 wait 30
+expect mixpage 1
+turn K2 -8
+wait 30
+shot pans.png
+turn PRESET 1
+wait 30
+expect mixpage 2
+turn K1 10
+wait 30
+shot fx.png
+turn PRESET 1
+wait 30
+expect mixpage 0
+# tap tempo
+tap GLO
+wait 420
+tap GLO
+wait 420
+tap GLO
+wait 420
+tap GLO
+wait 30
+expect bpm 120
 tap PLAY
 wait 30
 expect playing 0
@@ -192,8 +215,11 @@ expect store_writes 1
 reboot
 wait 600
 expect bpm 120
-expect otter_steps >2
+expect otter_steps 2
 expect cat_steps 8
-# MIDI in on channel 2 plays the kit
+expect mixpage 0
+tap SEL
+wait 30
+expect focus 1
 midi 91 24 64
 wait 100

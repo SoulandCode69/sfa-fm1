@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "plat.h"
 
-#define APP_NAME "SFA"
+#define APP_NAME "ECB"
 #define APP_SPLASH_RGB RGB(255, 64, 160)
 #define APP_BLOCK 256u                   /* frames per audio block: 5.8 ms at 44.1 kHz */
 #define APP_TOUCH                        /* velocity from the keys (lib/touch.h) */

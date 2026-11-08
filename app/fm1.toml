@@ -1,22 +1,22 @@
 # SFA Suite build settings (fm1-base tools/build.py)
-name = "SFA"
+name = "ECB"
 id_prefix = "FM-1_57"          # our identity prefix: dev FM-1_5700, releases FM-1_57XXYYZZ ("S"=5,"F"=7... close enough)
 usb_manufacturer = "Sin Fetish Audio"
-usb_product = "SFA Suite FM-1"
-o2 = ["engine/*.c"]            # the three engines at -O2
+usb_product = "Earth Creature Beats"
+o2 = ["engine/*.c", "samples_data.c"]   # the engines at -O2, the factory samples
 words = "words.tsv"
 ble = false                    # no radio for now: smallest, fastest build; USB MIDI + USB audio stay on
 mirror = true                  # the screen and panel live in Chrome too (site/mirror, tools/fm1_mirror.py)
 backup = true                  # settings backup/restore over USB (needed by resources)
 resources = "samples.bin"      # Fox's sample bank: tools/sfa_sample.py WAV -> app/samples.bin, written after an install
 resources_what = "the Fox sample bank"
-tagline = "Cat Kit + Fox Cut & Sample + Otter Synth, together"
+tagline = "Earth Creature Beats: Otter, Cat, Fox, Hopper and the Beaver, together"
 repo = "https://github.com/sinfetishaudio/sfa-fm1"
 licence = "GPL-3.0-only"
 credits = "Built on fm1-base by Charles Vestal and felucca-bsp from Felucca by Leo Kuroshita (Hügelton Instruments)."
 author = "Sin Fetish Audio"
-description = "Three small instruments in one firmware that play at once: Cat Kit (drum pads), Fox Cut & Sample (a sample chopped and played on the keys) and Otter Synth (a small 2-op FM synth). MIDI channels 1, 2, 3 play Otter, Cat, Fox from a computer."
-tags = ["groovebox", "synth", "sampler"]
+description = "A groovebox of five creatures: Otter Synth (32 presets, arp), Cat Kit (sample drums, 3 kits), Fox Bass & 808 (16 one-shots + 8 synth basses), Hopper Cut (slicer, samples the output), Beaver (4-lane sequencer, patterns A-D). MIDI channels 1-4 play Otter, Cat, Fox, Hopper."
+tags = ["groovebox", "drum-machine", "synth", "sampler", "sequencer"]
 install = "https://sinfetishaudio.github.io/sfa-fm1/install/"
 site = "https://sinfetishaudio.github.io/sfa-fm1/"
 screenshot = "docs/img/screen.png"
