@@ -190,3 +190,6 @@ The resource bank fix: 64 bytes of room for the 32-byte commit record.
 | date | unit | build | identity | notes |
 |---|---|---|---|---|
 | 2026-11-08 | (any) | PROTO Build 1 | FM-1_5900 | core/sfa_one.c: our own engine (exciter -> 3 waveguide combs -> folder -> ladder, 2 env, 2 LFO, 4 macros, 16 presets), portable C99 with host-provided sin/exp2; host renderer + bench (4 voices ~1.8% host = ~2x ECB's render); proto/ = Alien Stack body with SFA ONE in slot 4 via one_adapter.c; the full AS test script passes |
+
+2026-11-08 — SFA PROTO removed by decision: the FM-1 firmwares stay ECB and Alien Stack; our own engine work moves
+to the hardware/virtual track (core/ keeps sfa_one.c as the first portable engine, not wired into any firmware).
