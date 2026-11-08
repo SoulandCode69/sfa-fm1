@@ -106,7 +106,7 @@ void cat_pads_default(void)
 {
     /* kick kick2 snare rim clap chat ohat cym ltom mtom htom perc perc perc fx fx: hats and cymbals sit under the kicks */
     static const uint8_t LVL[NPADS] = {105, 105, 100, 85, 95, 72, 66, 62, 92, 92, 92, 80, 82, 70, 88, 100};
-    static const uint8_t PUN[NPADS] = {40, 40, 35, 20, 30, 10, 10, 0, 25, 25, 25, 15, 15, 15, 0, 0};
+    static const uint8_t PUN[NPADS] = {55, 50, 42, 20, 34, 10, 10, 0, 30, 30, 30, 15, 15, 15, 0, 0};
     uint32_t k, p;
     for (k = 0; k < MAXKITS; k++) for (p = 0; p < NPADS; p++) {
         uint8_t *q = pad_par[k][p];
@@ -159,6 +159,7 @@ static void start(uint32_t p, float vel)
     w->punch = p01(pp[5]) * 2.0f;
     w->snap = p01(pp[6]) * 0.9f; w->snap_lp = 0.0f;
     w->crushq = pp[7] ? fm_exp2f(11.0f - p01(pp[7]) * 8.5f) : 0.0f;   /* 2048 .. 6 levels */
+    filt = filt < 0.99f ? filt * (0.8f + 0.2f * vel) : filt;         /* velocity opens a filtered pad a touch */
     w->filt = filt < 0.99f;
     if (w->filt) { svf_coef(&w->fc, 100.0f * fm_exp2f(filt * 7.2f), 0.1f); w->flt.ic1 = w->flt.ic2 = 0; }   /* 100 Hz .. 15 kHz */
     w->on = 1;

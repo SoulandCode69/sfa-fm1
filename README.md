@@ -8,12 +8,13 @@ A groovebox of five creatures that play together. Built on [fm1-base](https://gi
 | CAT Kit | SEL | sample drum machine: 8 kits (CLASSIC, HOUSE, LOFI, PUNCH, TECHNO + the built TRAP, DNB, HIPHOP) x 16 pads; every pad its own PITCH DECAY FILTER LEVEL and SAMPLE (any of the 64 sounds: build your own kit) PUNCH SNAP CRUSH (pages PAD / PAD+ follow the pad you hit); KIT page; BUS compressor |
 | FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive, CLICK, PUNCH) + 24 synth basses |
 | HOPPER Cut | LFO | slicer: ALGO picks the source (BUILT-IN sounds, OWN = what you sampled, then your USER bank: tools/sfa_sample.py your WAVs, up to 16), SAMPLE the output (ARP: stop = chopped by transients and on the slice page, ready to play), chop EQUAL / TRANSIENT / MANUAL (hold a slice key + K1 moves its start), per-slice pitch / reverse / decay / level |
-| BEAVER | SEQ | 4 tracks x up to 32 steps, per step NOTE VEL LENGTH PROB (hold a step + K1-K4) and RATCHET x1-x4 (hold a step + GEN), swing, 8 patterns A-H (ALGO), a 16-slot song chain (hold CHAIN + keys 1-8 to write it, CHAIN + CLR to clear, tap CHAIN to run it), copy / paste, GEN / BEAT groove generators, step entry, live record |
+| BEAVER | SEQ | 4 tracks x up to 32 steps (OCT-/+ page the keys to 1-16 / 17-32), per step NOTE VEL LENGTH PROB (hold a step + K1-K4), RATCHET x1-x4 (hold a step + GEN), **parameter locks** (hold a step, press the creature's button, turn K1-K4), **polymeter** (PRESET knob: each track's own length) and **live transpose** (next PRESET page), **Euclid** (hold GEN, turn K1 pulses / K2 steps / K3 rotation), **fills** (hold BEAT: busier for as long as you hold, then back), swing, 8 patterns A-H (ALGO), a 16-slot song chain (hold CHAIN + keys 1-8 to write it, CHAIN + CLR to clear, tap CHAIN to run it), copy / paste, GEN / BEAT groove generators, step entry, live record |
 
 **One way of working everywhere**: a creature's button = its track (again: next page; **hold + K1 / K2: its level /
 pan, from any page**; a plain hold does nothing, so diving into a page never mutes anything). K1-K4 are always
 the four things on screen; PRESET knob = page; ALGO knob = preset / kit / 808 / pattern; SELECT knob = track.
-REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = mixer (levels + meters, pans, FX, MASTER: GLUE compressor, LOWEND, AIR, DRIVE;
+REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = mixer (levels + meters, pans, FX: a **reverb bus** (VERB, SIZE) and the delay, MASTER: GLUE compressor, LOWEND, AIR, DRIVE,
+**SENDS: each creature's send into the reverb and delay**;
 keys 1-4 mute, 9-12 solo; **keys 5-8 and 13-16 are 8 scenes**: hold one to store the pattern + presets + kit + mix,
 tap to recall). **HOME = the home screen**: the five creatures as tiles (preset / kit / level / meter /
 REC / MUTE), white keys 1-5 jump straight to one, K1-K4 are the four track levels. The device boots there.
@@ -24,6 +25,10 @@ live one lit. SAVE keeps everything.
 plays it; GEN rewrites the focused track only, a new one every press. **REC while stopped = step entry**: play the
 keys and each one lands on the next step of the focused track (OCT+ = a rest, OCT- = back); PLAY to hear it. While
 playing, REC arms the track for live record. The mixer shows the audio load (CPU %) and flags xruns.
+
+**Sampling into an MPC or a computer**: each FM-1 is a class-compliant USB audio interface as well as a MIDI device, and
+both firmwares send that stream at full level whatever MASTER does; on the MPC, Preferences → Audio Device (MPC 2.10+
+takes class-compliant interfaces), or the headphone out into the line inputs.
 
 **Two FM-1s**: the installer flashes whichever FM-1 answers, so plug in Unit A alone when running tools/go.sh
 (or pass `--port` to base/tools/fm1_install.py). Unit B stays stock. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
