@@ -12,7 +12,7 @@ Format "SFA2": count, 3 pad, count x { offset u32, length u32 (samples), name[12
 (A single file may also be written in the old "SFA1" format with --single.)"""
 import argparse, struct, sys, wave
 from pathlib import Path
-RATE, MAXN, REGION = 22050, 92000, 46 * 4096
+RATE, MAXN, REGION = 22050, 92000, 46 * 4096 - 64        # the region less the platform's 32-byte commit record (and room)
 
 def read_wav(path):
     w = wave.open(str(path))
