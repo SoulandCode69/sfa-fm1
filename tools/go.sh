@@ -28,15 +28,13 @@ if [ -z "$NOFLASH" ]; then
     rm -f "$APP"/build/sfa.fwsc                                # (an old SFA package must never be flashed again)
     PKG=$(ls -t "$APP"/build/*.fwsc | head -1)                 # the package this build just wrote (ECB.fwsc)
     echo "== package: $PKG ($(date -r "$PKG" +%H:%M:%S))"
-    PRODUCT=$(sed -n 's/^usb_product = "\(.*\)".*/\1/p' "$APP"/fm1.toml)   # the port is named after the firmware on the unit
-    try=0
-    until "$WPY" "$(wslpath -w "$PWD/base/tools/fm1_install.py")" "$(wslpath -w "$PWD/$PKG")" --yes ${PRODUCT:+--port "$PRODUCT"}; do
+    try=0                                                      # (no --port: the unit answers to whatever firmware it runs now)
+    until "$WPY" "$(wslpath -w "$PWD/base/tools/fm1_install.py")" "$(wslpath -w "$PWD/$PKG")" --yes; do
         try=$((try + 1))
         if [ "$try" -ge 3 ]; then
             echo
             echo "!! the FM-1 is on USB but could not be claimed. Almost always: a browser tab holds its MIDI port."
             echo "   Close EVERY localhost:$PORT tab (the mirror), and any other MIDI app, then run tools/go.sh $APP again."
-            echo "   (A unit running another firmware answers to that firmware's name: ECB = Earth Creature Beats, Alien Stack = Alien Stack.)"
             exit 3
         fi
         echo "-- not claimed; closing nothing myself. Retrying in 4 s (close the mirror tab now)..."
