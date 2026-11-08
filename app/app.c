@@ -47,7 +47,7 @@ static const uint16_t ENG_DARK[5] = {RGB(30, 84, 116), RGB(112, 82, 16), RGB(116
 
 #include "icons.c"
 
-#define SET_MAGIC 0x45434232u            /* "ECB2" */
+#define SET_MAGIC 0x45434233u            /* "ECB3" */
 typedef struct {
     uint32_t magic;
     int8_t octave;
@@ -56,9 +56,9 @@ typedef struct {
     uint8_t level[NENG], pan[NENG];
     uint8_t delay_mix, delay_time, delay_fb, crush, drive, mixpage;
     uint8_t otter_preset, fox_preset, cat_kit, pattern;
-    uint8_t chain, rsv[3];
+    uint8_t chain, glue, lowend, air;     /* the master page */
     uint8_t param[NENG][NPAGES][NPARAM];
-    uint8_t pads[4 * 16 * 4];
+    uint8_t pads[4 * 16 * 8];
     uint8_t slices[16 * 4];
     uint8_t pat[4][780];                  /* pattern_t x 4 */
 } settings_t;
@@ -75,6 +75,7 @@ static void chain_advance(void) { set.pattern = (uint8_t)((set.pattern + 1u) % 4
 PLAT_POOL static int16_t dly[DLY_LEN];
 static uint32_t dly_w;
 static float dly_lp, dly_prev, dc_x[2], dc_y[2], lim_env = 1.0f;
+static float low_lp[2], air_lp[2], glue_env, glue_g = 1.0f;
 static uint8_t dly_tick;
 static float mix[NENG][APP_BLOCK];
 static float mixout[APP_BLOCK];
@@ -115,6 +116,9 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
     uint32_t crush_div = 1u + (uint32_t)(p01(set.crush) * p01(set.crush) * 24.0f);
     float crush_q = set.crush ? fm_exp2f(2.0f + p01(set.crush) * 9.0f) : 0.0f;
     uint32_t dtime = 1100u + (uint32_t)(p01(set.delay_time) * (float)(DLY_LEN - 1200u));
+    float low_c = 1.0f - fm_exp2f(-6.2831853f * 110.0f / SR), low_amt = p01(set.lowend) * 1.0f;      /* a low shelf at 110 Hz, up to +6 dB */
+    float air_c = 1.0f - fm_exp2f(-6.2831853f * 5000.0f / SR), air_amt = p01(set.air) * 0.8f;       /* a high shelf from 5 kHz */
+    float gthr = 1.0f - p01(set.glue) * 0.6f, gslope = p01(set.glue) * 0.6f, gmake = 1.0f + p01(set.glue) * 0.5f;
     midi_in();
     seq_tick(PAT, n);
     if (otter_arp_on()) {
@@ -152,6 +156,14 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         }
         dly_prev = mono;
         l += dly_lp * dmix; r += dly_lp * dmix;
+        if (set.lowend) { low_lp[0] += (l - low_lp[0]) * low_c; low_lp[1] += (r - low_lp[1]) * low_c; l += low_lp[0] * low_amt; r += low_lp[1] * low_amt; }
+        if (set.air) { air_lp[0] += (l - air_lp[0]) * air_c; air_lp[1] += (r - air_lp[1]) * air_c; l += (l - air_lp[0]) * air_amt; r += (r - air_lp[1]) * air_amt; }
+        if (set.glue) {                                                  /* GLUE: a master compressor, 2 ms attack, 150 ms release */
+            float a = fm_fabsf(l), b = fm_fabsf(r); if (b > a) a = b;
+            glue_env += (a > glue_env ? 0.02f : 0.00015f) * (a - glue_env);
+            if ((i & 7u) == 0u) glue_g = glue_env > gthr ? fm_powf(glue_env / gthr, -gslope) : 1.0f;
+            l *= glue_g * gmake; r *= glue_g * gmake;
+        }
         if (set.drive) { l = fm_soft(l * 0.7f * mdrive) * dnorm; r = fm_soft(r * 0.7f * mdrive) * dnorm; }
         if (set.crush) {
             if (++crush_cnt >= crush_div) { crush_cnt = 0; crush_hold[0] = (float)(int32_t)(l * crush_q) / crush_q; crush_hold[1] = (float)(int32_t)(r * crush_q) / crush_q; }
@@ -220,6 +232,7 @@ void app_init(void)
         for (e = 0; e < NENG; e++) { set.page[e] = 0; set.level[e] = 100; set.pan[e] = 64; }
         set.level[E_CAT] = 110;
         set.delay_mix = 0; set.delay_time = 60; set.delay_fb = 50; set.crush = 0; set.drive = 0; set.mixpage = 0;
+        set.glue = 35; set.lowend = 25; set.air = 20;
         set.otter_preset = 0; set.fox_preset = 0; set.cat_kit = 0; set.pattern = 0; set.chain = 0;
         cat_pads_default(); hop_slices_default();
         for (k = 0; k < 4u; k++) pattern_defaults((pattern_t *)set.pat[k]);
@@ -281,7 +294,7 @@ void app_say(const char *a, const char *b)
     }
 }
 
-static const char *body_name(void) { return body == PG_HOME ? "HOME" : body == PG_SEQ ? "BEAVER" : body == PG_MIX ? (set.mixpage == 0 ? "MIXER" : set.mixpage == 1 ? "PANS" : "FX") : ENG[set.focus]->name; }
+static const char *body_name(void) { return body == PG_HOME ? "HOME" : body == PG_SEQ ? "BEAVER" : body == PG_MIX ? (set.mixpage == 0 ? "MIXER" : set.mixpage == 1 ? "PANS" : set.mixpage == 2 ? "FX" : "MASTER") : ENG[set.focus]->name; }
 
 static void speak(void)
 {
@@ -343,6 +356,14 @@ static void solo_toggle(uint8_t e)
     app_say(ENG[e]->name, seq.solo ? "SOLO" : "SOLO OFF");
 }
 
+static uint8_t scratch;
+static int32_t held_engine(void)                                      /* which creature button is down (-1 none) */
+{
+    static const uint8_t B[4] = {B_FX, B_SEL, B_ENV, B_LFO};
+    uint32_t i;
+    for (i = 0; i < 4u; i++) if (ui.btn >> B[i] & 1u) return (int32_t)i;
+    return -1;
+}
 static uint8_t *knob_target(uint32_t p, const char **name)
 {
     static const char *const SEQN[4] = {"TEMPO", "SWING", "STEPS", "GATE"};
@@ -350,7 +371,12 @@ static uint8_t *knob_target(uint32_t p, const char **name)
     static const char *const PADN[4] = {"PAD", "VEL", "LENGTH", "PROB"};
     static const char *const MIXN[4] = {"OTTER", "CAT", "FOX", "HOPPER"};
     static const char *const MIX2[4] = {"DELAY", "DTIME", "DFEEDB", "CRUSH"};
+    static const char *const MIX3[4] = {"GLUE", "LOWEND", "AIR", "DRIVE"};
     static const char *const PANN[4] = {"PAN OTT", "PAN CAT", "PAN FOX", "PAN HOP"};
+    {                                                                   /* a creature's button held: its LEVEL / PAN, from any page */
+        int32_t h = held_engine();
+        if (h >= 0) { *name = p == 0 ? "LEVEL" : p == 1 ? "PAN" : "-"; return p == 0 ? &set.level[h] : p == 1 ? &set.pan[h] : &scratch; }
+    }
     if (body == PG_SEQ) {
         if (ui.held_step >= 0) { *name = (set.focus == E_CAT ? PADN : STEPN)[p]; return seq_step_param(PAT, set.focus, (uint32_t)ui.held_step, p); }
         *name = SEQN[p]; return p == 0 ? &PAT->bpm : p == 1 ? &PAT->swing : p == 2 ? &PAT->steps : &PAT->gate;
@@ -359,6 +385,7 @@ static uint8_t *knob_target(uint32_t p, const char **name)
     if (body == PG_MIX) {
         if (set.mixpage == 1u) { *name = PANN[p]; return &set.pan[p]; }
         if (set.mixpage == 2u) { *name = MIX2[p]; return p == 0 ? &set.delay_mix : p == 1 ? &set.delay_time : p == 2 ? &set.delay_fb : &set.crush; }
+        if (set.mixpage == 3u) { *name = MIX3[p]; return p == 0 ? &set.glue : p == 1 ? &set.lowend : p == 2 ? &set.air : &set.drive; }
         *name = MIXN[p]; return &set.level[p];
     }
     *name = page_names(set.focus, set.page[set.focus])[p];
@@ -370,6 +397,18 @@ static void knob(uint32_t p, int32_t e)
     const char *name;
     uint8_t *v = knob_target(p, &name);
     char t[12];
+    {
+        int32_t h = held_engine();
+        if (h >= 0) {                                                       /* hold a creature + K1/K2: its level / pan (no mute then) */
+            static const uint8_t B[4] = {B_FX, B_SEL, B_ENV, B_LFO};
+            ui.btn_long[B[h]] = 2;
+            if (p > 1) return;
+            *v = (uint8_t)clamp((int32_t)*v + e * (p == 0 ? 3 : 2), 0, 127);
+            if (p == 1) { if (*v == 64u) { t[0] = 'C'; t[1] = 0; } else { t[0] = *v < 64u ? 'L' : 'R'; int_text(*v < 64u ? 64 - (int32_t)*v : (int32_t)*v - 64, t + 1); } }
+            else int_text(*v, t);
+            app_say(ENG[h]->name, t); set_dirty = 1; ui.redraw = 1; return;
+        }
+    }
     if (body == PG_ENGINE && set.focus == E_HOP && ui.held_slice > 0 && p == 0) {   /* MANUAL chop: move the held slice's start */
         hop_slice_nudge((uint32_t)ui.held_slice, e * 440);
         app_say("SLICE START", e > 0 ? ">" : "<");
@@ -437,7 +476,7 @@ static void engine_button(uint32_t k, uint8_t e, uint32_t btn, uint32_t now)
 {
     uint32_t bit = 1u << k;
     if ((btn & bit) && !(ui.btn & bit)) { ui.btn_t[k] = now; ui.btn_long[k] = 0; }
-    else if ((btn & bit) && ui.btn_t[k] && !ui.btn_long[k] && now - ui.btn_t[k] >= 450u) { ui.btn_long[k] = 1; mute_toggle(e); }
+    else if ((btn & bit) && ui.btn_t[k] && !ui.btn_long[k] && now - ui.btn_t[k] >= 600u) { ui.btn_long[k] = 1; mute_toggle(e); }
     else if (!(btn & bit) && (ui.btn & bit)) { if (!ui.btn_long[k]) focus(e); ui.btn_t[k] = 0; }
 }
 
@@ -550,7 +589,7 @@ static void input(void)
         if ((e = plat_enc((int)k)) == 0) continue;
         if (k >= EN_K1 && k < EN_K1 + NPARAM) knob(k - EN_K1, e);
         else if (k == EN_PRESET) {
-            if (body == PG_MIX) { set.mixpage = (uint8_t)((set.mixpage + 3u + (e > 0 ? 1u : 2u)) % 3u); ui.redraw = 1; app_say(body_name(), ""); }
+            if (body == PG_MIX) { set.mixpage = (uint8_t)((set.mixpage + 4u + (e > 0 ? 1u : 3u)) % 4u); ui.redraw = 1; app_say(body_name(), ""); }
             else if (body == PG_ENGINE) page_set((uint8_t)(set.page[set.focus] + (e > 0 ? 1u : ENG[set.focus]->npages - 1u)));
         } else if (k == EN_ALGO) {
             if (body == PG_SEQ) {
@@ -794,6 +833,12 @@ static void draw(void)
         cv_text(8, 4, &FONT_B, body_name(), accent);
         cv_text(232 - text_w(&FONT_XS, "KEYS 1-4 MUTE  9-12 SOLO"), 8, &FONT_XS, "KEYS 1-4 MUTE  9-12 SOLO", C_SUB);
         if (set.mixpage == 1u) { for (i = 0; i < NENG; i++) pan_bar(BX(i), 34, ENG[i]->name, set.pan[i], ENG_RGB[i]); }
+        else if (set.mixpage == 3u) {
+            bar(BX(0), 34, "GLUE", set.glue, 0, 127, C_BRAND, set.glue ? 0 : "OFF");
+            bar(BX(1), 34, "LOWEND", set.lowend, 0, 127, C_BRAND, set.lowend ? 0 : "FLAT");
+            bar(BX(2), 34, "AIR", set.air, 0, 127, C_BRAND, set.air ? 0 : "FLAT");
+            bar(BX(3), 34, "DRIVE", set.drive, 0, 127, C_BRAND, set.drive ? 0 : "CLEAN");
+        }
         else if (set.mixpage == 2u) {
             bar(BX(0), 34, "DELAY", set.delay_mix, 0, 127, C_TXT, set.delay_mix ? 0 : "DRY");
             bar(BX(1), 34, "DTIME", set.delay_time, 0, 127, C_TXT, 0);
@@ -832,7 +877,7 @@ static void draw(void)
         if (body == PG_SEQ) { if (i <= 3u) c = C_BEAVER; else if (i >= 5u && i <= 8u) c = (PAT->mute >> (i - 5u) & 1u) ? C_REC : ENG_DARK[i - 5u]; else if (i == 10u) c = seq.solo ? ENG_RGB[3] : C_RULE; else if (i == 4u || i == 9u) c = C_BRAND; if (ui.keys >> BK[i] & 1u) c = C_TXT; }
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 10, 11, 18, c);
     }
-    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "KEYS 1-6 JUMP  7 = NEW BEAT" : body == PG_SEQ ? "CPY PST CLR CHN BEAT M1-4 GEN SOLO" : body == PG_MIX ? "PRESET KNOB: LEVELS PANS FX" : seq.stepin && !seq.playing ? "STEP ENTRY: KEYS WRITE  OCT+ REST" : "REC=STEP ENTRY  HOLD=MUTE", C_SUB);
+    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "KEYS 1-6 JUMP  7 = NEW BEAT" : body == PG_SEQ ? "CPY PST CLR CHN BEAT M1-4 GEN SOLO" : body == PG_MIX ? "PRESET: LEVELS PANS FX MASTER" : seq.stepin && !seq.playing ? "STEP ENTRY: KEYS WRITE  OCT+ REST" : "REC=STEP  HOLD=MUTE  HOLD+K1=LEVEL", C_SUB);
     int_text((int32_t)(plat_master() * 100u / 4096u), t); text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_TXT);
     if (body == PG_MIX) {                                              /* the mixer shows the audio load and any xruns */

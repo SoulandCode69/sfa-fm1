@@ -291,6 +291,10 @@ wait 30
 shot fx.png
 turn PRESET 1
 wait 30
+expect mixpage 3
+shot master.png
+turn PRESET 1
+wait 30
 expect mixpage 0
 # tap tempo
 tap GLO
@@ -365,3 +369,32 @@ shot cat_beat.png
 tap PLAY
 wait 50
 expect playing 0
+# Build 5: hold a creature + K1 = its level (no mute, no focus change); Cat PAD+ page; master page
+tap SEL
+wait 50
+expect focus 1
+press FX
+wait 100
+spin K1 -5
+wait 50
+release FX
+wait 100
+expect focus 1
+expect mute 0
+tap HOME
+wait 50
+expect param0 85
+tap HOME
+wait 50
+tap SEL
+wait 50
+spin PRESET -2
+wait 50
+expect page 1
+tapkey w2
+wait 100
+spin K1 20
+wait 50
+shot cat_padplus.png
+spin PRESET -1
+wait 50

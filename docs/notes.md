@@ -80,6 +80,7 @@ Rules: one unit at a time; never flash a build that hasn't run in fm1-emu/host s
 | 2026-11-07 | A | SFA v2..v6 | FM-1_5700 | groovebox, sound overhauls, Beaver. OK. v5 fixed a NaN-silence bug (Chamberlin SVF) |
 | 2026-11-08 | A | ECB Build 1 (v1.0 step 1) | FM-1_5700 | Earth Creature Beats: sample Cat, Fox 808, Hopper, Beaver 4 lanes, mixer |
 | 2026-11-08 | A | ECB Build 2 | FM-1_5700 | workflow: hold=mute, REC arms, step edit (hold+knobs), copy/paste/chain, mute/solo, new palette |
+| 2026-11-08 | A | ECB Build 5 | FM-1_5700 | Cat PAD+ page (SAMPLE any of 64 per pad, PUNCH, SNAP, CRUSH; pads blob 512 B, settings magic ECB3 resets saves), Fox 808 CLICK+PUNCH, MASTER mixer page (GLUE, LOWEND, AIR, DRIVE), 48 Otter presets, 16 Fox basses, hold creature + K1/K2 = level/pan anywhere (mute now at 600 ms); 86 sim checks; beat peaks -1.5 dBFS, 0 clipped |
 | 2026-11-08 | A | ECB Build 4 | FM-1_5700 | vector cartoon creatures (AA, cached), brighter palette + gradient panels, step entry (REC stopped), GEN/BEAT groove generators, second core renders Otter+Fox (cpu2_fallback), fm_soft replaces per-sample tanh, Cat comp gain every 8 samples, CPU/xrun readout in mixer; 80 sim checks pass, generated beat peaks -2.4 dBFS no clipping |
 | 2026-11-08 | A | ECB Build 3 | FM-1_5700 | HOME screen (5 tiles, keys 1-5 jump, K1-K4 levels), page titles, outlined icons, Hopper slice grid, header pattern strip; 69 sim checks pass |
 

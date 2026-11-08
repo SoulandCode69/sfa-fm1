@@ -10,13 +10,13 @@
 
 static const char *const EN1[NPARAM] = {"FILTER", "DECAY", "GLIDE", "DRIVE"};
 static const char *const EN2[NPARAM] = {"ATTACK", "RELEASE", "SUB", "PITCHENV"};
-static const char *const EN3[NPARAM] = {"TONE", "-", "-", "-"};
+static const char *const EN3[NPARAM] = {"TONE", "CLICK", "PUNCH", "-"};
 static const char *const BN1[NPARAM] = {"CUTOFF", "RES", "ENVMOD", "DECAY"};
 static const char *const BN2[NPARAM] = {"WAVE", "SUB", "GLIDE", "DRIVE"};
 static const char *const BN3[NPARAM] = {"LFO", "WOBBLE", "ACCENT", "RELEASE"};
 static const char *NAMES1[NPARAM], *NAMES2[NPARAM], *NAMES3[NPARAM];
 static uint8_t par1[NPARAM], par2[NPARAM], par3[NPARAM];
-static uint8_t e_par[3][NPARAM] = {{127, 127, 10, 0}, {0, 20, 0, 0}, {64, 0, 0, 0}};        /* 808 mode's own */
+static uint8_t e_par[3][NPARAM] = {{127, 127, 10, 0}, {0, 20, 0, 0}, {64, 25, 30, 0}};        /* 808 mode's own */
 static uint8_t b_par[3][NPARAM] = {{40, 70, 80, 45}, {0, 60, 20, 30}, {30, 0, 60, 20}};    /* bass mode's own */
 static uint8_t mode;                                     /* 0 = 808 sample, 1 = bass synth */
 static const char *TITLES[3];
@@ -24,7 +24,7 @@ static const char *const ET[3] = {"PLAY", "SHAPE", "TONE"}, *const BT[3] = {"FIL
 static uint8_t preset_i;                                 /* 0..15 the 808 bank, 16..23 the synth presets */
 
 typedef struct { const char *name; uint8_t p[3][NPARAM]; } bpreset_t;
-#define NBPRESET 8
+#define NBPRESET 16
 static const bpreset_t BPRESETS[NBPRESET] = {
     /*                CUT RES ENV DEC    WAVE SUB GLI DRV   LFO WOB ACC REL */
     {"ACID 303",    {{38, 85, 95, 40},  {0, 0, 25, 40},    {30, 0, 90, 15}}},
@@ -35,6 +35,15 @@ static const bpreset_t BPRESETS[NBPRESET] = {
     {"WOBBLE",      {{30, 75, 30, 80},  {0, 70, 0, 60},    {60, 110, 40, 30}}},
     {"GROWL",       {{45, 60, 60, 60},  {127, 50, 15, 110},{80, 70, 70, 25}}},
     {"DEEP HOUSE",  {{30, 35, 70, 35},  {0, 90, 0, 20},    {20, 0, 40, 20}}},
+    /* Build 5 */
+    {"808 SYNTH",   {{15, 5, 30, 110},  {127, 127, 15, 20}, {0, 0, 30, 60}}},
+    {"NEURO",       {{48, 70, 50, 70},  {0, 40, 10, 120},  {90, 100, 60, 25}}},
+    {"FUNK SQR",    {{60, 45, 110, 30}, {127, 30, 0, 35},  {25, 0, 80, 10}}},
+    {"TECHNO RUMBLE",{{25, 20, 40, 95}, {0, 100, 5, 70},   {15, 0, 20, 40}}},
+    {"DONK",        {{70, 95, 120, 20}, {127, 20, 0, 50},  {30, 0, 90, 5}}},
+    {"TRAP SUB",    {{18, 0, 10, 127},  {127, 127, 30, 15}, {10, 0, 10, 50}}},
+    {"GARAGE BASS", {{40, 55, 85, 40},  {0, 70, 12, 45},   {35, 20, 60, 15}}},
+    {"DISTORT SAW", {{55, 40, 50, 60},  {0, 40, 0, 127},   {40, 0, 70, 20}}},
 };
 
 /* the 808 bank among the sample kits */
@@ -76,7 +85,7 @@ void fox_mode_set_params(void) { mode_stash(); }
 static struct {
     adpcm_t a; float inc, inc_target, env, aenv, sub_ph, pitch_env;
     int32_t held[8]; uint8_t nheld; int32_t note; uint8_t gate, on;
-    svf_t flt;
+    svf_t flt; uint32_t rng;
 } e8;
 
 static void e8_note(int32_t note, uint32_t vel, int on)
@@ -106,7 +115,7 @@ static void e8_render(float *out, uint32_t n)
     float filt = p01(par1[0]), dec = p01(par1[1]), glide = par1[2] ? 0.03f * fm_exp2f(-p01(par1[2]) * 6.0f) : 1.0f;
     float drive = p01(par1[3]), dgain = 1.0f + drive * drive * 5.0f, dnorm = drive > 0.0f ? 1.0f / fm_soft(dgain * 0.7f) : 1.0f;
     float att = par2[0] ? 1.0f / ((0.002f + p01(par2[0]) * 0.3f) * SR) : 1.0f, rel = decay_coef(0.004f + p01(par2[1]) * 0.6f);
-    float sub = p01(par2[2]) * 0.6f, penv = p01(par2[3]) * 1.5f, tone = p01(par3[0]);
+    float sub = p01(par2[2]) * 0.6f, penv = p01(par2[3]) * 1.5f, tone = p01(par3[0]), click = p01(par3[1]) * 0.8f, punch = p01(par3[2]) * 1.6f;
     float dcoef = dec >= 0.99f ? 1.0f : decay_coef(0.02f + dec * dec * 1.5f);
     svfc_t fc;
     int filt_on = filt < 0.99f;
@@ -123,6 +132,11 @@ static void e8_render(float *out, uint32_t n)
             x += fm_sinf(e8.sub_ph * 6.2831853f) * sub * e8.env;
         }
         if (filt_on) x = svf_lp(&e8.flt, &fc, x);
+        if (e8.a.pos < 1800.0f) {                                       /* the first 40 ms: PUNCH lifts it, CLICK adds the beater */
+            float lift = 1.0f - e8.a.pos * (1.0f / 1800.0f);
+            x *= 1.0f + punch * lift * lift;
+            if (click > 0.0f && e8.a.pos < 110.0f) x += noise(&e8.rng) * click * (1.0f - e8.a.pos * (1.0f / 110.0f));
+        }
         if (e8.gate) { if (e8.aenv < 1.0f) { e8.aenv += att; if (e8.aenv > 1.0f) e8.aenv = 1.0f; } } else e8.aenv *= rel;
         e8.env *= dcoef;
         x *= e8.env * e8.aenv;

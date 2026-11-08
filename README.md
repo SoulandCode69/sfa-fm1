@@ -5,14 +5,15 @@ A groovebox of five creatures that play together. Built on [fm1-base](https://gi
 | Creature | Button | What |
 |---|---|---|
 | OTTER Synth | FX | 4-voice polysynth, 32 presets (ALGO), ADSR, filter env, LFO, arpeggiator |
-| CAT Kit | SEL | sample drum machine: 3 factory kits x 16 pads, per-pad PITCH DECAY FILTER LEVEL (page 1 follows the pad you hit), bus compressor |
-| FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive) + 8 synth basses |
+| CAT Kit | SEL | sample drum machine: 3 factory kits x 16 pads; every pad its own PITCH DECAY FILTER LEVEL and SAMPLE (any of the 64 sounds: build your own kit) PUNCH SNAP CRUSH (pages PAD / PAD+ follow the pad you hit); KIT page; BUS compressor |
+| FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive, CLICK, PUNCH) + 16 synth basses |
 | HOPPER Cut | LFO | slicer: SAMPLE the output (ARP), chop EQUAL / TRANSIENT / MANUAL (hold a slice key + K1 moves its start), per-slice pitch / reverse / decay / level |
 | BEAVER | SEQ | 4 tracks x up to 32 steps, per step NOTE VEL LENGTH PROB (hold a step + K1-K4), swing, patterns A-D, chain, copy / paste, live record onto armed tracks |
 
-**One way of working everywhere**: a creature's button = its track (again: next page; **hold: mute**). K1-K4 are always
+**One way of working everywhere**: a creature's button = its track (again: next page; **hold: mute**; **hold + K1 / K2:
+its level / pan, from any page**). K1-K4 are always
 the four things on screen; PRESET knob = page; ALGO knob = preset / kit / 808 / pattern; SELECT knob = track.
-REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = mixer (levels + meters, pans, FX;
+REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = mixer (levels + meters, pans, FX, MASTER: GLUE compressor, LOWEND, AIR, DRIVE;
 keys 1-4 mute, 9-12 solo). **HOME = the home screen**: the five creatures as tiles (preset / kit / level / meter /
 REC / MUTE), white keys 1-5 jump straight to one, K1-K4 are the four track levels. The device boots there.
 Every engine page shows its title (OTTER · ENVELOPE, HOPPER · SLICE) and the header shows patterns A-D with the
