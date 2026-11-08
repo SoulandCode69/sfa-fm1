@@ -9,7 +9,9 @@ Run from the repo root after `python3 base/tools/build.py app --host`:
 import sys, wave, struct, math
 import numpy as np
 
-N_OTTER, N_FOX = 64, 40
+APP = "app"
+if "--app" in sys.argv: APP = sys.argv[sys.argv.index("--app") + 1]; del sys.argv[sys.argv.index("--app"):sys.argv.index("--app") + 2]
+N_OTTER, N_FOX, N_GREYS = (64, 40, 0) if APP == "app" else (48, 40, 24)
 SEG = 1.0                                   # seconds per sound (500 ms held, 500 ms release)
 
 def gen():
@@ -21,12 +23,18 @@ def gen():
     for i in range(N_OTTER):
         o += ["key 7 down", "key 11 down", "key 14 down", "wait 500", "key 7 up", "key 11 up", "key 14 up", "wait 500", "spin ALGO 1", "wait 20"]
     o += ["wavstop"]
-    open("app/tests/audit_otter.txt", "w").write("\n".join(o) + "\n")
+    open(f"{APP}/tests/audit_otter.txt", "w").write("\n".join(o) + "\n")
     f = ["wait 600", "master 4096", "tap HOME", "wait 50", "tap ENV", "wait 100", "wav audit_fox.wav"]
     for i in range(N_FOX):
         f += ["key 7 down", "wait 300", "key 7 up", "wait 200", "key 12 down", "wait 300", "key 12 up", "wait 200", "spin ALGO 1", "wait 20"]
     f += ["wavstop"]
-    open("app/tests/audit_fox.txt", "w").write("\n".join(f) + "\n")
+    open(f"{APP}/tests/audit_fox.txt", "w").write("\n".join(f) + "\n")
+    if N_GREYS:
+        g = ["wait 600", "master 4096", "tap HOME", "wait 50", "tap LFO", "wait 100", "wav audit_greys.wav"]
+        for i in range(N_GREYS):
+            g += ["key 7 down", "key 11 down", "key 14 down", "wait 500", "key 7 up", "key 11 up", "key 14 up", "wait 500", "spin ALGO 1", "wait 20"]
+        g += ["wavstop"]
+        open(f"{APP}/tests/audit_greys.txt", "w").write("\n".join(g) + "\n")
 
 def load(path):
     w = wave.open(path)
@@ -44,8 +52,9 @@ def metrics(x, sr):
     return pk, rms, pk - rms, hf, cen
 
 def report():
-    for name, n, per in (("otter", N_OTTER, 1.02), ("fox", N_FOX, 1.02)):
-        try: d, sr = load(f"app/build/host/out/audit_{name}.wav")
+    for name, n, per in (("otter", N_OTTER, 1.02), ("fox", N_FOX, 1.02), ("greys", N_GREYS, 1.02)):
+        if not n: continue
+        try: d, sr = load(f"{APP}/build/host/out/audit_{name}.wav")
         except FileNotFoundError: continue
         print(f"== {name}: {len(d)/sr:.1f} s")
         print(f"{'#':>3} {'peak':>6} {'rms':>6} {'crest':>5} {'hf%':>5} {'cen':>6}")

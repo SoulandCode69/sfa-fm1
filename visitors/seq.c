@@ -265,6 +265,26 @@ static void seq_gen(pattern_t *p, uint8_t e, int32_t root, int32_t nslices)
     }
 }
 
+/* a Euclidean rhythm on one lane: pulses spread as evenly as possible over steps, rotated; the pattern's length follows */
+static void seq_euclid(pattern_t *p, uint8_t e, uint32_t pulses, uint32_t steps, uint32_t rot, int32_t note, int32_t pad)
+{
+    lane_t *l = &p->lane[e];
+    uint32_t i, bucket = 0;
+    seq_clear_lane(p, e);
+    if (steps > NSTEP) steps = NSTEP;
+    if (!p->llen[e] && p->steps < steps) p->steps = (uint8_t)steps;
+    for (i = 0; i < steps; i++) {
+        uint32_t s = (i + rot) % steps;
+        bucket += pulses;
+        if (bucket >= steps) {
+            bucket -= steps;
+            if (e == E_CAT) LMASK(l, s) = (uint16_t)(1u << (pad < 0 || pad > 15 ? 0 : pad));
+            else LNOTE(l, s) = (uint8_t)(note < 0 ? (e == E_FOX ? 36 : 60) : note);
+            l->vel[s] = (uint8_t)((i % (steps / (pulses ? pulses : 1u) + 1u)) == 0u ? 110u : 92u);
+        }
+    }
+}
+
 /* copy / paste */
 static pattern_t clip; static uint8_t clip_full;
 static void pattern_copy(const pattern_t *p) { clip = *p; clip_full = 1; }

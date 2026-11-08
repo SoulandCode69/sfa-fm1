@@ -4,22 +4,26 @@
  * white keys. Every voice has PITCH DECAY TONE LEVEL and BEND SNAP DRIVE NOISE of its own; a kit is a full set of
  * those for all 16 voices, 8 kits (ALGO), and your edits are saved per kit. The voice pages follow the pad you hit.
  *   page 1 VOICE:  PITCH DECAY TONE LEVEL      page 2 VOICE+:  BEND SNAP DRIVE NOISE
- *   page 3 KIT:    KIT TUNE DECAY LEVEL        page 4 BUS:     COMP PUNCH LOWCUT DRIVE
+ *   page 3 LAYER:  SAMPLE (an ABDUCT hit layered under the voice, at its pitch and level)
+ *   page 4 KIT:    KIT TUNE DECAY LEVEL        page 5 BUS:     COMP PUNCH LOWCUT DRIVE
  * The 16 voices: KICK KICK2 SNARE RIM CLAP CHAT OHAT CYM LTOM MTOM HTOM BELL ZAP CLICK METAL BLIP. */
 #include "fastmath.h"
 #include "engine.h"
+#include "../samples.h"
 
 static const char *const NAMES1[NPARAM] = {"PITCH", "DECAY", "TONE", "LEVEL"};
 static const char *const NAMES1B[NPARAM] = {"BEND", "SNAP", "DRIVE", "NOISE"};
+static const char *const NAMES1C[NPARAM] = {"SAMPLE", "-", "-", "-"};
 static const char *const NAMES2[NPARAM] = {"KIT", "TUNE", "DECAY", "LEVEL"};
 static const char *const NAMES3[NPARAM] = {"COMP", "PUNCH", "LOWCUT", "DRIVE"};
 static uint8_t par1[NPARAM] = {64, 64, 64, 100};
 static uint8_t par1b[NPARAM] = {64, 30, 0, 30};
+static uint8_t par1c[NPARAM] = {0, 0, 0, 0};
 static uint8_t par2[NPARAM] = {0, 64, 64, 100};
 static uint8_t par3[NPARAM] = {25, 15, 0, 0};
 #define NPADS 16
 #define MAXKITS 8
-#define PP 8
+#define PP 9                                             /* + LAYER: the sample */
 enum { V_KICK, V_KICK2, V_SNARE, V_RIM, V_CLAP, V_CHAT, V_OHAT, V_CYM, V_LTOM, V_MTOM, V_HTOM, V_BELL, V_ZAP, V_CLICK, V_METAL, V_BLIP };
 static const char *const VNAME[NPADS] = {"KICK", "KICK2", "SNARE", "RIM", "CLAP", "CHAT", "OHAT", "CYM", "LTOM", "MTOM", "HTOM", "BELL", "ZAP", "CLICK", "METAL", "BLIP"};
 static const char *const KNAME[MAXKITS] = {"MANTIS", "ANALOG", "DIGITAL", "INDUSTRY", "GLITCH", "TRIBAL", "MINIMAL", "SAUCER"};
@@ -67,6 +71,7 @@ void cat_pads_default(void)
         const uint8_t *b = BASE[p]; const kitmod_t *m = &KITMOD[k]; uint8_t *q = pad_par[k][p];
         q[0] = clamp8(b[0] + m->pitch); q[1] = clamp8(b[1] + m->decay); q[2] = clamp8(b[2] + m->tone); q[3] = b[3];
         q[4] = clamp8((int32_t)b[4] * m->bend / 100); q[5] = b[5]; q[6] = clamp8((int32_t)b[6] * m->drive / 100); q[7] = clamp8((int32_t)b[7] * m->noise / 100);
+        q[8] = (k == 2u || k == 4u || k == 7u) ? (uint8_t)(8u + p * 8u) : 0u;   /* DIGITAL, GLITCH and SAUCER come layered with the ABDUCT hits */
     }
 }
 uint8_t *cat_pad_blob(uint32_t *size) { *size = sizeof pad_par; return &pad_par[0][0][0]; }
@@ -76,8 +81,8 @@ int cat_last_pad(void) { return last_pad; }
 void cat_kit(int32_t step) { kit_i = (uint8_t)(((int32_t)kit_i + step + MAXKITS) % MAXKITS); }
 int cat_kit_index(void) { return kit_i; }
 void cat_kit_set(int k) { kit_i = (uint8_t)(k % MAXKITS); }
-static void pad_view_load(void) { uint32_t i; for (i = 0; i < NPARAM; i++) { par1[i] = pad_par[kit_i][shown_pad][i]; par1b[i] = pad_par[kit_i][shown_pad][4 + i]; } }
-static void pad_view_store(void) { uint32_t i; for (i = 0; i < NPARAM; i++) { pad_par[kit_i][shown_pad][i] = par1[i]; pad_par[kit_i][shown_pad][4 + i] = par1b[i]; } }
+static void pad_view_load(void) { uint32_t i; for (i = 0; i < NPARAM; i++) { par1[i] = pad_par[kit_i][shown_pad][i]; par1b[i] = pad_par[kit_i][shown_pad][4 + i]; } par1c[0] = pad_par[kit_i][shown_pad][8]; }
+static void pad_view_store(void) { uint32_t i; for (i = 0; i < NPARAM; i++) { pad_par[kit_i][shown_pad][i] = par1[i]; pad_par[kit_i][shown_pad][4 + i] = par1b[i]; } pad_par[kit_i][shown_pad][8] = par1c[0]; }
 void cat_sync(void)
 {
     if ((uint8_t)last_pad != shown_pad || shown_kit != kit_i) { shown_pad = (uint8_t)last_pad; shown_kit = kit_i; pad_view_load(); }
@@ -87,7 +92,8 @@ void cat_sync(void)
 /* a voice: two oscillators (phase, freq, pitch envelope), a noise path through an SVF, envelopes */
 typedef struct {
     float ph1, ph2, hz, hz_end, penv, pcoef, env, dcoef, nenv, ncoef, gain, drive, nmix, snap, snap_lp, tone;
-    svf_t nf; svfc_t nfc; uint8_t on, kind, cyc;
+    svf_t nf; svfc_t nfc; uint8_t on, kind, cyc, layer;
+    adpcm_t a; float ainc, again;                                    /* the LAYER sample */
 } voice_t;
 static voice_t v[NPADS];
 static volatile uint8_t trig[NPADS], trig_vel[NPADS];
@@ -131,6 +137,14 @@ static void start(uint32_t p, float vel)
     case V_CLICK: base_hz = 2500.0f; base_dec = 0.02f; w->penv = 0.0f; w->pcoef = 1.0f; break;
     case V_METAL: base_hz = 800.0f; base_dec = 0.35f; w->penv = 0.3f * bend; w->pcoef = decay_coef(0.05f); break;
     default:      base_hz = 880.0f; base_dec = 0.08f; w->penv = 1.0f * bend; w->pcoef = decay_coef(0.01f); break;   /* BLIP */
+    }
+    w->layer = 0;
+    if (q[8]) {                                                       /* LAYER: an ABDUCT hit under the voice */
+        uint32_t ki, idx = ((uint32_t)q[8] - 1u) * 16u / 127u;
+        for (ki = 0; ki < SMPKIT_N; ki++) if (!SMPKIT[ki].is808) {
+            const smp_t *sm = &SMP[SMPKIT[ki].first + (idx < SMPKIT[ki].n ? idx : SMPKIT[ki].n - 1u)];
+            adpcm_start(&w->a, sm); w->ainc = semi * ((float)sm->rate / SR); w->again = 0.8f; w->layer = 1; break;
+        }
     }
     w->hz_end = base_hz * semi;
     w->hz = w->hz_end;
@@ -201,12 +215,13 @@ static void m_render(float *out, uint32_t n)
                 float t2 = noise(&rng); w->snap_lp += (t2 - w->snap_lp) * 0.35f;
                 x += (t2 - w->snap_lp) * w->snap * (w->env - 0.93f) * 14.0f;
             }
+            if (w->layer) { x += adpcm_read(&w->a, w->ainc) * w->again * w->env * 1.2f; if (adpcm_done(&w->a)) w->layer = 0; }
             if (w->drive > 0.0f && w->kind != V_METAL) x = fm_soft(x * (1.0f + w->drive * 3.0f)) * (1.0f / (1.0f + w->drive * 0.8f));
             x *= w->gain;
             if (w->env > 0.8f) x *= 1.0f + punch * (w->env - 0.8f) * 5.0f;                      /* the bus PUNCH on every attack */
             w->env *= w->dcoef; w->nenv *= w->ncoef;
             s += x;
-            if (w->env < 0.0008f && w->nenv < 0.0008f) w->on = 0;
+            if (w->env < 0.0008f && w->nenv < 0.0008f && !w->layer) w->on = 0;
         }
         if (hpc > 0.0f) { float y = s - hp_x + (1.0f - hpc) * hp_y; hp_x = s; hp_y = y; s = y; }
         {
@@ -224,12 +239,14 @@ static void m_render(float *out, uint32_t n)
 
 static const char *m_text(uint8_t page, uint32_t p, char *buf)
 {
-    if (page == 2u && p == 0u) return cat_kit_name();
+    if (page == 3u && p == 0u) return cat_kit_name();
+    if (page == 2u && p == 0u) { if (!par1c[0]) return "OFF"; { uint32_t ki, idx = ((uint32_t)par1c[0] - 1u) * 16u / 127u; for (ki = 0; ki < SMPKIT_N; ki++) if (!SMPKIT[ki].is808) return SMP[SMPKIT[ki].first + (idx < SMPKIT[ki].n ? idx : SMPKIT[ki].n - 1u)].name; } return "-"; }
+    if (page == 2u) return "-";
     if (page == 0u && p == 0u) { int32_t st = ((int32_t)par1[0] - 64) * 24 / 127; buf[0] = st < 0 ? '-' : '+'; st = st < 0 ? -st : st; buf[1] = (char)('0' + st / 10); buf[2] = (char)('0' + st % 10); buf[3] = 0; return buf; }
     if (page == 1u && p > 0u && par1b[p] == 0u) return "OFF";
-    if (page == 3u && (p == 2u || p == 3u) && (p == 2u ? par3[2] : par3[3]) == 0u) return "OFF";
+    if (page == 4u && (p == 2u || p == 3u) && (p == 2u ? par3[2] : par3[3]) == 0u) return "OFF";
     return 0;
 }
 
-static const char *const TITLES[4] = {"VOICE", "VOICE+", "KIT", "BUS"};
-const engine_t cat = {"MANTIS", m_init, m_note, m_render, m_panic, 4, {NAMES1, NAMES1B, NAMES2, NAMES3, 0}, {par1, par1b, par2, par3, 0}, m_text, TITLES};
+static const char *const TITLES[5] = {"VOICE", "VOICE+", "LAYER", "KIT", "BUS"};
+const engine_t cat = {"MANTIS", m_init, m_note, m_render, m_panic, 5, {NAMES1, NAMES1B, NAMES1C, NAMES2, NAMES3}, {par1, par1b, par1c, par2, par3}, m_text, TITLES};

@@ -14,6 +14,14 @@ Audio: `python3 tools/render_visitors.py` (the REPTILE bank and the Greys' defau
 `python3 tools/pack_samples.py --pack assets/vpack --out visitors/samples_data.c` and
 `python3 tools/sfa_sample.py assets/vuser --out visitors/samples.bin`.
 
+Build 3: **GREYS is a synth** now: a wavetable / FM engine (morphing table in a three-voice unison, an FM modulator,
+sub, filter with drive, ADSR, LFO to morph / pitch / filter, glide, chorus), 24 presets on ALGO, measured level trims.
+**The Mothership**: OCT- / OCT+ on the Ship page the keys to steps 1-16 / 17-32 (the other half dims); hold GEN and
+turn K1 pulses / K2 steps / K3 rotation for a live **Euclidean** pattern on the focused being (a tap of GEN is still a
+groove). **Mantis LAYER** page: an ABDUCT hit (16 processed alien drums, a new pack) under any voice at its pitch;
+DIGITAL, GLITCH and SAUCER come layered. **48 new Nordics presets** (pads, choirs, keys, bells, arps) and **24 new
+Reptile basses**, all audited (tools/audit.py --app visitors). ARP toggles the Nordics' arpeggiator.
+
 Build 2: **parameter locks** (on the Ship, hold a step, press the being's button, turn K1-K4: that knob lands there
 when the step plays; a magenta mark on the step), **polymeter** (PRESET knob on the Ship: each being's own loop length,
 0 = the pattern's; the grid shows each lane's position), a **reverb bus** (FX page: VERB, SIZE; the delay beside it),
@@ -21,5 +29,4 @@ segmented 'stack' bars, the ALIEN / STACK header.
 
 Build 1: the look (the five visitors drawn as vector art, a cosmic palette, the mothership HOME with a
 starfield), MANTIS complete, the REPTILE bank, the Greys' bank, the SHIP = ECB's sequencer with everything it learned.
-NORDICS and the REPTILES' synth half carry ECB's engines for now; their own deeper engines (mod matrix, chorus /
-shimmer, granular Greys, parameter locks, polymeter, MIDI clock, a reverb bus) are the next builds.
+Still to come: a mod matrix for the Reptiles, chorus / shimmer on the Nordics, per-being reverb sends, MIDI clock.

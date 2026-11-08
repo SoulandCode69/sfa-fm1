@@ -55,6 +55,30 @@ REPTILE = [
     ("glass-lead", lambda: R.fade_out(R.norm(fm(C2 * 4, 2.0, 2.5, 0.8, 0.3, 0.3) + fm(C2 * 4 * 1.002, 2.0, 2.5, 0.8, 0.3, 0.3)), 20), 60),
 ]
 
+def crush(x, bits, hold=1):
+    q = 2 ** (bits - 1); y = np.round(x * q) / q
+    if hold > 1: y = np.repeat(y[::hold], hold)[:len(x)]
+    return y
+def ringmod(x, hz): return x * np.sin(2 * np.pi * hz * R.t(len(x) / SR))
+ABDUCT = [                                   # 16 processed alien drum hits for the Mantis' LAYER page
+    ("kick-crush", lambda: R.fade_out(R.norm(crush(R.kick(200, 46, 0.03, 0.3, 0.6, 0.4, 2.0), 6, 2)))),
+    ("kick-sub", lambda: R.fade_out(R.norm(R.kick(120, 38, 0.06, 0.45, 0.8, 0.1, 1.2, sub=0.8, beater=0.0)), 20)),
+    ("snare-ring", lambda: R.fade_out(R.norm(ringmod(R.snare(200, 330, 0.08, 0.16, 600, 2200, 0.9, 0.4), 613) * 0.7 + R.snare(200, 330, 0.08, 0.16, 600, 2200, 0.9, 0.4) * 0.5))),
+    ("snare-static", lambda: R.fade_out(R.norm(R.svf_bp(R.noise(0.35), 1800, 0.6) * 3 * R.env_exp(0.35, 0.09) + R.sine_sweep(260, 180, 0.01, 0.35) * R.env_exp(0.35, 0.05)))),
+    ("clap-glitch", lambda: R.fade_out(R.norm(crush(R.clap(1300, 1.5, 0.15, 0.4, 5, 0.006), 5, 3)))),
+    ("hat-fm", lambda: R.fade_out(R.norm(R.svf_bp(fm(3200, 1.41, 8.0, 0.12, 0.05, 0.03), 7000, 0.8) * 2))),
+    ("hat-open-fm", lambda: R.fade_out(R.norm(R.svf_bp(fm(3200, 1.41, 8.0, 0.5, 0.2, 0.18), 7000, 0.8) * 2), 20)),
+    ("cymbal-alien", lambda: R.fade_out(R.norm(R.svf_bp(fm(2100, 2.76, 6.0, 1.0, 0.5, 0.35), 5500, 0.5) * 2 + R.svf_bp(R.noise(1.0), 9000, 0.7) * R.env_exp(1.0, 0.3)), 20)),
+    ("tom-laser", lambda: R.fade_out(R.norm(R.sat(R.sine_sweep(900, 110, 0.05, 0.4) * R.env_exp(0.4, 0.14), 1.6)))),
+    ("tom-ring", lambda: R.fade_out(R.norm(ringmod(R.tom(160, 95, 0.05, 0.28, 0.5, 0.1), 211)))),
+    ("blip", lambda: R.fade_out(R.norm(R.sine_sweep(1800, 2400, 0.02, 0.12) * R.env_exp(0.12, 0.03)))),
+    ("teleport", lambda: R.fade_out(R.norm(fm(400, 0.5, 12.0, 0.5, 0.15, 0.2) * (1 + np.sin(2 * np.pi * 40 * R.t(0.5)))))),
+    ("static-burst", lambda: R.fade_out(R.norm(crush(R.svf_bp(R.noise(0.25), 3000, 0.4) * 3, 4, 2) * R.env_exp(0.25, 0.08)))),
+    ("chirp", lambda: R.fade_out(R.norm((lambda x: np.sin(2 * np.pi * np.cumsum(600 + 3400 * (x / 0.18) ** 2) / SR))(R.t(0.18)) * R.env_exp(0.18, 0.06)))),
+    ("thud", lambda: R.fade_out(R.norm(R.onepole_lp(R.noise(0.3), 300) * 4 * R.env_exp(0.3, 0.05) + R.sine(55, 0.3) * R.env_exp(0.3, 0.12)), 20)),
+    ("glitch-roll", lambda: R.fade_out(R.norm(np.concatenate([R.sine(880 * (1 + 0.3 * k), 0.03) * R.env_exp(0.03, 0.01) for k in range(8)]) * 1.0))),
+]
+
 def drone(sec=3.4):
     x = R.t(sec); out = np.zeros_like(x)
     for i, (hz, g) in enumerate(((55, 1.0), (55 * 1.5, 0.5), (110 * 1.26, 0.35), (220, 0.2))):
@@ -83,6 +107,9 @@ def main():
     for i, (name, fn, root) in enumerate(REPTILE):
         x = fn(); p = VP / "REPTILE" / f"{i:02d}_{name}_r{root}.wav"; R.write_wav(p, x); total += len(x) // 2
         print(f"REPTILE {i:2d} {name:12s} {len(x) / SR:5.2f} s  root {root}")
+    for i, (name, fn) in enumerate(ABDUCT):
+        x = fn(); p = VP / "ABDUCT" / f"{i:02d}_{name}.wav"; R.write_wav(p, x); total += len(x) // 2
+        print(f"ABDUCT  {i:2d} {name:12s} {len(x) / SR:5.2f} s")
     for i, (name, fn) in enumerate((("drone", drone), ("transmission", transmission), ("sweep", sweep), ("choir", choir))):
         x = fn(); p = VU / f"{i + 1:02d}_{name}.wav"; R.write_wav(p, x)
         print(f"vuser   {i:2d} {name:12s} {len(x) / SR:5.2f} s")

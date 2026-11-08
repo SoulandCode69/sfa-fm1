@@ -21,3 +21,8 @@ instead, written by SAMPLE + SAVE or `tools/sfa_sample.py`.
 Two more kits, TECHNO and HOUSE, rendered by tools/render_pack.py like the others (original synthesis, CC0). The
 built kits TRAP, DNB and HIPHOP use no new audio: tools/vkits.py assembles them from the pool by name. The demo user
 bank (assets/user: a one-bar break built from the HOUSE kit, a chord stab, a vowel sweep) is tools/demo_bank.py, CC0.
+
+## Alien Stack
+REPTILE (16 chromatic one-shots) and ABDUCT (16 processed drum hits) are synthesised by tools/render_visitors.py on
+render_pack.py's primitives, original and CC0; the Greys' former default bank (drone, transmission, sweep, choir) is
+kept as assets/vuser for the user-bank tool.

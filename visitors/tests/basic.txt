@@ -280,17 +280,11 @@ wait 700
 release SEL
 wait 30
 expect mute 0
-# sample the output into Hopper
+# ARP toggles the Nordics' arpeggiator (Alien Stack has no slicer)
 tap ARP
 wait 30
-expect hop_rec 1
-wait 1200
 tap ARP
 wait 30
-expect hop_rec 0
-expect hop_secs >9
-expect hop_peak >3000
-shot hopper_sampled.png
 # mixer: levels, pans, fx, key mutes
 tap EDIT
 wait 30
@@ -471,16 +465,7 @@ wait 50
 expect chain 0
 tap LFO
 wait 50
-tap ARP
-wait 50
-expect hop_rec 1
-wait 1200
-tap ARP
-wait 100
-expect hop_rec 0
-expect page 3
 expect focus 3
-shot hopper_sampled_slices.png
 # Build 8: 8 patterns, scenes on the mixer keys (hold = store, tap = recall)
 tap HOME
 wait 50
@@ -508,18 +493,28 @@ expect pattern 6
 spin ALGO -5
 wait 50
 expect pattern 1
-# Build 8: Hopper sources on ALGO: BUILT-IN, OWN, then the user bank (break, chord, vox)
+# GREYS: the wavetable synth; ALGO browses 24 presets; a chord renders without clipping
 tap HOME
 wait 50
 tapkey w3
 wait 50
 expect focus 3
-spin ALGO 1
-wait 200
-shot hopper_source.png
-expect hop_secs 14
-tapkey w0
-wait 400
+spin ALGO 2
+wait 100
+expect hop_source 2
+shot greys.png
+wav greys.wav
+key w0 down
+key w4 down
+key w7 down
+wait 900
+key w0 up
+key w4 up
+key w7 up
+wait 700
+wavstop
+spin ALGO -2
+wait 50
 tap HOME
 wait 50
 # Alien Stack: a parameter lock (hold step + the being's button + K1), lane lengths (PRESET on the Ship), the reverb
@@ -570,3 +565,27 @@ wait 50
 tapkey w0 110
 wait 1500
 wavstop
+# Mothership: GEN held + K1/K2 = Euclid on the focused lane; OCT+ = steps 17-32 on the keys
+tap SEL
+wait 50
+tap SEQ
+wait 50
+expect body 1
+key b9 down
+wait 100
+spin K2 -4
+wait 50
+spin K1 1
+wait 50
+key b9 up
+wait 50
+expect cat_hits 5
+tap OCT+
+wait 50
+expect steps 32
+tapkey w0
+wait 50
+expect step_16on 1
+tap OCT-
+wait 50
+shot ship_euclid.png
