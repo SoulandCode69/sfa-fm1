@@ -25,12 +25,12 @@ int hop_chop_mode(void); int hop_chops(void); int hop_chopmode(void); int hop_re
 void hop_record_feed(const float *mix, uint32_t n); int hop_save_needed(void); int hop_save(void); uint32_t hop_bank_seconds_x10(void);
 uint32_t hop_bank_len(void); int32_t hop_peak(uint32_t from, uint32_t to); uint32_t hop_window(uint32_t *a, uint32_t *b); float hop_playhead(void);
 uint32_t hop_slice_points(const uint32_t **pts); uint8_t *hop_slice_blob(uint32_t *size); void hop_slices_default(void); int hop_last_slice(void);
-void hop_sync(void); void hop_rechop(void); void hop_slice_nudge(uint32_t idx, int32_t delta);
+void hop_sync(void); void hop_rechop(void); void hop_slice_nudge(uint32_t idx, int32_t delta); int hop_slice_active(uint32_t idx);
 
 #define NENG 4
 static const engine_t *const ENG[NENG] = {&otter, &cat, &fox, &hopper};
 enum { E_OTTER, E_CAT, E_FOX, E_HOP };
-enum { PG_ENGINE, PG_SEQ, PG_MIX };
+enum { PG_ENGINE, PG_SEQ, PG_MIX, PG_HOME };
 
 /* the palette: a dark neutral ground, light text, one bright colour per creature, red for recording */
 #define C_BG      RGB(10, 12, 16)
@@ -216,6 +216,7 @@ void app_init(void)
     }
     cat.init(); hopper.init();
     seq_stop();
+    body = PG_HOME;
 }
 
 /* ----------------------------------------------------------------- backup --- */
@@ -269,7 +270,7 @@ void app_say(const char *a, const char *b)
     }
 }
 
-static const char *body_name(void) { return body == PG_SEQ ? "BEAVER" : body == PG_MIX ? (set.mixpage == 0 ? "MIXER" : set.mixpage == 1 ? "PANS" : "FX") : ENG[set.focus]->name; }
+static const char *body_name(void) { return body == PG_HOME ? "HOME" : body == PG_SEQ ? "BEAVER" : body == PG_MIX ? (set.mixpage == 0 ? "MIXER" : set.mixpage == 1 ? "PANS" : "FX") : ENG[set.focus]->name; }
 
 static void speak(void)
 {
@@ -343,6 +344,7 @@ static uint8_t *knob_target(uint32_t p, const char **name)
         if (ui.held_step >= 0) { *name = (set.focus == E_CAT ? PADN : STEPN)[p]; return seq_step_param(PAT, set.focus, (uint32_t)ui.held_step, p); }
         *name = SEQN[p]; return p == 0 ? &PAT->bpm : p == 1 ? &PAT->swing : p == 2 ? &PAT->steps : &PAT->gate;
     }
+    if (body == PG_HOME) { *name = MIXN[p]; return &set.level[p]; }
     if (body == PG_MIX) {
         if (set.mixpage == 1u) { *name = PANN[p]; return &set.pan[p]; }
         if (set.mixpage == 2u) { *name = MIX2[p]; return p == 0 ? &set.delay_mix : p == 1 ? &set.delay_time : p == 2 ? &set.delay_fb : &set.crush; }
@@ -435,6 +437,12 @@ static void input(void)
                 ui.redraw = 1;
                 continue;
             }
+            if (body == PG_HOME) {                                     /* home: keys 1-5 jump to a creature */
+                if (w >= 0 && w < 4) focus((uint8_t)w);
+                else if (w == 4) { body = PG_SEQ; ui.redraw = 1; app_say("BEAVER", ""); }
+                else if (w == 5) { body = PG_MIX; ui.redraw = 1; app_say("MIXER", ""); }
+                continue;
+            }
             if (body == PG_MIX) {                                      /* the mixer's keys: mute 1-4, solo 9-12 */
                 if (w >= 0 && w < 4) mute_toggle((uint8_t)w);
                 else if (w >= 8 && w < 12) solo_toggle((uint8_t)(w - 8));
@@ -478,7 +486,7 @@ static void input(void)
             else { hop_record_start(); body = PG_ENGINE; set.focus = E_HOP; app_say("SAMPLING", "ARP STOPS"); }
             ui.redraw = 1;
         }
-        else if (k == B_HOME) { seq_stop(); seq.rec = 0; seq.armed = 0; body = PG_ENGINE; ui.redraw = 1; app_say("HOME", ""); }
+        else if (k == B_HOME) { body = body == PG_HOME ? PG_ENGINE : PG_HOME; ui.held_step = -1; ui.redraw = 1; app_say(body_name(), ""); }
         else if (k == B_OCTDN || k == B_OCTUP) {
             int32_t o = clamp(set.octave + (k == B_OCTUP ? 1 : -1), -2, 2);
             char t[4] = {o < 0 ? '-' : '+', (char)('0' + (o < 0 ? -o : o)), 0};
@@ -593,15 +601,17 @@ static void draw(void)
             int on = i < NENG ? body == PG_ENGINE && i == set.focus : body == PG_SEQ;
             int muted = i < NENG && !lane_audible(PAT, (uint8_t)i), armed = i < NENG && (seq.armed >> i & 1u);
             cv_rect(x, 3, 25, 30, on ? ENG_RGB[i] : C_PANEL);
-            icon(x + 4, 6, ICONS[i], on ? C_BG : muted ? C_MUTED : ENG_RGB[i], 1);
+            icon_o(x + 4, 6, ICONS[i], on ? C_BG : muted ? C_MUTED : ENG_RGB[i], 1, on ? ENG_DARK[i] : C_BG, on);
             if (i < NENG) cv_rect(x + 4, 25, 17, 3, armed ? C_REC : muted ? C_MUTED : on ? C_BG : ENG_DARK[i]);   /* the track's state line */
         }
         int_text(PAT->bpm, t);
         cv_text(235 - text_w(&FONT_XS, t), 3, &FONT_XS, t, seq.playing ? C_TXT : C_SUB);
         cv_text(235 - text_w(&FONT_XS, tr), 18, &FONT_XS, tr, seq.rec ? C_REC : seq.playing ? ENG_RGB[3] : C_MUTED);
-        if (seq.chain) { t[0] = 0; text_cat(t, "CH "); t[3] = (char)('A' + set.pattern); t[4] = 0; }
-        else { t[0] = (char)('A' + set.pattern); t[1] = 0; }
-        cv_text(235 - text_w(&FONT_XS, "120") - 8 - text_w(&FONT_XS, t), 3, &FONT_XS, t, C_BEAVER);
+        for (i = 0; i < 4u; i++) {                                 /* the four pattern slots, the live one lit */
+            int32_t x = 176 + (int32_t)i * 7;
+            cv_rect(x, 4, 5, 5, i == set.pattern ? C_BEAVER : seq.chain ? ENG_DARK[4] : C_RULE);
+        }
+        if (seq.chain) cv_text(176, 12, &FONT_T, "CHAIN", C_BEAVER);
     }
     cv_blit(0, 0);
 
@@ -609,9 +619,10 @@ static void draw(void)
     cv_begin(240, 128, C_BG);
     if (body == PG_ENGINE) {
         int hop_wave = set.focus == E_HOP && set.page[E_HOP] < 3u;
-        icon(6, 0, ICONS[set.focus], accent, 2);
-        cv_text(42, 6, &FONT_B, cur->name, accent);
-        for (i = 0; i < cur->npages; i++) cv_rect(42 + (int32_t)i * 9, 24, 6, 3, set.page[set.focus] == i ? accent : C_RULE);
+        icon_o(6, 0, ICONS[set.focus], accent, 2, C_BG, 1);
+        cv_text(44, 2, &FONT_B, cur->name, accent);
+        if (cur->titles) cv_text(44, 18, &FONT_XS, cur->titles[set.page[set.focus]], C_SUB);
+        for (i = 0; i < cur->npages; i++) cv_rect(44 + text_w(&FONT_XS, cur->titles ? cur->titles[set.page[set.focus]] : "") + 8 + (int32_t)i * 8, 23, 5, 3, set.page[set.focus] == i ? accent : C_RULE);
         {
             const char *a = "", *b = "";
             if (set.focus == E_OTTER) { a = otter_preset_name(); t[0] = set.octave < 0 ? '-' : '+'; t[1] = (char)('0' + (set.octave < 0 ? -set.octave : set.octave)); t[2] = 0; b = t; }
@@ -623,8 +634,8 @@ static void draw(void)
                 int_text((int32_t)hop_bank_seconds_x10() / 10, s); text_cat(s, "."); int_text((int32_t)hop_bank_seconds_x10() % 10, s + 2); text_cat(s, "S");
                 b = s;
             }
-            cv_text(232 - text_w(&FONT_XS, b), 10, &FONT_XS, b, set.focus == E_HOP && hop_recording() ? C_REC : C_TXT);
-            cv_text(232 - text_w(&FONT_XS, b) - 8 - text_w(&FONT_XS, a), 10, &FONT_XS, a, C_SUB);
+            cv_text(232 - text_w(&FONT_XS, b), 4, &FONT_XS, b, set.focus == E_HOP && hop_recording() ? C_REC : C_TXT);
+            cv_text(232 - text_w(&FONT_XS, a), 17, &FONT_XS, a, C_SUB);
         }
         if (hop_wave) {
             uint32_t a, b, nc = hop_window(&a, &b), len = hop_bank_len(), c;
@@ -657,10 +668,45 @@ static void draw(void)
             if (hop_wave) bar_h(BX(i), 62, 34, nm, v, 0, 127, accent, txt);
             else bar(BX(i), 34, nm, v, 0, 127, accent, txt);
         }
+        if (set.focus == E_HOP && set.page[E_HOP] == 3u && hop_chop_mode()) {   /* the slice page: the slices as a grid */
+            uint32_t nc = (uint32_t)hop_chops(), c;
+            for (c = 0; c < 16u; c++) {
+                int32_t x = 8 + (int32_t)c * 14;
+                uint16_t col = c >= nc ? C_PANEL : (int)c == hop_last_slice() ? accent : hop_slice_active(c) ? C_TXT : ENG_DARK[3];
+                cv_rect(x, 108, 12, 14, col);
+                if (c < nc) { int_text((int32_t)c + 1, t); cv_text(x + (c < 9u ? 3 : 1), 109, &FONT_T, t, col == accent || col == C_TXT ? C_BG : C_SUB); }
+            }
+        }
+    } else if (body == PG_HOME) {
+        cv_text(8, 4, &FONT_B, "EARTH CREATURE BEATS", C_BRAND);
+        for (i = 0; i < 5u; i++) {                                     /* five tiles */
+            int32_t x = 8 + (int32_t)i * 46, y = 24;
+            int is_eng = i < NENG, muted = is_eng && !lane_audible(PAT, (uint8_t)i), armed = is_eng && (seq.armed >> i & 1u);
+            const char *sub = i == E_OTTER ? otter_preset_name() : i == E_CAT ? cat_kit_name() : i == E_FOX ? fox_preset_name() : i == E_HOP ? (hop_chop_mode() ? "CHOP" : "KEYS") : (seq.playing ? "PLAY" : "STOP");
+            char lv[4];
+            ui_panel(x, y, 42, 100);
+            icon_o(x + 5, y + 4, ICONS[i], muted ? C_MUTED : ENG_RGB[i], 2, C_BG, 1);
+            cv_text(x + (42 - text_w(&FONT_T, i < NENG ? ENG[i]->name : "BEAVER")) / 2, y + 40, &FONT_T, i < NENG ? ENG[i]->name : "BEAVER", muted ? C_MUTED : ENG_RGB[i]);
+            cv_text(x + 3, y + 52, &FONT_T, sub, C_SUB);
+            if (is_eng) {
+                int32_t m = (int32_t)(meter[i] * 30.0f); if (m > 30) m = 30;
+                cv_rect(x + 3, y + 64, 36, 4, C_RULE); cv_rect(x + 3, y + 64, set.level[i] * 36 / 127, 4, muted ? C_MUTED : ENG_RGB[i]);
+                cv_rect(x + 3, y + 70, m * 36 / 30, 2, C_TXT);
+                int_text(set.level[i], lv); cv_text(x + 3, y + 76, &FONT_T, lv, C_TXT);
+                if (armed) cv_text(x + 39 - text_w(&FONT_T, "REC"), y + 76, &FONT_T, "REC", C_REC);
+                else if (muted) cv_text(x + 39 - text_w(&FONT_T, "MUTE"), y + 76, &FONT_T, "MUTE", C_MUTED);
+            } else {
+                t[0] = (char)('A' + set.pattern); t[1] = 0;
+                int_text(PAT->bpm, lv);
+                cv_text(x + 3, y + 64, &FONT_T, "PAT", C_SUB); cv_text(x + 3 + text_w(&FONT_T, "PAT "), y + 64, &FONT_T, t, C_BEAVER);
+                cv_text(x + 3, y + 76, &FONT_T, lv, C_TXT); cv_text(x + 3 + text_w(&FONT_T, lv) + 3, y + 76, &FONT_T, "BPM", C_SUB);
+            }
+            cv_text(x + 3, y + 88, &FONT_T, i == 0 ? "KEY 1" : i == 1 ? "KEY 2" : i == 2 ? "KEY 3" : i == 3 ? "KEY 4" : "KEY 5", C_MUTED);
+        }
     } else if (body == PG_SEQ) {
         uint32_t e, s, shown = PAT->steps > 16u ? 32u : 16u, cw = shown > 16u ? 6u : 13u;
-        icon(6, 0, ICONS[4], accent, 2);
-        cv_text(42, 6, &FONT_B, "BEAVER", accent);
+        icon_o(6, 0, ICONS[4], accent, 2, C_BG, 1);
+        cv_text(44, 6, &FONT_B, "BEAVER", accent);
         for (i = 0; i < 4u; i++) {
             char l[2] = {(char)('A' + i), 0};
             cv_rect(104 + (int32_t)i * 18, 5, 16, 16, i == set.pattern ? accent : C_PANEL);
@@ -719,17 +765,18 @@ static void draw(void)
         int held = ui.keys >> WK[i] & 1u;
         int pad = body == PG_ENGINE && (set.focus == E_CAT || (set.focus == E_HOP && hop_chop_mode() && i < (uint32_t)hop_chops()));
         int mixkey = body == PG_MIX && (i < 4u || (i >= 8u && i < 12u));
-        uint16_t c = held ? ENG_RGB[set.focus] : pad ? C_SUB : mixkey ? ENG_DARK[i & 3u] : C_MUTED;
+        int homekey = body == PG_HOME && i < 6u;
+        uint16_t c = held ? ENG_RGB[set.focus] : pad ? C_SUB : mixkey ? ENG_DARK[i & 3u] : homekey ? (i < 5u ? ENG_DARK[i] : C_RULE) : C_MUTED;
         if (body == PG_SEQ) c = held ? C_TXT : i < PAT->steps ? (seq_lane_has(PAT, set.focus, i) ? ENG_RGB[set.focus] : C_MUTED) : C_PANEL;
         cv_rect(4 + (int32_t)i * 14, 24, 13, 30, c);
-        if (pad || mixkey) { int_text((int32_t)(mixkey ? (i & 3u) : i) + 1, t); cv_text(5 + (int32_t)i * 14 + (i < 9u || mixkey ? 2 : 0), 42, &FONT_XS, t, held ? C_BG : C_TXT); }
+        if (pad || mixkey || homekey) { int_text((int32_t)(mixkey ? (i & 3u) : i) + 1, t); cv_text(5 + (int32_t)i * 14 + (i < 9u || mixkey ? 2 : 0), 42, &FONT_XS, t, held ? C_BG : C_TXT); }
     }
     for (i = 0; i < 11u; i++) {
         uint16_t c = ui.keys >> BK[i] & 1u ? C_TXT : C_RULE;
         if (body == PG_SEQ) { if (i <= 3u) c = C_BEAVER; else if (i >= 5u && i <= 8u) c = (PAT->mute >> (i - 5u) & 1u) ? C_REC : ENG_DARK[i - 5u]; else if (i == 10u) c = seq.solo ? ENG_RGB[3] : C_RULE; if (ui.keys >> BK[i] & 1u) c = C_TXT; }
         cv_rect(4 + (int32_t)AT[i] * 14 + 8, 10, 11, 18, c);
     }
-    cv_text(4, 61, &FONT_XS, body == PG_SEQ ? "COPY PASTE CLR CHAIN  M1-4  SOLO" : body == PG_MIX ? "PRESET KNOB: LEVELS PANS FX" : "HOLD=MUTE REC=ARM ALGO=PRESET", C_SUB);
+    cv_text(4, 61, &FONT_XS, body == PG_HOME ? "K1-4 LEVELS  KEYS JUMP  HOME BACK" : body == PG_SEQ ? "COPY PASTE CLR CHAIN  M1-4  SOLO" : body == PG_MIX ? "PRESET KNOB: LEVELS PANS FX" : "HOLD=MUTE REC=ARM ALGO=PRESET", C_SUB);
     int_text((int32_t)(plat_master() * 100u / 4096u), t); text_cat(t, "%");
     cv_text(236 - text_w(&FONT_XS, t), 61, &FONT_XS, t, C_TXT);
     cv_blit(0, 164);
@@ -752,7 +799,7 @@ void app_frame(void)
     if (seq.step != ui.shown_step) { ui.shown_step = seq.step; ui.redraw = 1; }
     if (cat_last_pad() != last_pad) { last_pad = cat_last_pad(); ui.redraw = 1; }
     if (hop_last_slice() != last_slice) { last_slice = hop_last_slice(); ui.redraw = 1; }
-    if (body == PG_MIX && set.mixpage == 0u && now - last_meter > 80u) { last_meter = now; ui.redraw = 1; }
+    if (((body == PG_MIX && set.mixpage == 0u) || body == PG_HOME) && now - last_meter > 80u) { last_meter = now; ui.redraw = 1; }
     if (ui.redraw) { ui.redraw = 0; draw(); }
 }
 

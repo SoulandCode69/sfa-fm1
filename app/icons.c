@@ -19,13 +19,23 @@ static const icon_t ICON_HOPPER = {
     {0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0618, 0x07F0, 0x0360, 0x01C0, 0x0000, 0x0000}};
 static const icon_t *const ICONS[5] = {&ICON_OTTER, &ICON_CAT, &ICON_FOX, &ICON_HOPPER, &ICON_BEAVER};
 
-static void icon(int32_t x, int32_t y, const icon_t *ic, uint16_t col, int32_t scale)
+/* the creature in col with a light muzzle; outline (if not 0) is drawn one pixel around it: bold, cartoon */
+static void icon_o(int32_t x, int32_t y, const icon_t *ic, uint16_t col, int32_t scale, uint16_t outline, int do_outline)
 {
-    int32_t r, c;
-    uint16_t light = RGB(255, 240, 225);
+    int32_t r, c, d;
+    uint16_t light = RGB(255, 242, 228);
+    if (do_outline)
+        for (r = 0; r < 16; r++)
+            for (c = 0; c < 16; c++)
+                if ((ic->body[r] | ic->light[r]) >> (15 - c) & 1u)
+                    for (d = 0; d < 4; d++) {
+                        static const int8_t DX[4] = {1, -1, 0, 0}, DY[4] = {0, 0, 1, -1};
+                        cv_rect(x + (c + DX[d]) * scale, y + (r + DY[d]) * scale, scale, scale, outline);
+                    }
     for (r = 0; r < 16; r++)
         for (c = 0; c < 16; c++) {
             if (ic->body[r] >> (15 - c) & 1u) cv_rect(x + c * scale, y + r * scale, scale, scale, col);
             else if (ic->light[r] >> (15 - c) & 1u) cv_rect(x + c * scale, y + r * scale, scale, scale, light);
         }
 }
+static void icon(int32_t x, int32_t y, const icon_t *ic, uint16_t col, int32_t scale) { icon_o(x, y, ic, col, scale, 0, 0); }

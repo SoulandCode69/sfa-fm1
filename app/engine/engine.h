@@ -19,6 +19,7 @@ struct engine {
     const char *const *names[NPAGES];     /* each page's NPARAM short labels */
     uint8_t *params[NPAGES];              /* each page's NPARAM values 0..127 (the app saves them) */
     const char *(*param_text)(uint8_t page, uint32_t p, char *buf);   /* a value shown as words, or 0 */
+    const char *const *titles;            /* each page's title (or 0) */
 };
 
 /* a trapezoidal state-variable filter (Simper): stable at any cutoff and resonance. Coefficients per block,

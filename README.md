@@ -13,7 +13,10 @@ A groovebox of five creatures that play together. Built on [fm1-base](https://gi
 **One way of working everywhere**: a creature's button = its track (again: next page; **hold: mute**). K1-K4 are always
 the four things on screen; PRESET knob = page; ALGO knob = preset / kit / 808 / pattern; SELECT knob = track.
 REC arms the focused track (hold: clear it); PLAY runs; GLO taps tempo; EDIT = mixer (levels + meters, pans, FX;
-keys 1-4 mute, 9-12 solo); HOME stops. SAVE keeps everything. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
+keys 1-4 mute, 9-12 solo). **HOME = the home screen**: the five creatures as tiles (preset / kit / level / meter /
+REC / MUTE), white keys 1-5 jump straight to one, K1-K4 are the four track levels. The device boots there.
+Every engine page shows its title (OTTER · ENVELOPE, HOPPER · SLICE) and the header shows patterns A-D with the
+live one lit. SAVE keeps everything. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
 Samples: docs/SAMPLES.md (original, CC0). Clean by default: no drive, no delay until you add them.
 
 ## Everyday loop (WSL/Ubuntu)

@@ -207,6 +207,7 @@ int hop_chop_mode(void) { return par1[2] >> 3 != 0; }
 uint8_t *hop_slice_blob(uint32_t *size) { *size = sizeof slice_par; return &slice_par[0][0]; }
 void hop_slices_default(void) { uint32_t i; for (i = 0; i < NSLICES; i++) { slice_par[i][0] = 64; slice_par[i][1] = 0; slice_par[i][2] = 127; slice_par[i][3] = 100; } }
 int hop_last_slice(void) { return last_slice; }
+int hop_slice_active(uint32_t idx) { uint32_t i; for (i = 0; i < NV; i++) if (v[i].on && (uint32_t)(v[i].note & 15) == idx) return 1; return 0; }
 void hop_sync(void)                                     /* main loop, every frame: page 4 is the slice's */
 {
     uint32_t i;
@@ -393,4 +394,5 @@ static const char *f_text(uint8_t page, uint32_t p, char *buf)
     if (page == 2u && p == 3u) return ROLLS[par3[3] >> 5];
     return 0;
 }
-const engine_t hopper = {"HOPPER", f_init, f_note, f_render, f_panic, 5, {NAMES1, NAMES2, NAMES3, NAMES4, NAMES5}, {par1, par2, par3, par4, par5}, f_text};
+static const char *const TITLES[5] = {"CUT", "PLAYBACK", "SHAPE", "SLICE", "CHOP MODE"};
+const engine_t hopper = {"HOPPER", f_init, f_note, f_render, f_panic, 5, {NAMES1, NAMES2, NAMES3, NAMES4, NAMES5}, {par1, par2, par3, par4, par5}, f_text, TITLES};

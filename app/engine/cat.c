@@ -133,4 +133,5 @@ static const char *c_text(uint8_t page, uint32_t p, char *buf)
     return 0;
 }
 
-const engine_t cat = {"CAT", c_init, c_note, c_render, c_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, c_text};
+static const char *const TITLES[3] = {"PAD", "KIT", "BUS"};
+const engine_t cat = {"CAT", c_init, c_note, c_render, c_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, c_text, TITLES};

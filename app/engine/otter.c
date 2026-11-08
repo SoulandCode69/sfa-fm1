@@ -269,5 +269,6 @@ static const char *o_text(uint8_t page, uint32_t p, char *buf)
     return 0;
 }
 
+static const char *const TITLES[5] = {"SOUND", "ENVELOPE", "FILTER ENV", "MODULATION", "ARPEGGIO"};
 const engine_t otter = {"OTTER", o_init, o_note, o_render, o_panic, 5, {NAMES[0], NAMES[1], NAMES[2], NAMES[3], NAMES[4]},
-                        {par[0], par[1], par[2], par[3], par[4]}, o_text};
+                        {par[0], par[1], par[2], par[3], par[4]}, o_text, TITLES};

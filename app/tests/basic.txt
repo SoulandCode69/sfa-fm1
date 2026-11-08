@@ -2,6 +2,28 @@
 #   app/build/host/ecb_host app/tests/basic.txt app/build/host/out
 wait 600
 master 4096
+# HOME first: five tiles, K1-K4 are the track levels, keys 1-5 jump
+expect body 3
+shot home.png
+spin K1 -10
+wait 30
+expect param0 70
+spin K1 10
+wait 30
+tapkey w2
+wait 100
+expect body 0
+expect focus 2
+tap HOME
+wait 100
+expect body 3
+tapkey w4
+wait 100
+expect body 1
+tap HOME
+wait 100
+tapkey w1
+wait 100
 expect focus 1
 expect body 0
 shot cat.png
@@ -124,6 +146,11 @@ wavstop
 tap LFO
 tap LFO
 tap LFO
+wait 30
+expect page 3
+tapkey w2
+wait 200
+shot hopper_slices.png
 tap LFO
 wait 30
 expect page 4

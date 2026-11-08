@@ -19,6 +19,8 @@ static uint8_t par1[NPARAM], par2[NPARAM], par3[NPARAM];
 static uint8_t e_par[3][NPARAM] = {{127, 127, 10, 0}, {0, 20, 0, 0}, {64, 0, 0, 0}};        /* 808 mode's own */
 static uint8_t b_par[3][NPARAM] = {{40, 70, 80, 45}, {0, 60, 20, 30}, {30, 0, 60, 20}};    /* bass mode's own */
 static uint8_t mode;                                     /* 0 = 808 sample, 1 = bass synth */
+static const char *TITLES[3];
+static const char *const ET[3] = {"PLAY", "SHAPE", "TONE"}, *const BT[3] = {"FILTER", "OSCILLATOR", "MODULATION"};
 static uint8_t preset_i;                                 /* 0..15 the 808 bank, 16..23 the synth presets */
 
 typedef struct { const char *name; uint8_t p[3][NPARAM]; } bpreset_t;
@@ -46,6 +48,7 @@ static void mode_apply(void)
     const char *const *n1 = mode ? BN1 : EN1, *const *n2 = mode ? BN2 : EN2, *const *n3 = mode ? BN3 : EN3;
     uint8_t (*src)[NPARAM] = mode ? b_par : e_par;
     for (p = 0; p < NPARAM; p++) { NAMES1[p] = n1[p]; NAMES2[p] = n2[p]; NAMES3[p] = n3[p]; }
+    for (p = 0; p < 3u; p++) TITLES[p] = mode ? BT[p] : ET[p];
     for (g = 0; g < 3u; g++) for (p = 0; p < NPARAM; p++) (g == 0 ? par1 : g == 1 ? par2 : par3)[p] = src[g][p];
 }
 static void mode_stash(void)
@@ -210,4 +213,4 @@ static const char *f_text(uint8_t page, uint32_t p, char *buf)
     if (page == 0u && p == 3u && par1[3] == 0u) return "OFF";
     return 0;
 }
-const engine_t fox = {"FOX", f_init, f_note, f_render, f_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, f_text};
+const engine_t fox = {"FOX", f_init, f_note, f_render, f_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, f_text, TITLES};
