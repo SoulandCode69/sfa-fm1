@@ -215,6 +215,8 @@ void hop_sync(void)                                     /* main loop, every fram
     else for (i = 0; i < NPARAM; i++) slice_par[shown_slice][i] = par4[i];
 }
 void hop_rechop(void) { nslice_pt = 0; }                /* the app: after a new sample or a SENS change */
+void hop_chopmode_set(int m) { par5[0] = (uint8_t)(m <= 0 ? 0 : m == 1 ? 64 : 127); }
+void hop_chop_on(int chops) { if (chops < 2) chops = 2; if (chops > 16) chops = 16; par1[2] = (uint8_t)((chops - 1) * 8); }
 int hop_chops(void) { return (par1[2] >> 3) + 1; }
 int hop_recording(void) { return rec_on; }
 uint32_t hop_bank_seconds_x10(void) { return bank_len * 10u / 22050u; }

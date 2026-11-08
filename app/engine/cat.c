@@ -26,9 +26,33 @@ static uint8_t pad_par[MAXKITS][NPADS][PP];             /* PITCH DECAY FILTER LE
 static volatile int8_t last_pad = 0;
 static uint8_t shown_pad = 0;
 
-/* the drum kits among the sample kits */
-static uint32_t kit_count(void) { uint32_t i, n = 0; for (i = 0; i < SMPKIT_N; i++) if (!SMPKIT[i].is808) n++; return n; }
-static const smpkit_t *kit_at(uint32_t k) { uint32_t i, n = 0; for (i = 0; i < SMPKIT_N; i++) if (!SMPKIT[i].is808) { if (n == k) return &SMPKIT[i]; n++; } return &SMPKIT[0]; }
+/* the drum kits: the sample kits that are not the 808 bank, then the built kits (a base kit + per-pad choices) */
+typedef struct { const char *name; uint8_t base; uint8_t pad[NPADS][PP]; } vkit_t;
+static const vkit_t VKITS[1] = {
+    {"TRAP", 2, {                              /* PUNCH's pads with 808 kicks, 808 toms, a snap rim, cowbell / woodblock / tick */
+    {64, 110, 127, 110, 9, 60, 40, 0},
+    {64, 100, 127, 105, 3, 55, 30, 0},
+    {64, 127, 127, 100, 0, 45, 35, 10},
+    {64, 127, 127, 80, 71, 20, 20, 0},
+    {64, 127, 127, 95, 0, 30, 25, 0},
+    {90, 90, 127, 74, 0, 10, 10, 0},
+    {64, 127, 127, 66, 0, 10, 0, 0},
+    {64, 127, 127, 60, 111, 0, 0, 0},
+    {96, 70, 127, 92, 3, 30, 0, 0},
+    {80, 70, 127, 92, 3, 30, 0, 0},
+    {64, 70, 127, 92, 3, 30, 0, 0},
+    {70, 127, 127, 78, 55, 15, 0, 0},
+    {64, 127, 127, 80, 89, 15, 0, 0},
+    {64, 127, 127, 70, 95, 15, 0, 25},
+    {64, 127, 127, 85, 125, 0, 0, 0},
+    {64, 127, 127, 100, 63, 0, 0, 0}}},
+};
+#define NVKIT (sizeof VKITS / sizeof *VKITS)
+static uint32_t smp_kits(void) { uint32_t i, n = 0; for (i = 0; i < SMPKIT_N; i++) if (!SMPKIT[i].is808) n++; return n; }
+static uint32_t kit_count(void) { uint32_t n = smp_kits() + NVKIT; return n > MAXKITS ? MAXKITS : n; }
+static const smpkit_t *smp_kit_at(uint32_t k) { uint32_t i, n = 0; for (i = 0; i < SMPKIT_N; i++) if (!SMPKIT[i].is808) { if (n == k) return &SMPKIT[i]; n++; } return &SMPKIT[0]; }
+static const vkit_t *vkit_of(uint32_t k) { uint32_t s = smp_kits(); return k >= s && k - s < NVKIT ? &VKITS[k - s] : 0; }
+static const smpkit_t *kit_at(uint32_t k) { const vkit_t *v = vkit_of(k); return smp_kit_at(v ? v->base : k); }
 static const smp_t *pad_smp(uint32_t pad)
 {
     const smpkit_t *k = kit_at(kit_i);
@@ -39,7 +63,7 @@ static const smp_t *pad_smp(uint32_t pad)
 
 uint8_t *cat_pad_blob(uint32_t *size) { *size = sizeof pad_par; return &pad_par[0][0][0]; }
 const char *cat_pad_name(int pad) { const smp_t *s = pad >= 0 ? pad_smp((uint32_t)pad) : 0; return s ? s->name : "-"; }
-const char *cat_kit_name(void) { return kit_at(kit_i)->name; }
+const char *cat_kit_name(void) { const vkit_t *v = vkit_of(kit_i); return v ? v->name : kit_at(kit_i)->name; }
 int cat_last_pad(void) { return last_pad; }
 void cat_kit(int32_t step) { uint32_t n = kit_count(); kit_i = (uint8_t)(((int32_t)kit_i + step + (int32_t)n) % (int32_t)n); }
 int cat_kit_index(void) { return kit_i; }
@@ -52,6 +76,9 @@ void cat_pads_default(void)
     uint32_t k, p;
     for (k = 0; k < MAXKITS; k++) for (p = 0; p < NPADS; p++) {
         uint8_t *q = pad_par[k][p];
+        const vkit_t *v = vkit_of(k);
+        uint32_t i;
+        if (v) { for (i = 0; i < PP; i++) q[i] = v->pad[p][i]; continue; }
         q[0] = 64; q[1] = 127; q[2] = 127; q[3] = LVL[p]; q[4] = 0; q[5] = PUN[p]; q[6] = p < 2u ? 20 : 0; q[7] = 0;
     }
 }

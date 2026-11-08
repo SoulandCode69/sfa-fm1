@@ -24,7 +24,7 @@ static const char *const ET[3] = {"PLAY", "SHAPE", "TONE"}, *const BT[3] = {"FIL
 static uint8_t preset_i;                                 /* 0..15 the 808 bank, 16..23 the synth presets */
 
 typedef struct { const char *name; uint8_t p[3][NPARAM]; } bpreset_t;
-#define NBPRESET 16
+#define NBPRESET 24
 static const bpreset_t BPRESETS[NBPRESET] = {
     /*                CUT RES ENV DEC    WAVE SUB GLI DRV   LFO WOB ACC REL */
     {"ACID 303",    {{38, 85, 95, 40},  {0, 0, 25, 40},    {30, 0, 90, 15}}},
@@ -44,6 +44,15 @@ static const bpreset_t BPRESETS[NBPRESET] = {
     {"TRAP SUB",    {{18, 0, 10, 127},  {127, 127, 30, 15}, {10, 0, 10, 50}}},
     {"GARAGE BASS", {{40, 55, 85, 40},  {0, 70, 12, 45},   {35, 20, 60, 15}}},
     {"DISTORT SAW", {{55, 40, 50, 60},  {0, 40, 0, 127},   {40, 0, 70, 20}}},
+    /* Build 7 */
+    {"HOUSE PLUCK", {{50, 45, 90, 30},  {0, 70, 0, 25},    {30, 0, 60, 10}}},
+    {"DNB REESE",   {{30, 20, 5, 100},  {0, 60, 0, 70},    {8, 25, 20, 50}}},
+    {"MOOG BASS",   {{35, 50, 60, 55},  {0, 85, 15, 40},   {20, 0, 50, 20}}},
+    {"SQUELCH",     {{45, 100, 110, 35}, {127, 10, 30, 45}, {30, 0, 100, 10}}},
+    {"DUB SUB",     {{15, 0, 15, 100},  {127, 127, 25, 10}, {10, 0, 10, 60}}},
+    {"ELECTRO SQR", {{65, 35, 70, 40},  {127, 40, 5, 60},  {25, 0, 70, 15}}},
+    {"FILTER SWEEP",{{25, 65, 120, 90}, {0, 50, 0, 35},    {40, 60, 30, 40}}},
+    {"PSY BASS",    {{40, 75, 95, 20},  {0, 30, 0, 70},    {30, 0, 90, 5}}},
 };
 
 /* the 808 bank among the sample kits */

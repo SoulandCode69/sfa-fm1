@@ -9,7 +9,7 @@ Run from the repo root after `python3 base/tools/build.py app --host`:
 import sys, wave, struct, math
 import numpy as np
 
-N_OTTER, N_FOX = 48, 32
+N_OTTER, N_FOX = 64, 40
 SEG = 1.0                                   # seconds per sound (500 ms held, 500 ms release)
 
 def gen():

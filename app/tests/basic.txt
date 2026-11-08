@@ -79,6 +79,29 @@ wait 30
 expect kit 2
 spin ALGO 1
 wait 30
+expect kit 3
+shot cat_trap.png
+wav trap.wav
+tapkey w0 110
+wait 150
+tapkey w1 110
+wait 150
+tapkey w2 110
+wait 150
+tapkey w3 110
+wait 150
+tapkey w4 110
+wait 150
+tapkey w5 110
+wait 150
+tapkey w6 110
+wait 150
+tapkey w7 110
+wait 150
+wait 500
+wavstop
+spin ALGO 1
+wait 30
 expect kit 0
 # Otter: a chord, presets
 tap FX
@@ -398,3 +421,61 @@ wait 50
 shot cat_padplus.png
 spin PRESET -1
 wait 50
+# Build 7: ratchet (held step + GEN), the song chain (CHAIN held + keys 1-4), Hopper sample -> chopped slices
+tap SEL
+wait 50
+expect focus 1
+tap SEQ
+wait 50
+expect body 1
+key w0 down
+wait 100
+tapkey b9
+wait 50
+key w0 up
+wait 50
+expect step_0len 32
+key w0 down
+wait 100
+tapkey b9
+wait 50
+tapkey b9
+wait 50
+key w0 up
+wait 50
+expect step_0len 96
+key b3 down
+wait 100
+tapkey w0
+wait 50
+tapkey w1
+wait 50
+tapkey w0
+wait 50
+key b3 up
+wait 50
+expect song_len 3
+expect chain 0
+tapkey b3
+wait 50
+expect chain 1
+shot beaver_song.png
+tap PLAY
+wait 2500
+tap PLAY
+wait 50
+tapkey b3
+wait 50
+expect chain 0
+tap LFO
+wait 50
+tap ARP
+wait 50
+expect hop_rec 1
+wait 1200
+tap ARP
+wait 100
+expect hop_rec 0
+expect page 3
+expect focus 3
+shot hopper_sampled_slices.png

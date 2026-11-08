@@ -4,11 +4,11 @@ A groovebox of five creatures that play together. Built on [fm1-base](https://gi
 
 | Creature | Button | What |
 |---|---|---|
-| OTTER Synth | FX | 4-voice polysynth, 32 presets (ALGO), ADSR, filter env, LFO, arpeggiator |
-| CAT Kit | SEL | sample drum machine: 3 factory kits x 16 pads; every pad its own PITCH DECAY FILTER LEVEL and SAMPLE (any of the 64 sounds: build your own kit) PUNCH SNAP CRUSH (pages PAD / PAD+ follow the pad you hit); KIT page; BUS compressor |
-| FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive, CLICK, PUNCH) + 16 synth basses |
-| HOPPER Cut | LFO | slicer: SAMPLE the output (ARP), chop EQUAL / TRANSIENT / MANUAL (hold a slice key + K1 moves its start), per-slice pitch / reverse / decay / level |
-| BEAVER | SEQ | 4 tracks x up to 32 steps, per step NOTE VEL LENGTH PROB (hold a step + K1-K4), swing, patterns A-D, chain, copy / paste, live record onto armed tracks |
+| OTTER Synth | FX | 4-voice polysynth, 64 presets (ALGO), ADSR, filter env, LFO, arpeggiator |
+| CAT Kit | SEL | sample drum machine: 4 kits (CLASSIC, LOFI, PUNCH, TRAP) x 16 pads; every pad its own PITCH DECAY FILTER LEVEL and SAMPLE (any of the 64 sounds: build your own kit) PUNCH SNAP CRUSH (pages PAD / PAD+ follow the pad you hit); KIT page; BUS compressor |
+| FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive, CLICK, PUNCH) + 24 synth basses |
+| HOPPER Cut | LFO | slicer: SAMPLE the output (ARP: stop = chopped by transients and on the slice page, ready to play), chop EQUAL / TRANSIENT / MANUAL (hold a slice key + K1 moves its start), per-slice pitch / reverse / decay / level |
+| BEAVER | SEQ | 4 tracks x up to 32 steps, per step NOTE VEL LENGTH PROB (hold a step + K1-K4) and RATCHET x1-x4 (hold a step + GEN), swing, patterns A-D, an 8-slot song chain (hold CHAIN + keys 1-4 to write it, CHAIN + CLR to clear, tap CHAIN to run it), copy / paste, GEN / BEAT groove generators, step entry, live record |
 
 **One way of working everywhere**: a creature's button = its track (again: next page; **hold: mute**; **hold + K1 / K2:
 its level / pan, from any page**). K1-K4 are always

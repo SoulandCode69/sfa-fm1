@@ -325,4 +325,84 @@ key 12 up
 wait 200
 spin ALGO 1
 wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
+key 7 down
+wait 300
+key 7 up
+wait 200
+key 12 down
+wait 300
+key 12 up
+wait 200
+spin ALGO 1
+wait 20
 wavstop

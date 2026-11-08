@@ -10,8 +10,10 @@
 typedef struct {
     uint8_t note[NSTEP];                  /* 0 = rest (Hopper: 255 = rest); Cat: unused */
     uint16_t mask[NSTEP];                 /* Cat: the pads; others unused */
-    uint8_t vel[NSTEP], len[NSTEP], prob[NSTEP];
+    uint8_t vel[NSTEP], len[NSTEP], prob[NSTEP];   /* len: bits 0-4 the length in quarter steps (0 = gate), bits 5-6 ratchet repeats */
 } lane_t;
+#define STEP_LEN(b) ((b) & 31u)
+#define STEP_RAT(b) ((b) >> 5)
 
 typedef struct {
     uint8_t bpm, swing, steps, gate;      /* 40..240; 0..127; 1..32; 0..127 of a step */
@@ -29,6 +31,8 @@ static struct {
     uint8_t solo;                         /* bit per lane, 0 = none */
     uint8_t stepin;                       /* step entry: keys write at the cursor and advance it */
     int32_t cursor;
+    uint8_t rat_left[NLANE];              /* ratchet: repeats still to fire this step, and when the next one is due */
+    uint32_t rat_next[NLANE], rat_gap[NLANE];
     uint8_t chain, chain_pos;             /* chain mode: play the slots in a row */
     uint32_t rng;
 } seq;
@@ -66,28 +70,40 @@ static void seq_release(uint8_t e)
     if (seq.held[e] >= 0) { ENG[e]->note(seq.held[e], 0, 0); seq.held[e] = -1; }
 }
 
+/* one lane's hit at step st (also each ratchet repeat; div = how many hits share the step) */
+static void lane_hit(const pattern_t *p, uint8_t e, int32_t st, uint32_t div)
+{
+    const lane_t *l = &p->lane[e];
+    uint32_t i, len_q = STEP_LEN(l->len[st]);
+    if (e == E_CAT) {
+        if (l->mask[st]) for (i = 0; i < 16u; i++) if (l->mask[st] >> i & 1u) cat.note((int32_t)i, l->vel[st], 1);
+    } else if (!lane_rest(e, l->note[st])) {
+        seq_release(e);
+        ENG[e]->note(l->note[st], l->vel[st], 1);
+        if (e == E_HOP) return;                                            /* one-shots */
+        seq.held[e] = l->note[st];
+        seq.held_t[e] = 0;
+        seq.off_at[e] = len_q ? seq.step_len * len_q / 4u : seq_this_len(p, st) * (uint32_t)p->gate / 127u;
+        if (div > 1u) { uint32_t g = seq_this_len(p, st) / div; if (seq.off_at[e] > g * 3u / 4u) seq.off_at[e] = g * 3u / 4u; }
+        if (seq.off_at[e] < 300u) seq.off_at[e] = 300u;
+    }
+}
+
 static void seq_fire(const pattern_t *p, int32_t st)
 {
-    uint32_t e, i;
+    uint32_t e;
     for (e = 0; e < NLANE; e++) {
         const lane_t *l = &p->lane[e];
-        uint32_t len_q = l->len[st] ? l->len[st] : 0u;
+        uint32_t rat = STEP_RAT(l->len[st]);
+        seq.rat_left[e] = 0;
         if (e != E_CAT && !lane_rest((uint8_t)e, l->note[st])) seq_release((uint8_t)e);
         if (!lane_audible(p, (uint8_t)e)) continue;
         if (l->prob[st] < 127u) {                                        /* probability */
             seq.rng = seq.rng * 1664525u + 1013904223u;
             if ((seq.rng >> 24) > (uint32_t)l->prob[st] * 2u) continue;
         }
-        if (e == E_CAT) {
-            if (l->mask[st]) for (i = 0; i < 16u; i++) if (l->mask[st] >> i & 1u) cat.note((int32_t)i, l->vel[st], 1);
-        } else if (!lane_rest((uint8_t)e, l->note[st])) {
-            ENG[e]->note(l->note[st], l->vel[st], 1);
-            if (e == E_HOP) continue;                                      /* one-shots */
-            seq.held[e] = l->note[st];
-            seq.held_t[e] = 0;
-            seq.off_at[e] = len_q ? seq.step_len * len_q / 4u : seq_this_len(p, st) * (uint32_t)p->gate / 127u;
-            if (seq.off_at[e] < 300u) seq.off_at[e] = 300u;
-        }
+        lane_hit(p, (uint8_t)e, st, rat + 1u);
+        if (rat) { seq.rat_left[e] = (uint8_t)rat; seq.rat_gap[e] = seq_this_len(p, st) / (rat + 1u); seq.rat_next[e] = seq.rat_gap[e]; }
     }
 }
 
@@ -99,13 +115,20 @@ static void seq_tick(pattern_t *p, uint32_t n)
     if (!seq.playing) return;
     if (seq.step < 0) { seq.step = 0; seq.phase = 0; seq.step_len = seq_step_samples(p); seq_fire(p, 0); }
     seq.phase += n;
-    for (e = 0; e < NLANE; e++)
+    for (e = 0; e < NLANE; e++) {
         if (seq.held[e] >= 0) { seq.held_t[e] += n; if (seq.held_t[e] >= seq.off_at[e]) seq_release((uint8_t)e); }
+        if (seq.rat_left[e] && seq.phase >= seq.rat_next[e]) {           /* a ratchet repeat */
+            uint32_t rat = STEP_RAT(p->lane[e].len[seq.step]);
+            seq.rat_left[e]--; seq.rat_next[e] += seq.rat_gap[e];
+            lane_hit(p, (uint8_t)e, seq.step, rat + 1u);
+        }
+    }
     if (seq.phase >= seq_this_len(p, seq.step)) {
         seq.phase -= seq_this_len(p, seq.step);
         seq.step_len = seq_step_samples(p);
         seq.step = seq.step + 1;
         if (seq.step >= (int32_t)(p->steps ? p->steps : 1)) { seq.step = 0; if (seq.chain) chain_advance(); }
+        for (e = 0; e < NLANE; e++) seq.rat_left[e] = 0;
         seq_fire(PAT, seq.step);
     }
 }
