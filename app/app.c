@@ -543,13 +543,13 @@ static void input(void)
 void app_input_only(void) { input(); }
 
 /* ------------------------------------------------------------------- draw --- */
-static void panel(int32_t x, int32_t y, int32_t w, int32_t h) { cv_rect(x, y, w, h, C_RULE); cv_rect(x + 1, y + 1, w - 2, h - 2, C_PANEL); }
+static void ui_panel(int32_t x, int32_t y, int32_t w, int32_t h) { cv_rect(x, y, w, h, C_RULE); cv_rect(x + 1, y + 1, w - 2, h - 2, C_PANEL); }
 
 static void bar_h(int32_t x, int32_t y, int32_t bh, const char *name, int32_t v, int32_t lo, int32_t hi, uint16_t col, const char *txt)
 {
     int32_t h = (v - lo) * (bh - 4) / (hi - lo);
     char t[8];
-    panel(x, y, 52, bh);
+    ui_panel(x, y, 52, bh);
     cv_rect(x + 2, y + bh - 2 - h, 48, h, col);
     cv_text(x + (52 - text_w(&FONT_XS, name)) / 2, y + bh + 3, &FONT_XS, name, C_SUB);
     if (!txt) { int_text(v, t); txt = t; }
@@ -562,7 +562,7 @@ static void pan_bar(int32_t x, int32_t y, const char *name, int32_t v, uint16_t 
 {
     char t[8];
     int32_t c = x + 26, p = (v - 64) * 23 / 64;
-    panel(x, y, 52, 56);
+    ui_panel(x, y, 52, 56);
     cv_rect(c, y + 4, 1, 48, C_MUTED);
     if (p >= 0) cv_rect(c, y + 20, p + 1, 16, col); else cv_rect(c + p, y + 20, -p + 1, 16, col);
     cv_text(x + (52 - text_w(&FONT_XS, name)) / 2, y + 59, &FONT_XS, name, C_SUB);
@@ -630,7 +630,7 @@ static void draw(void)
             uint32_t a, b, nc = hop_window(&a, &b), len = hop_bank_len(), c;
             const uint32_t *pts; uint32_t npts = hop_slice_points(&pts);
             float ph = hop_playhead();
-            panel(8, 30, 224, 28);
+            ui_panel(8, 30, 224, 28);
             for (c = 0; c < 110u; c++) {
                 uint32_t f0 = len * c / 110u, f1 = len * (c + 1u) / 110u;
                 int32_t h = hop_peak(f0, f1) * 12 / 32768, in = f0 >= a && f1 <= b;

@@ -85,7 +85,7 @@ static float sm_cut, sm_res, sm_det;      /* smoothed knobs */
 
 /* the arpeggiator: the held notes, stepped by the app's clock (otter_arp_tick, from the sequencer's tempo) */
 static int32_t held[8]; static uint8_t held_vel[8]; static uint8_t nheld;
-static int32_t arp_note = -1; static uint8_t arp_i, arp_dir, arp_oct;
+static int32_t arp_note = -1; static uint8_t arp_i, arp_dir;
 static void voice_on(int32_t note, uint32_t vel);
 static void voice_off(int32_t note);
 
