@@ -62,6 +62,15 @@ static inline float fm_soft(float x)
     return x * (27.0f + x2) / (27.0f + 9.0f * x2);
 }
 
+/* a transparent output clip: straight up to 0.7, a soft knee from there to 1.0; nothing audible happens below the knee */
+static inline float fm_clip(float x)
+{
+    float a = x < 0.0f ? -x : x;
+    if (a <= 0.7f) return x;
+    a = 0.7f + fm_soft((a - 0.7f) / 0.3f * 1.5f) * 0.3f;
+    return x < 0.0f ? -a : a;
+}
+
 /* seconds -> a per-sample multiplier that decays to 1/e in that time */
 static inline float decay_coef(float sec) { return fm_exp2f(-1.4427f / (sec * SR)); }
 

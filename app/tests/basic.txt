@@ -7,7 +7,7 @@ expect body 3
 shot home.png
 spin K1 -10
 wait 30
-expect param0 70
+expect param0 62
 spin K1 10
 wait 30
 tapkey w2
@@ -408,7 +408,7 @@ expect focus 1
 expect mute 0
 tap HOME
 wait 50
-expect param0 85
+expect param0 77
 tap HOME
 wait 50
 tap SEL

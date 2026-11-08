@@ -136,7 +136,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
     uint32_t dtime = 1100u + (uint32_t)(p01(set.delay_time) * (float)(DLY_LEN - 1200u));
     float low_c = 1.0f - fm_exp2f(-6.2831853f * 110.0f / SR), low_amt = p01(set.lowend) * 1.0f;      /* a low shelf at 110 Hz, up to +6 dB */
     float air_c = 1.0f - fm_exp2f(-6.2831853f * 5000.0f / SR), air_amt = p01(set.air) * 0.8f;       /* a high shelf from 5 kHz */
-    float gthr = 1.0f - p01(set.glue) * 0.6f, gslope = p01(set.glue) * 0.6f, gmake = 1.0f + p01(set.glue) * 0.5f;
+    float gthr = 1.0f - p01(set.glue) * 0.5f, gslope = p01(set.glue) * 0.45f, gmake = 1.0f + p01(set.glue) * 0.25f;
     midi_in();
     seq_tick(PAT, n);
     if (otter_arp_on()) {
@@ -153,7 +153,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         plat_cpu2_sync();
     }
     for (e = 0; e < NENG; e++) {
-        float lvl = lane_audible(PAT, (uint8_t)e) ? p01(set.level[e]) * 1.27f : 0.0f, pan = p01(set.pan[e]), pk = 0.0f;
+        float lvl = lane_audible(PAT, (uint8_t)e) ? p01(set.level[e]) : 0.0f, pan = p01(set.pan[e]), pk = 0.0f;
         gl[e] = lvl * fm_sinf((1.0f - pan) * 1.5707963f); gr[e] = lvl * fm_sinf(pan * 1.5707963f);
         for (i = 0; i < n; i += 4) { float a = fm_fabsf(mix[e][i]) * lvl; if (a > pk) pk = a; }
         meter[e] = pk > meter[e] ? pk : meter[e] * 0.85f;
@@ -178,7 +178,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         if (set.air) { air_lp[0] += (l - air_lp[0]) * air_c; air_lp[1] += (r - air_lp[1]) * air_c; l += (l - air_lp[0]) * air_amt; r += (r - air_lp[1]) * air_amt; }
         if (set.glue) {                                                  /* GLUE: a master compressor, 2 ms attack, 150 ms release */
             float a = fm_fabsf(l), b = fm_fabsf(r); if (b > a) a = b;
-            glue_env += (a > glue_env ? 0.02f : 0.00015f) * (a - glue_env);
+            glue_env += (a > glue_env ? 0.01f : 0.00008f) * (a - glue_env);
             if ((i & 7u) == 0u) glue_g = glue_env > gthr ? fm_powf(glue_env / gthr, -gslope) : 1.0f;
             l *= glue_g * gmake; r *= glue_g * gmake;
         }
@@ -190,16 +190,16 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         y[0] = l - dc_x[0] + 0.995f * dc_y[0]; dc_x[0] = l; dc_y[0] = y[0];
         y[1] = r - dc_x[1] + 0.995f * dc_y[1]; dc_x[1] = r; dc_y[1] = y[1];
         a = fm_fabsf(y[0]); pk = fm_fabsf(y[1]); if (pk > a) a = pk;
-        if (a > lim_env) lim_env += (a - lim_env) * 0.5f; else lim_env += (a - lim_env) * 0.0005f;
-        if (lim_env > 0.9f) { float g = 0.9f / lim_env; y[0] *= g; y[1] *= g; }
+        if (a > lim_env) lim_env += (a - lim_env) * 0.5f; else lim_env += (a - lim_env) * 0.00012f;   /* ~190 ms release: no pumping */
+        if (lim_env > 0.95f) { float g = 0.95f / lim_env; y[0] *= g; y[1] *= g; }
         if (!(y[0] == y[0]) || !(y[1] == y[1])) {
             for (e = 0; e < NENG; e++) ENG[e]->init();
             dc_x[0] = dc_x[1] = dc_y[0] = dc_y[1] = dly_lp = dly_prev = 0.0f; lim_env = 1.0f; y[0] = y[1] = 0.0f;
         }
         mixout[i] = (y[0] + y[1]) * 0.5f;
         gain_now += (gain - gain_now) * 0.004f;
-        lr[2 * i] = (int32_t)(fm_soft(y[0] * 0.9f) * 1.05f * gain_now);
-        lr[2 * i + 1] = (int32_t)(fm_soft(y[1] * 0.9f) * 1.05f * gain_now);
+        lr[2 * i] = (int32_t)(fm_clip(y[0]) * 0.85f * gain_now);            /* the output: -1.4 dB of headroom under the clip */
+        lr[2 * i + 1] = (int32_t)(fm_clip(y[1]) * 0.85f * gain_now);
     }
     hop_record_feed(mixout, n);
 }
@@ -247,10 +247,10 @@ void app_init(void)
     } else {
         uint32_t k;
         set.magic = SET_MAGIC; set.octave = 0; set.focus = E_CAT;
-        for (e = 0; e < NENG; e++) { set.page[e] = 0; set.level[e] = 100; set.pan[e] = 64; }
-        set.level[E_CAT] = 110;
+        for (e = 0; e < NENG; e++) { set.page[e] = 0; set.level[e] = 92; set.pan[e] = 64; }
+        set.level[E_CAT] = 100;
         set.delay_mix = 0; set.delay_time = 60; set.delay_fb = 50; set.crush = 0; set.drive = 0; set.mixpage = 0;
-        set.glue = 30; set.lowend = 20; set.air = 14;
+        set.glue = 22; set.lowend = 16; set.air = 12;
         set.otter_preset = 0; set.fox_preset = 0; set.cat_kit = 0; set.pattern = 0; set.chain = 0;
         cat_pads_default(); hop_slices_default();
         for (k = 0; k < 4u; k++) pattern_defaults((pattern_t *)set.pat[k]);

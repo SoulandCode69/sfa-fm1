@@ -17,7 +17,7 @@ static const char *const NAMES3[NPARAM] = {"COMP", "PUNCH", "LOWCUT", "DRIVE"};
 static uint8_t par1[NPARAM] = {64, 127, 127, 100};      /* views of the selected pad's params */
 static uint8_t par1b[NPARAM] = {0, 0, 0, 0};
 static uint8_t par2[NPARAM] = {0, 64, 64, 100};
-static uint8_t par3[NPARAM] = {35, 20, 0, 0};
+static uint8_t par3[NPARAM] = {25, 15, 0, 0};
 #define NPADS 16
 #define MAXKITS 8
 #define PP 8                                            /* params per pad */
@@ -168,9 +168,9 @@ static void c_render(float *out, uint32_t n)
 {
     uint32_t i, p;
     float comp = p01(par3[0]), punch = p01(par3[1]) * 1.5f, lowcut = p01(par3[2]), drive = p01(par3[3]);
-    float level = p01(par2[3]) * 1.1f;
+    float level = p01(par2[3]);
     float hpc = lowcut > 0.0f ? 1.0f - fm_exp2f(-6.2831853f * (20.0f + lowcut * 200.0f) / SR) : 0.0f;
-    float thr = 1.0f - comp * 0.7f, slope = comp * 0.75f, makeup = 1.0f + comp * 0.6f;
+    float thr = 1.0f - comp * 0.6f, slope = comp * 0.6f, makeup = 1.0f + comp * 0.35f;
     float dgain = 1.0f + drive * drive * 4.0f, dnorm = drive > 0.0f ? 1.0f / fm_soft(dgain * 0.7f) : 1.0f;
     for (p = 0; p < NPADS; p++)
         if (trig[p]) { trig[p] = 0; start(p, (float)trig_vel[p] * (1.0f / 127.0f)); }
@@ -207,7 +207,7 @@ static void c_render(float *out, uint32_t n)
         }
         if (drive > 0.0f) s = fm_soft(s * 0.7f * dgain) * dnorm;
         s *= level;
-        if (s > 1.5f) s = 1.5f; else if (s < -1.5f) s = -1.5f;        /* the ceiling (the master limits) */
+        if (s > 1.2f) s = 1.2f; else if (s < -1.2f) s = -1.2f;        /* the ceiling (the master limits) */
         out[i] += s;
     }
 }
