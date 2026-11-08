@@ -44,13 +44,13 @@ git clone --recursive <this repo>           # base/ = fm1-base + felucca-bsp
 python3 base/tools/build.py app --host      # host simulator, needs only cc
 app/build/host/ecb_host app/tests/basic.txt app/build/host/out   # 11 checks, screenshots + WAVs in out/
 sh base/tools/get_toolchain.sh              # once: JieLi pi32v2 toolchain -> ~/.jieli
-python3 base/tools/build.py app             # device: app/build/sfa-dev+<commit>.fwsc (identity FM-1_5700)
+python3 base/tools/build.py app             # device: app/build/ECB.fwsc (identity FM-1_5700)
 python3 base/tools/build.py app --web       # browser emulator (needs emcc)
 ```
 
 ## Flash (Unit A only)
 1. Felucca via https://thefirmwarehub.com first (proves the unit, the chip, the way back).
-2. `python3 base/tools/fm1_install.py app/build/sfa-*.fwsc` with the FM-1 on USB, or the hub's Install from file.
+2. `python3 base/tools/fm1_install.py app/build/ECB.fwsc` with the FM-1 on USB, or the hub's Install from file.
 3. Back: hub → Back to official V15. Stuck: hold OCT− at power-on.
 4. Log it in `FM1s/notes.md`.
 

@@ -151,3 +151,7 @@ That's Cat Kit voice #1 and Fox's first sample in the same session. Note what so
 Distortion report (Build 2/3 on device, sequencer playing): the simulator shows no clipping, so the likely cause is
 CPU overrun (xruns) with four engines at once. Build 4: cheaper saturation, the synths on the second core, and a CPU %
 / XRUN readout on the mixer page so the next report can say which it is.
+
+2026-11-08 — why no ECB build ever reached the device: the rename SFA → ECB moved the package to app/build/ECB.fwsc,
+but tools/go.sh kept flashing app/build/sfa.fwsc, the stale pre-rename package. Every run rebuilt ECB and reflashed old
+SFA. go.sh now flashes the newest .fwsc the build wrote, deletes the old one and prints which package it is sending.

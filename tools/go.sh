@@ -1,5 +1,5 @@
 #!/bin/sh
-# SFA Suite: build, flash the FM-1 (Unit A), write the sample bank, open the laptop UI. Run in WSL/Ubuntu:
+# Earth Creature Beats: build, flash the FM-1 (Unit A), write the sample bank, open the laptop UI. Run in WSL/Ubuntu:
 #   tools/go.sh            build + install + open the mirror in Chrome
 #   tools/go.sh --no-flash just build and (re)open the mirror
 #   tools/go.sh --pull     git pull first
@@ -21,8 +21,10 @@ if [ -z "$NOFLASH" ]; then
     echo "== install (Windows Python; the FM-1 on USB; close the hub / mirror tabs first)"
     WPY=$(command -v python.exe || true)
     if [ -z "$WPY" ]; then echo "python.exe not found: install Python on Windows (winget install Python.Python.3.12)"; exit 1; fi
-    W=$(wslpath -w "$PWD")
-    "$WPY" "$W\\base\\tools\\fm1_install.py" "$W\\app\\build\\sfa.fwsc" --yes
+    rm -f app/build/sfa.fwsc                                # (an old SFA package must never be flashed again)
+    PKG=$(ls -t app/build/*.fwsc | head -1)                 # the package this build just wrote (ECB.fwsc)
+    echo "== package: $PKG ($(date -r "$PKG" +%H:%M:%S))"
+    "$WPY" "$(wslpath -w "$PWD/base/tools/fm1_install.py")" "$(wslpath -w "$PWD/$PKG")" --yes
 fi
 
 echo "== laptop UI"
