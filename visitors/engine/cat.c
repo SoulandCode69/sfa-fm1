@@ -96,6 +96,8 @@ typedef struct {
     adpcm_t a; float ainc, again;                                    /* the LAYER sample */
 } voice_t;
 static voice_t v[NPADS];
+#define NTAIL 4
+static voice_t tail[NTAIL]; static uint8_t tail_i;          /* retriggered voices fade out here instead of cutting */
 static volatile uint8_t trig[NPADS], trig_vel[NPADS];
 static float comp_env, comp_g = 1.0f, hp_x, hp_y;
 static uint32_t rng = 99u;
@@ -116,7 +118,8 @@ static void start(uint32_t p, float vel)
     float pitch = ((float)q[0] - 64.0f) * (24.0f / 127.0f) + ((float)par2[1] - 64.0f) * (12.0f / 127.0f);
     float dec = p01(q[1]) * p01(par2[2]) * 2.0f, tone = p01(q[2]), bend = p01(q[4]);
     float semi = fm_exp2f(pitch * (1.0f / 12.0f)), base_dec, base_hz, nhz;
-    if (p == V_CHAT) v[V_OHAT].on = 0;                                /* the closed hat chokes the open one */
+    if (w->on) { tail[tail_i] = *w; tail[tail_i].dcoef = 0.97f; tail[tail_i].ncoef = 0.97f; tail[tail_i].snap = 0.0f; tail[tail_i].layer = 0; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); }
+    if (p == V_CHAT && v[V_OHAT].on) { tail[tail_i] = v[V_OHAT]; tail[tail_i].dcoef = 0.97f; tail[tail_i].ncoef = 0.97f; tail[tail_i].snap = 0.0f; tail[tail_i].layer = 0; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); v[V_OHAT].on = 0; }   /* the closed hat chokes the open one, softly */
     tone = tone * (0.75f + 0.25f * vel);                              /* velocity brightens */
     w->kind = (uint8_t)p; w->tone = tone;
     w->gain = (0.25f + 0.75f * vel * vel) * p01(q[3]) * 1.1f;
@@ -172,8 +175,8 @@ static void m_render(float *out, uint32_t n)
     for (p = 0; p < NPADS; p++) if (trig[p]) { trig[p] = 0; start(p, (float)trig_vel[p] * (1.0f / 127.0f)); }
     for (i = 0; i < n; i++) {
         float s = 0.0f, g;
-        for (p = 0; p < NPADS; p++) {
-            voice_t *w = &v[p];
+        for (p = 0; p < NPADS + NTAIL; p++) {
+            voice_t *w = p < NPADS ? &v[p] : &tail[p - NPADS];
             float x, tonal = 0.0f, nz, dt;
             if (!w->on) continue;
             w->penv *= w->pcoef;

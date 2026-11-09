@@ -623,3 +623,50 @@ expect fill 0
 tap PLAY
 wait 50
 shot ship_fill.png
+# Build 5: the song builder (Ship page 4): slots, pattern, repeats, scene; the chain honours repeats and recalls scenes
+tap HOME
+wait 50
+tapkey w4
+wait 50
+expect body 1
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 50
+expect chain 0
+key b3 down
+wait 60
+tapkey b2
+wait 60
+key b3 up
+wait 50
+expect song_len 0
+tapkey w0
+wait 50
+spin K2 1
+wait 50
+expect song_len 1
+spin K3 2
+wait 50
+expect song_rep0 3
+tapkey w1
+wait 50
+spin K2 2
+wait 50
+expect song_len 2
+spin K4 1
+wait 50
+expect song_scene1 1
+shot ship_song.png
+tapkey b3
+wait 50
+expect chain 1
+tap PLAY
+wait 2200
+expect pattern 1
+tap PLAY
+wait 50

@@ -14,6 +14,12 @@ Audio: `python3 tools/render_visitors.py` (the REPTILE bank and the Greys' defau
 `python3 tools/pack_samples.py --pack assets/vpack --out visitors/samples_data.c` and
 `python3 tools/sfa_sample.py assets/vuser --out visitors/samples.bin`.
 
+Build 5: **the declick pass**: a Mantis voice that retriggers (and the open hat when the closed hat chokes it) fades
+out in a tail instead of cutting; a Reptiles 808 retrigger fades the old note over 2 ms; mixer levels, pans, mutes and
+sends ramp across the block (no zipper). **The song builder** (fourth Ship page on PRESET): 16 slots in two rows;
+keys pick a slot, SLOT / PATTERN / REPEAT (1-8 bars, below 1 ends the song there) / SCENE (a mixer scene recalled on
+entering the slot). CHAIN plays the song honouring repeats and scenes. Settings magic ALI3.
+
 Build 4: **the Alien Stack layout**: every parameter page is four horizontal stack rows (name, 12 segments, value) with
 a context strip under them (a synth: the presets either side of the one you are on; Mantis: the sixteen voices, the one
 you hit lit). **The Mothership**: per-being **FX sends** (mixer page 5: SENDS; the reverb and delay are fed from them,
