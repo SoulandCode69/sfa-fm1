@@ -1,7 +1,19 @@
+# build output
 app/build/
 app/web/words/
 core/build/
-renders/
-renders/
+visitors/build/
 **/render_tmp/
-visitors/build/host/
+# renders and tool scratch (local only)
+renders/
+assets/lab/_backups/
+__pycache__/
+*.pyc
+# packages and dist
+dist/
+*.fwsc
+# editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/

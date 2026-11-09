@@ -1,0 +1,12 @@
+Sin Fetish Audio (SFA)
+
+Source code in this repository (app/, visitors/, core/, tools/, sfa/, site/) is licensed under the GNU General Public
+License, version 3 only (see LICENSE). Copyright (C) 2026 Sin Fetish Audio.
+
+Third-party and bundled material:
+
+* base/  fm1-base, https://github.com/charlesvestal/fm1-base, Mozilla Public License 2.0. It is a git submodule, not
+  copied here; its own licence applies to it.
+* Samples shipped with the firmware are original recordings or synthesis by Sin Fetish Audio, released under CC0 1.0.
+  Provenance is in docs/SAMPLES.md.
+* "FM-1" and "M-VAVE" are names of products of their respective owner. Sin Fetish Audio is not affiliated with them.

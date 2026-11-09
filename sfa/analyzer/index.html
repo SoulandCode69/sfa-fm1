@@ -58,6 +58,10 @@ header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; pa
 .drop { border: 1px dashed var(--dim); border-radius: 6px; padding: 14px 12px; text-align: center; color: var(--dim); cursor: pointer; background: var(--panel); }
 .drop.over { border-color: var(--accent); color: var(--accent); background: var(--panel2); }
 .drop b { display: block; color: var(--fg); font: 700 14px/1.2 var(--display); margin-bottom: 4px; }
+.hist { position: absolute; z-index: 20; right: 12px; top: 52px; width: min(460px, calc(100vw - 24px)); max-height: 70vh; overflow: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+.hist h3 { margin: 10px 0 6px; font: 500 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); } .hist h3:first-child { margin-top: 0; }
+.hist .run, .hist .fav { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 12px; } .hist .run span.nm, .hist .fav span.nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file .star { border: 0; background: none; padding: 0 2px; color: var(--dim); cursor: pointer; } .file .star.on { color: var(--warn); }
 .files { overflow: auto; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
 .group { font: 500 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); padding: 8px 2px 2px; }
 .file { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 2px 8px; padding: 7px 8px; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; align-items: center; }
@@ -101,6 +105,14 @@ th:first-child, td:first-child { text-align: left; }
 tr.act td { background: var(--panel2); }
 .status { color: var(--dim); font: 400 11px/1.3 var(--mono); }
 details > summary { cursor: pointer; font: 500 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.abbar { display: none; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; margin-top: 12px; background: var(--panel); border: 1px solid var(--accent); border-radius: 6px; }
+.abbar.on { display: flex; }
+.abbar .side { display: flex; align-items: center; gap: 6px; }
+.abbar .side b { font: 800 15px/1 var(--display); width: 18px; }
+.abbar select { max-width: 230px; }
+.abbar .listen button { min-width: 38px; font-weight: 700; }
+.abbar .listen button.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+td.up { color: var(--warn); } td.dn { color: var(--c2); } td.eq { color: var(--dim); }
 .rules { color: var(--dim); font-size: 12px; margin: 8px 0 0; }
 
 @media (max-width: 1180px) { .stage { grid-template-columns: minmax(0, 1fr); } .meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } }
@@ -115,7 +127,7 @@ details > summary { cursor: pointer; font: 500 10px/1 var(--mono); letter-spacin
     <div><b>SFA</b> <span>Analyzer</span></div>
   </div>
   <button class="primary" id="bOpen">Open WAVs</button>
-  <input type="file" id="fIn" accept=".wav,audio/wav,audio/*" multiple hidden>
+  <input type="file" id="fIn" accept=".wav,.mp3,.flac,.ogg,.m4a,.aif,.aiff,.opus,audio/*" multiple hidden>
   <button id="bPlay" title="Space">Play</button>
   <button id="bLoop" title="Loop the selection">Loop</button>
   <button id="bZoom" title="Z: zoom to the selection, F: fit">Zoom</button>
@@ -125,10 +137,22 @@ details > summary { cursor: pointer; font: 500 10px/1 var(--mono); letter-spacin
   <label class="ctl">Smooth <select id="sSmooth"><option value="0">off</option><option value="12">1/12 oct</option><option value="6" selected>1/6 oct</option><option value="3">1/3 oct</option></select></label>
   <label class="ctl">Slope <select id="sTilt"><option value="0" selected>flat</option><option value="3">+3 dB/oct</option><option value="4.5">+4.5 dB/oct</option></select></label>
   <label class="ctl">FFT <select id="sFft"><option>1024</option><option selected>2048</option><option>4096</option><option>8192</option></select></label>
+  <button id="bHist" title="Past renders and favourites (needs the console)">History</button>
+  <button id="bAB" title="Compare two files; keys A and B switch the one you hear and see">A/B</button>
   <button id="bCsv" title="Download the comparison table">CSV</button>
   <button id="bCopy" title="Copy a text report of the active file">Copy report</button>
 </header>
 
+<div class="hist" id="hist" hidden></div>
+<div class="abbar" id="abBar">
+  <div class="side"><b style="color:var(--c1)">A</b><select id="abA" aria-label="File A"></select></div>
+  <button id="abSwap" title="Swap A and B">&#8646;</button>
+  <div class="side"><b style="color:var(--c2)">B</b><select id="abB" aria-label="File B"></select></div>
+  <label class="ctl">Pair <select id="abPair" aria-label="Pairs across units"></select></label>
+  <span class="listen" style="display:flex;gap:4px;align-items:center"><span class="readout">Listen</span><button id="abLA" title="A">A</button><button id="abLB" title="B">B</button></span>
+  <label class="ctl"><input type="checkbox" id="abMatch" checked> Match loudness</label>
+  <span class="readout" id="abNote"></span>
+</div>
 <div class="shell">
   <aside class="side">
     <div class="drop" id="drop" tabindex="0" role="button" aria-label="Drop WAV files here or press Enter to browse"><b>Drop WAVs here</b>ECB, Alien Stack, or any 16 / 24 / 32-bit WAV</div>
@@ -140,7 +164,9 @@ details > summary { cursor: pointer; font: 500 10px/1 var(--mono); letter-spacin
     <section class="viz">
       <div class="card"><h3><span id="tName">Waveform</span><span class="tools"><span class="readout" id="rdView"></span></span></h3><div class="plot" id="pWave"><canvas></canvas></div></div>
       <div class="card"><h3><span>Spectrogram</span><span class="tools"><label class="ctl">Floor <select id="sFloor"><option value="-80">-80</option><option value="-100" selected>-100</option><option value="-120">-120</option></select> dB</label></span></h3><div class="plot" id="pSg"><canvas></canvas></div></div>
+      <div class="card" id="abCard" hidden><h3><span>A vs B</span><span class="tools"><span class="readout" id="abHead"></span></span></h3><div class="tablewrap"><table id="abTbl"></table></div></div>
       <div class="card"><h3><span>Spectrum <span id="spLegend" style="margin-left:10px"></span></span><span class="tools"><button id="bPeak" class="on">Peak hold</button></span></h3><div class="plot" id="pSp"><canvas></canvas></div></div>
+      <div class="card" id="diffCard" hidden><h3><span>Difference, B minus A</span><span class="tools"><span class="readout" id="diffNote"></span></span></h3><div class="plot" id="pDiff" style="height:130px"><canvas></canvas></div></div>
     </section>
     <section class="meters">
       <div class="card"><h3><span>Verdict</span><span class="pill busy" id="vPill">-</span></h3>
@@ -177,6 +203,16 @@ const fmtT = s => { const m = Math.floor(s / 60); return (m ? m + ":" : "") + (s
 const RULES = { clipRun: 0.9995, tpFlag: 0.0, tpWatch: -1.0, clicksFlag: 4, dcWatch: 0.005, clickK: 10, clickMin: 0.03, isolate: 4.5 };
 
 /* ---------- WAV decode: our own parser (16 / 24 / 32 PCM, float 32 / 64, extensible, 8-bit) ---------- */
+async function decodeAny(buf) {
+  try { return parseWav(buf); }
+  catch (e) {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) throw e;
+    const ctx = new C();
+    try { const ab = await ctx.decodeAudioData(buf.slice(0)), ch = Math.min(2, ab.numberOfChannels), L = ab.getChannelData(0).slice(); return { sr: ab.sampleRate, ch, srcCh: ab.numberOfChannels, bits: 0, n: ab.length, L, R: ch > 1 ? ab.getChannelData(1).slice() : L, mono: ch === 1 }; }
+    catch (e2) { throw new Error("could not read this file as audio"); }
+    finally { if (ctx.close) ctx.close(); }
+  }
+}
 function parseWav(buf) {
   const dv = new DataView(buf);
   const tag = o => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
@@ -362,16 +398,42 @@ async function analyze(f, say) {
 
 /* ---------- state ---------- */
 const S = { files: [], act: -1, sel: null, view: null, smooth: +store.get("smooth", 6), tilt: +store.get("tilt", 0), fft: +store.get("fft", 2048), floor: +store.get("floor", -100), peak: store.get("peak", "1") === "1", loop: false, hover: null,
-  play: { ctx: null, src: null, t0: 0, off: 0, on: false, head: 0 }, sortBy: null, sortDir: 1 };
+  play: { ctx: null, src: null, t0: 0, off: 0, on: false, head: 0 }, sortBy: null, sortDir: 1, ab: null };
 let uid = 0;
-const act = () => S.files[S.act] || null;
+const act = () => (S.ab ? S.files[S.ab[S.ab.side]] : S.files[S.act]) || null;
 const say = t => { $("#status").textContent = t; };
 
+/* ---------- favourites and render history (served by the console; kept in renders/favourites.json) ---------- */
+let FAVS = new Set(); const isFav = f => !!f.src && FAVS.has(f.src);
+async function favLoad() { try { const r = await fetch("/api/favs"); if (r.ok) FAVS = new Set(await r.json()); } catch (e) {} }
+async function toggleFav(f) {
+  if (!f || !f.src) { say("Only files loaded from the console renders can be favourites."); return; }
+  FAVS.has(f.src) ? FAVS.delete(f.src) : FAVS.add(f.src);
+  try { const r = await fetch("/api/favs", { method: "POST", headers: { "X-SFA": "1" }, body: JSON.stringify([...FAVS]) }); if (!r.ok) throw new Error(await r.text()); } catch (e) { say("Could not save favourites: " + e.message); }
+  renderFiles(); if (!$("#hist").hidden) histDraw();
+}
+async function addRemote(path, name, group) { try { const r = await fetch(path); if (!r.ok) throw new Error(r.status); await addBuffer(name, await r.arrayBuffer(), group, path); if (S.act < 0) selectFile(0); } catch (e) { say("Could not load " + name + ": " + e.message); } }
+let HIST = null;
+async function histDraw() {
+  const box = $("#hist");
+  if (!HIST) { try { HIST = await (await fetch("/api/history")).json(); } catch (e) { box.innerHTML = "History needs the console server (tools/sfa console)."; return; } await favLoad(); }
+  const nm = p => p.split("/").slice(-3).join(" / "), U = { ecb: "ECB", as: "Alien Stack" };
+  let h = "<h3>Favourites</h3>" + ([...FAVS].map(p => '<div class="fav"><span class="nm" title="' + esc(p) + '">\u2605 ' + esc(nm(p)) + '</span><button data-hadd="' + esc(p) + '">Add</button><button data-hun="' + esc(p) + '">Unstar</button></div>').join("") || '<div class="readout">None yet. Star a file in the list.</div>');
+  h += "<h3>Render runs</h3>" + (HIST.map((r, i) => '<div class="run"><span class="nm"><b>' + (U[r.unit] || r.unit) + "</b> " + esc(r.stamp) + " \u00b7 " + r.n + " files" + (r.verdicts.flag ? ' \u00b7 <span style="color:var(--bad)">' + r.verdicts.flag + " flag</span>" : "") + (r.verdicts.watch ? " \u00b7 " + r.verdicts.watch + " watch" : "") + '</span><button data-hrun="' + i + '">Add run</button></div>').join("") || '<div class="readout">No renders yet. Run sim/render in the console.</div>');
+  box.innerHTML = h;
+}
+$("#bHist").onclick = () => { const b = $("#hist"); b.hidden = !b.hidden; if (!b.hidden) { HIST = null; histDraw(); } };
+$("#hist").addEventListener("click", async e => {
+  const a = e.target.closest("[data-hadd]"), u = e.target.closest("[data-hun]"), r = e.target.closest("[data-hrun]");
+  if (a) { const p = a.dataset.hadd; await addRemote(p, p.split("/").pop(), p.split("/")[2] + " " + p.split("/")[3]); }
+  if (u) await toggleFav({ src: u.dataset.hun });
+  if (r) { const run = HIST[+r.dataset.hrun]; r.disabled = true; for (const f of run.files) await addRemote(f.path, run.unit.toUpperCase() + " " + f.name, run.unit + " " + run.stamp); r.disabled = false; }
+});
 /* ---------- loading ---------- */
-async function addBuffer(name, buf, group) {
+async function addBuffer(name, buf, group, src) {
   try {
-    const w = parseWav(buf);
-    const f = Object.assign(w, { id: ++uid, name, group: group || "", dur: w.n / w.sr, m: null, color: COLORS[S.files.length % COLORS.length], show: false, sg: {}, buf: null });
+    const w = await decodeAny(buf);
+    const f = Object.assign(w, { id: ++uid, name, group: group || "", src: src || "", dur: w.n / w.sr, m: null, color: COLORS[S.files.length % COLORS.length], show: false, sg: {}, buf: null });
     S.files.push(f); if (S.act < 0) S.act = 0;
     render();
     f.pending = true; renderFiles();
@@ -380,19 +442,19 @@ async function addBuffer(name, buf, group) {
   } catch (e) { say(name + ": " + e.message); }
 }
 async function addFiles(list) {
-  const arr = Array.from(list).filter(f => /\.wav$/i.test(f.name) || /wav/.test(f.type));
-  if (!arr.length) { say("Those are not WAV files."); return; }
+  const arr = Array.from(list).filter(f => /\.(wav|mp3|flac|oga|ogg|m4a|aac|aif|aiff|opus)$/i.test(f.name) || /^audio\//.test(f.type));
+  if (!arr.length) { say("Those are not audio files."); return; }
   for (const f of arr) { const b = await f.arrayBuffer(); await addBuffer(f.name, b, f.webkitRelativePath ? f.webkitRelativePath.split("/")[0] : ""); if (S.files.length === 1 || S.act < 0) selectFile(S.files.length - 1); }
 }
 async function loadManifest(url) {
   try {
     const r = await fetch(url); if (!r.ok) return false; const mf = await r.json(), base = new URL(url, location.href);
     say("Loading " + (mf.title || "renders") + "...");
-    for (const it of mf.files) { const rr = await fetch(new URL(it.path, base)); if (!rr.ok) continue; await addBuffer(it.name || it.path.split("/").pop(), await rr.arrayBuffer(), it.group || mf.unit || ""); }
+    for (const it of mf.files) { const rr = await fetch(new URL(it.path, base)); if (!rr.ok) continue; await addBuffer(it.name || it.path.split("/").pop(), await rr.arrayBuffer(), it.group || mf.unit || "", new URL(it.path, base).pathname); }
     selectFile(0); return true;
   } catch (e) { return false; }
 }
-function selectFile(i) { S.act = clamp(i, 0, S.files.length - 1); S.sel = null; S.view = null; stopPlay(); render(); }
+function selectFile(i, asB) { i = clamp(i, 0, S.files.length - 1); if (S.ab) { if (asB) S.ab.b = i; else { S.ab.a = i; } S.ab.side = asB ? "b" : "a"; } S.act = i; S.sel = null; S.view = null; stopPlay(); render(); }
 
 /* ---------- drawing: shared plot rect ---------- */
 const ML = 44, MR = 10;
@@ -484,8 +546,8 @@ let spCache = null;
 function spectra() {
   const out = []; const N = 8192;
   for (const f of S.files) {
-    if (!f.show && f !== act()) continue;
-    const i0 = f === act() && S.sel ? Math.floor(S.sel[0] * f.sr) : 0, i1 = f === act() && S.sel ? Math.floor(S.sel[1] * f.sr) : f.n, key = f.id + ":" + i0 + ":" + i1 + ":" + N;
+    if (S.ab ? (f !== S.files[S.ab.a] && f !== S.files[S.ab.b]) : (!f.show && f !== act())) continue;
+    const i0 = S.sel && (S.ab || f === act()) ? Math.floor(S.sel[0] * f.sr) : 0, i1 = S.sel && (S.ab || f === act()) ? Math.floor(S.sel[1] * f.sr) : f.n, key = f.id + ":" + i0 + ":" + i1 + ":" + N;
     f.spc = f.spc || {};
     if (!f.spc[key]) { f.spc = {}; f.spc[key] = welch(f.mono ? [f.L] : [f.L, f.R], i0, Math.max(i1, i0 + 16), N, true); }
     out.push({ f, sp: f.spc[key] });
@@ -520,7 +582,7 @@ function drawSp() {
   const list = spectra(); const lg = [];
   S.curves = [];
   for (const { f, sp } of list) {
-    const col = cssv(f.color), mid = curve(sp, f, pw, false), peak = S.peak ? curve(sp, f, pw, true) : null;
+    const col = cssv(S.ab ? (f === S.files[S.ab.a] ? "--c1" : "--c2") : f.color), mid = curve(sp, f, pw, false), peak = S.peak ? curve(sp, f, pw, true) : null;
     S.curves.push({ f, mid });
     if (peak) { c.strokeStyle = col; c.globalAlpha = .35; c.lineWidth = 1; c.beginPath(); for (let x = 0; x < pw; x++) { const y = clamp(yD(peak[x]), top, bot); x ? c.lineTo(ML + x, y) : c.moveTo(ML + x, y); } c.stroke(); c.globalAlpha = 1; }
     c.beginPath(); c.moveTo(ML, bot); for (let x = 0; x < pw; x++) c.lineTo(ML + x, clamp(yD(mid[x]), top, bot)); c.lineTo(ML + pw, bot); c.closePath(); c.globalAlpha = f === act() ? .18 : .07; c.fillStyle = col; c.fill(); c.globalAlpha = 1;
@@ -559,7 +621,7 @@ function renderMeters() {
   $("#mLoud").innerHTML = kv("Integrated", fmt(l.I) + " LUFS") + kv("Momentary max", fmt(l.M) + " LUFS") + kv("Short-term max", l.S === null ? "-" : fmt(l.S) + " LUFS", "", l.S === null ? "needs 3 s of audio" : "") + kv("Range", l.LRA === null ? "-" : fmt(l.LRA) + " LU", "", l.LRA === null ? "needs a longer file" : "") + (f.mono ? '<div class="status" style="grid-column:1/-1">Mono file: measured as dual mono (L = R).</div>' : "");
   const s = m.st;
   $("#mStereo").innerHTML = f.mono ? '<div class="status" style="grid-column:1/-1">Mono file.</div>' : kv("Correlation", s.corr.toFixed(2), s.corr < 0 ? "bd" : "", "worst 0.1 s: " + s.corrMin.toFixed(2)) + kv("Side energy", (s.width * 100).toFixed(0) + " %", "", "of mid + side") + kv("Balance", (s.bal > 0 ? "L " : "R ") + Math.abs(s.bal).toFixed(1) + " dB", Math.abs(s.bal) > 3 ? "wn" : "") + kv("Channels", f.srcCh + (f.srcCh > 2 ? " (first 2 shown)" : ""));
-  $("#mTone").innerHTML = kv("Centroid", m.centroid >= 1000 ? (m.centroid / 1000).toFixed(2) + " kHz" : m.centroid.toFixed(0) + " Hz") + kv("Above 5 kHz", (m.hf * 100).toFixed(1) + " %", m.hf > .35 ? "wn" : "", "share of the energy") + kv("95 % rolloff", m.rolloff >= 1000 ? (m.rolloff / 1000).toFixed(1) + " kHz" : m.rolloff.toFixed(0) + " Hz") + kv("Format", f.sr / 1000 + " kHz / " + f.bits + " bit", "", fmtT(f.dur));
+  $("#mTone").innerHTML = kv("Centroid", m.centroid >= 1000 ? (m.centroid / 1000).toFixed(2) + " kHz" : m.centroid.toFixed(0) + " Hz") + kv("Above 5 kHz", (m.hf * 100).toFixed(1) + " %", m.hf > .35 ? "wn" : "", "share of the energy") + kv("95 % rolloff", m.rolloff >= 1000 ? (m.rolloff / 1000).toFixed(1) + " kHz" : m.rolloff.toFixed(0) + " Hz") + kv("Format", f.sr / 1000 + " kHz / " + (f.bits ? f.bits + " bit" : "decoded"), "", fmtT(f.dur));
   const p = $("#vPill"); p.className = "pill " + m.verdict; p.textContent = m.verdict;
   $("#vWhy").innerHTML = m.why.map(([lv, t]) => '<li class="' + ["ok", "wn", "bd"][lv] + '">' + esc(t) + "</li>").join("");
   $("#vClicks").innerHTML = m.clickEv.slice(0, 80).map(e => '<button data-t="' + e.t + '" title="' + fmt(e.d) + ' dB step">' + e.t.toFixed(3) + "s</button>").join("");
@@ -571,7 +633,7 @@ function renderFiles() {
     if (g) h += '<div class="group">' + esc(g) + "</div>";
     for (const i of groups[g]) {
       const f = S.files[i], v = f.pending || !f.m ? "busy" : f.m.verdict;
-      h += '<div class="file ' + (i === S.act ? "act" : "") + '" data-i="' + i + '" tabindex="0" role="button" style="--c:' + cssv(f.color) + '"><button class="chip ' + (f.show ? "on" : "") + '" data-chip="' + i + '" title="Show in the spectrum overlay" aria-label="Overlay"></button><span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span><span><span class="pill ' + v + '">' + (v === "busy" ? "..." : v) + '</span> <button class="x" data-x="' + i + '" title="Remove" aria-label="Remove">×</button></span><span class="sub">' + fmtT(f.dur) + " · " + f.sr / 1000 + "k · " + (f.mono ? "mono" : "stereo") + (f.m ? " · " + fmt(f.m.tpDb) + " dBTP" : "") + "</span></div>";
+      h += '<div class="file ' + (i === S.act ? "act" : "") + '" data-i="' + i + '" tabindex="0" role="button" style="--c:' + cssv(f.color) + '"><button class="chip ' + (f.show ? "on" : "") + '" data-chip="' + i + '" title="Show in the spectrum overlay" aria-label="Overlay"></button><span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span><span><span class="pill ' + v + '">' + (v === "busy" ? "..." : v) + '</span> <button class="star ' + (isFav(f) ? "on" : "") + '" data-star="' + i + '" title="Favourite (kept across sessions)" aria-label="Favourite">' + (isFav(f) ? "\u2605" : "\u2606") + '</button> <button class="x" data-x="' + i + '" title="Remove" aria-label="Remove">×</button></span><span class="sub">' + fmtT(f.dur) + " · " + f.sr / 1000 + "k · " + (f.mono ? "mono" : "stereo") + (f.m ? " · " + fmt(f.m.tpDb) + " dBTP" : "") + "</span></div>";
     }
   }
   $("#files").innerHTML = h;
@@ -584,14 +646,14 @@ function renderTable() {
   $("#rulesTxt").textContent = "Rules: flag on any full-scale sample, a true peak over 0 dBTP, or " + RULES.clicksFlag + " or more clicks; watch on a true peak above " + RULES.tpWatch + " dBTP, any click, DC offset over " + RULES.dcWatch * 100 + " %, or stereo correlation dipping below -0.3. A click is a step of at least " + RULES.clickMin + " (about -28 dBFS) that is " + RULES.clickK + "x bigger than the signal around it, in audio that was already sounding. Loudness follows ITU-R BS.1770-4 with the 70 LUFS absolute and 10 LU relative gates; true peak is 4x oversampled.";
 }
 function renderHeader() {
-  const f = act(); $("#tName").textContent = f ? f.name : "Waveform";
+  const f = act(); $("#tName").textContent = f ? (S.ab ? (S.ab.side === "a" ? "A \u00B7 " : "B \u00B7 ") : "") + f.name : "Waveform";
   $("#rdSel").innerHTML = S.sel ? "selection <b>" + fmtT(S.sel[0]) + " - " + fmtT(S.sel[1]) + "</b> (" + ((S.sel[1] - S.sel[0]) * 1000).toFixed(0) + " ms)" : "no selection";
   $("#rdView").textContent = f ? (S.view ? "zoom " + fmtT(S.view[0]) + " - " + fmtT(S.view[1]) : "whole file " + fmtT(f.dur)) : "";
   $("#bPlay").textContent = S.play.on ? "Stop" : "Play"; $("#bLoop").classList.toggle("on", S.loop); $("#bPeak").classList.toggle("on", S.peak);
 }
 let raf = 0;
-function draw() { drawWave(); drawSg(); drawSp(); drawGon(); }
-function render() { renderFiles(); renderMeters(); renderTable(); renderHeader(); cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }
+function draw() { drawWave(); drawSg(); drawSp(); drawDiff(); drawGon(); }
+function render() { renderFiles(); renderMeters(); renderTable(); renderHeader(); renderAB(); cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }
 
 /* ---------- playback ---------- */
 function ensureBuf(f) {
@@ -600,9 +662,9 @@ function ensureBuf(f) {
 function startPlay(from) {
   const f = act(); if (!f) return; stopPlay(true);
   const P = S.play; P.ctx = P.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (P.ctx.state === "suspended") P.ctx.resume();
-  const a = S.sel ? S.sel[0] : (from !== undefined ? from : 0), b = S.sel ? S.sel[1] : f.dur, src = P.ctx.createBufferSource(); src.buffer = ensureBuf(f); src.connect(P.ctx.destination);
-  const start = from !== undefined && !S.sel ? from : a; P.off = start; P.t0 = P.ctx.currentTime; P.end = b; P.begin = a;
-  if (S.loop && S.sel) { src.loop = true; src.loopStart = a; src.loopEnd = b; src.start(0, a); } else src.start(0, start, b - start);
+  const a = S.sel ? S.sel[0] : (from !== undefined ? from : 0), b = S.sel ? S.sel[1] : f.dur, src = P.ctx.createBufferSource(); src.buffer = ensureBuf(f); const gn = P.ctx.createGain(); gn.gain.value = abGain(f); src.connect(gn); gn.connect(P.ctx.destination);
+  const start = from !== undefined ? clamp(from, a, Math.max(a, b - 0.01)) : a; P.off = start; P.t0 = P.ctx.currentTime; P.end = b; P.begin = a;
+  if (S.loop && S.sel) { src.loop = true; src.loopStart = a; src.loopEnd = b; src.start(0, start); } else src.start(0, start, b - start);
   src.onended = () => { if (P.src === src && !S.loop) { P.on = false; P.head = 0; renderHeader(); draw(); } };
   P.src = src; P.on = true; renderHeader(); tickPlay();
 }
@@ -627,6 +689,70 @@ spHost.addEventListener("pointermove", e => { const r = spHost.getBoundingClient
 spHost.addEventListener("pointerleave", () => { S.hover = null; drawSp(); });
 $("#vClicks").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const f = act(), t = +b.dataset.t; S.view = [Math.max(0, t - 0.01), Math.min(f.dur, t + 0.01)]; S.sel = null; S.play.head = t; renderHeader(); draw(); });
 
+
+/* ---------- A/B: two files, one you hear and see at a time, level-matched ---------- */
+const baseName = n => n.replace(/^(ECB|AS)\s+/, "");
+function abPairs() {
+  const e = {}, a = {}; S.files.forEach((f, i) => { const m = /^(ECB|AS)\s+/.exec(f.name); if (m) (m[1] === "ECB" ? e : a)[baseName(f.name)] = i; });
+  return Object.keys(e).filter(k => k in a).map(k => ({ name: k, a: e[k], b: a[k] }));
+}
+function abGain(f) {
+  if (!S.ab || !$("#abMatch").checked) return 1;
+  const fa = S.files[S.ab.a], fb = S.files[S.ab.b]; if (!fa || !fb || !fa.m || !fb.m) return 1;
+  const la = fa.m.loud.I, lb = fb.m.loud.I; if (!isFinite(la) || !isFinite(lb)) return 1;
+  return Math.pow(10, (Math.min(la, lb) - (f === fa ? la : lb)) / 20);                    // bring the louder one down to the quieter
+}
+function abSide(side) {
+  if (!S.ab || S.ab.side === side) return; const was = S.play.on, t = S.play.head; S.ab.side = side; S.act = S.ab[side];
+  if (was) startPlay(Math.min(t, act().dur)); render();
+}
+function abOpen(on, pair) {
+  if (on && S.files.length < 2) { say("Load two files to compare them."); return; }
+  if (!on) { S.ab = null; $("#abBar").classList.remove("on"); $("#bAB").classList.remove("on"); render(); return; }
+  const ps = abPairs(), pp = pair || ps.find(p => p.name === "song.wav") || ps[0];
+  S.ab = pp ? { a: pp.a, b: pp.b, side: "a", match: true } : { a: S.act, b: (S.act + 1) % S.files.length, side: "a", match: true };
+  S.act = S.ab.a; $("#abBar").classList.add("on"); $("#bAB").classList.add("on"); render();
+}
+function abFill() {
+  const opts = S.files.map((f, i) => '<option value="' + i + '">' + esc(f.name) + "</option>").join(""), A = $("#abA"), B = $("#abB");
+  A.innerHTML = opts; B.innerHTML = opts; if (S.ab) { A.value = S.ab.a; B.value = S.ab.b; }
+  const ps = abPairs(); $("#abPair").innerHTML = '<option value="">' + (ps.length ? "ECB vs AS..." : "none loaded") + "</option>" + ps.map((p, i) => '<option value="' + i + '">' + esc(p.name) + "</option>").join("");
+  $("#abLA").classList.toggle("on", !!S.ab && S.ab.side === "a"); $("#abLB").classList.toggle("on", !!S.ab && S.ab.side === "b");
+}
+const AB_ROWS = [["Peak", f => f.m.peakDb, 1, "dBFS"], ["True peak", f => f.m.tpDb, 1, "dBTP"], ["RMS", f => f.m.rmsDb, 1, "dBFS"], ["Crest", f => f.m.crest, 1, "dB"], ["Loudness", f => f.m.loud.I, 1, "LUFS"], ["Range", f => f.m.loud.LRA, 1, "LU"],
+  ["Centroid", f => f.m.centroid, 0, "Hz"], ["Above 5 kHz", f => f.m.hf * 100, 1, "%"], ["Side energy", f => f.m.st.width * 100, 0, "%"], ["Correlation", f => f.m.st.corr, 2, ""], ["Clicks", f => f.m.clickEv.length, 0, ""]];
+function renderAB() {
+  const on = !!S.ab; $("#abCard").hidden = !on; $("#diffCard").hidden = !on; if (!on) return; abFill();
+  const fa = S.files[S.ab.a], fb = S.files[S.ab.b]; if (!fa || !fb) return;
+  $("#abHead").textContent = "level matching " + ($("#abMatch").checked ? "on" : "off") + (fa.m && fb.m && isFinite(fa.m.loud.I) && isFinite(fb.m.loud.I) ? " · B is " + fmt(fb.m.loud.I - fa.m.loud.I) + " LU vs A" : "");
+  if (!fa.m || !fb.m) { $("#abTbl").innerHTML = "<tr><td>Analysing...</td></tr>"; return; }
+  $("#abTbl").innerHTML = "<thead><tr><th>Measure</th><th style=\"color:var(--c1)\">A</th><th style=\"color:var(--c2)\">B</th><th>B − A</th></tr></thead><tbody>" + AB_ROWS.map(([n, g, d, u]) => {
+    const x = g(fa), y = g(fb), ok = isFinite(x) && isFinite(y), dd = ok ? y - x : null, cls = !ok || Math.abs(dd) < Math.pow(10, -d) ? "eq" : dd > 0 ? "up" : "dn";
+    return "<tr><td>" + n + "</td><td>" + (isFinite(x) ? x.toFixed(d) : "-") + " " + u + "</td><td>" + (isFinite(y) ? y.toFixed(d) : "-") + " " + u + "</td><td class=\"" + cls + "\">" + (ok ? (dd > 0 ? "+" : dd < 0 ? "−" : "") + Math.abs(dd).toFixed(d) : "-") + "</td></tr>";
+  }).join("") + "</tbody>";
+}
+function drawDiff() {
+  if (!S.ab) return; const host = $("#pDiff"), { c, w, h } = setup(host); c.fillStyle = cssv("--plot"); c.fillRect(0, 0, w, h);
+  const ca = S.curves && S.curves.find(q => q.f === S.files[S.ab.a]), cb = S.curves && S.curves.find(q => q.f === S.files[S.ab.b]); if (!ca || !cb) return;
+  const top = 6, bot = h - 18, pw = w - ML - MR, R = 18, yD = d => top + (R - d) / (2 * R) * (bot - top), fa = S.files[S.ab.a], fb = S.files[S.ab.b];
+  const off = $("#abMatch").checked && fa.m && fb.m && isFinite(fa.m.loud.I) && isFinite(fb.m.loud.I) ? fa.m.loud.I - fb.m.loud.I : 0;
+  $("#diffNote").textContent = off ? "level-matched: tone only" : "raw levels";
+  c.font = "10px " + cssv("--mono"); c.strokeStyle = cssv("--grid"); c.fillStyle = cssv("--dim"); c.textAlign = "right";
+  for (let d = -R; d <= R; d += 6) { const y = Math.round(yD(d)) + .5; c.beginPath(); c.moveTo(ML, y); c.lineTo(w - MR, y); c.stroke(); c.fillText((d > 0 ? "+" : d < 0 ? "−" : "") + Math.abs(d), ML - 6, y + 3); }
+  c.textAlign = "center"; for (const fr of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) { const x = Math.round(fX(fr, w)) + .5; c.beginPath(); c.moveTo(x, top); c.lineTo(x, bot); c.stroke(); c.fillText(fr >= 1000 ? fr / 1000 + "k" : fr, x, h - 4); }
+  const y0 = yD(0); c.beginPath(); c.moveTo(ML, y0); for (let x = 0; x < pw; x++) c.lineTo(ML + x, clamp(yD(cb.mid[x] - ca.mid[x] + off), top, bot)); c.lineTo(ML + pw, y0); c.closePath();
+  c.fillStyle = cssv("--accent"); c.globalAlpha = .28; c.fill(); c.globalAlpha = 1;
+  c.strokeStyle = cssv("--accent"); c.lineWidth = 1.8; c.beginPath(); for (let x = 0; x < pw; x++) { const y = clamp(yD(cb.mid[x] - ca.mid[x] + off), top, bot); x ? c.lineTo(ML + x, y) : c.moveTo(ML + x, y); } c.stroke();
+  c.strokeStyle = cssv("--fg"); c.lineWidth = 1; c.beginPath(); c.moveTo(ML, y0); c.lineTo(w - MR, y0); c.stroke();
+}
+$("#bAB").onclick = () => abOpen(!S.ab);
+$("#abA").onchange = e => { S.ab.a = +e.target.value; if (S.ab.side === "a") S.act = S.ab.a; render(); };
+$("#abB").onchange = e => { S.ab.b = +e.target.value; if (S.ab.side === "b") S.act = S.ab.b; render(); };
+$("#abSwap").onclick = () => { const t = S.ab.a; S.ab.a = S.ab.b; S.ab.b = t; S.act = S.ab[S.ab.side]; render(); };
+$("#abPair").onchange = e => { if (e.target.value === "") return; const p = abPairs()[+e.target.value]; S.ab.a = p.a; S.ab.b = p.b; S.ab.side = "a"; S.act = p.a; render(); };
+$("#abLA").onclick = () => abSide("a"); $("#abLB").onclick = () => abSide("b");
+$("#abMatch").onchange = () => { if (S.play.on) startPlay(S.play.head); render(); };
+
 /* ---------- wiring ---------- */
 $("#bOpen").onclick = () => $("#fIn").click();
 $("#drop").onclick = () => $("#fIn").click();
@@ -644,8 +770,9 @@ document.addEventListener("drop", async e => {
 $("#files").addEventListener("click", e => {
   const chip = e.target.closest("[data-chip]"), x = e.target.closest("[data-x]"), row = e.target.closest(".file");
   if (chip) { const f = S.files[+chip.dataset.chip]; f.show = !f.show; e.stopPropagation(); render(); return; }
+  const st = e.target.closest("[data-star]"); if (st) { toggleFav(S.files[+st.dataset.star]); e.stopPropagation(); return; }
   if (x) { const i = +x.dataset.x; S.files.splice(i, 1); S.act = Math.min(S.act, S.files.length - 1); stopPlay(true); render(); e.stopPropagation(); return; }
-  if (row) selectFile(+row.dataset.i);
+  if (row) selectFile(+row.dataset.i, S.ab && e.shiftKey);
 });
 $("#files").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList.contains("file")) selectFile(+e.target.dataset.i); });
 $("#tbl").addEventListener("click", e => { const th = e.target.closest("th"), tr = e.target.closest("tbody tr"); if (th) { const k = th.dataset.s; S.sortDir = S.sortBy === k ? -S.sortDir : 1; S.sortBy = k; renderTable(); } else if (tr) selectFile(+tr.dataset.i); });
@@ -661,7 +788,7 @@ function csv() {
 }
 function report() {
   const f = act(); if (!f || !f.m) return "No analysed file.";
-  const m = f.m, l = m.loud; return ["SFA Analyzer: " + f.name, f.sr + " Hz, " + f.bits + " bit, " + (f.mono ? "mono" : "stereo") + ", " + fmtT(f.dur), "Verdict: " + m.verdict.toUpperCase() + " (" + m.why.map(w => w[1]).join("; ") + ")",
+  const m = f.m, l = m.loud; return ["SFA Analyzer: " + f.name, f.sr + " Hz, " + (f.bits ? f.bits + " bit" : "decoded") + ", " + (f.mono ? "mono" : "stereo") + ", " + fmtT(f.dur), "Verdict: " + m.verdict.toUpperCase() + " (" + m.why.map(w => w[1]).join("; ") + ")",
     "Peak " + fmt(m.peakDb) + " dBFS, true peak " + fmt(m.tpDb) + " dBTP, RMS " + fmt(m.rmsDb) + " dBFS, crest " + fmt(m.crest) + " dB", "Loudness: " + fmt(l.I) + " LUFS integrated, " + fmt(l.M) + " momentary max, " + (l.S === null ? "-" : fmt(l.S)) + " short-term max, LRA " + (l.LRA === null ? "-" : fmt(l.LRA)),
     "Stereo: correlation " + m.st.corr.toFixed(2) + " (worst " + m.st.corrMin.toFixed(2) + "), side energy " + (m.st.width * 100).toFixed(0) + " %", "Tone: centroid " + m.centroid.toFixed(0) + " Hz, " + (m.hf * 100).toFixed(1) + " % above 5 kHz, 95 % rolloff " + m.rolloff.toFixed(0) + " Hz",
     "Clicks: " + (m.clickEv.length ? m.clickEv.map(e => e.t.toFixed(3) + "s").join(", ") : "none")].join("\n");
@@ -675,17 +802,20 @@ document.addEventListener("keydown", e => {
   else if (e.key === "Escape") { S.sel = null; S.view = null; render(); }
   else if (e.key === "z" || e.key === "Z") $("#bZoom").click();
   else if (e.key === "f" || e.key === "F") $("#bFit").click();
+  else if ((e.key === "a" || e.key === "A") && S.ab) abSide("a");
+  else if ((e.key === "b" || e.key === "B") && S.ab) abSide("b");
   else if (e.key === "ArrowDown") { e.preventDefault(); selectFile(S.act + 1); }
   else if (e.key === "ArrowUp") { e.preventDefault(); selectFile(S.act - 1); }
 });
 new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }).observe(document.body);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
-window.SFA = { S, parseWav, welch, loudness, truePeak, findClicks, analyze, addBuffer, loadManifest, report, csv, RULES };   /* a handle for tests and for scripts */
+window.SFA = { abOpen, abPairs, abGain, S, parseWav, welch, loudness, truePeak, findClicks, analyze, addBuffer, loadManifest, report, csv, RULES };   /* a handle for tests and for scripts */
 
 /* ---------- start: a manifest from ?manifest=..., or the default one beside this page when served over http ---------- */
 (async () => {
   render();
   const q = new URLSearchParams(location.search).get("manifest");
+  if (location.protocol.startsWith("http")) await favLoad();
   if (q) await loadManifest(q);
   else if (location.protocol.startsWith("http")) { if (!(await loadManifest("manifest.json"))) say("Drop WAV files to analyse them."); }
   else say("Drop WAV files to analyse them.");

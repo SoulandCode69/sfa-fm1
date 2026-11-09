@@ -1,0 +1,748 @@
+{
+ "updated": "2026-11-09",
+ "target": {
+  "retail_min": 150,
+  "retail_max": 250,
+  "bom_target_max": 80,
+  "assumptions": "Retail about 3x BOM; includes enclosure, assembly, FCC/CE amortisation, shipping and margin. FM-1 street price is about $70, so this is 2-3x the FM-1. Market comparison: Chompi $599, EP-133 about GBP 275."
+ },
+ "summary": "A small groovebox, $150-250 retail. Prototype on a Daisy Seed (64 MB SDRAM, stereo codec, SD, 480 MHz M7) running core/ SFA ONE; product path is a custom STM32H750 board reusing the simulator and engine.",
+ "sections": [
+  {
+   "id": "screen",
+   "title": "Screen",
+   "summary": "Small colour LCD, reusing the FM-1 UI work.",
+   "items": [
+    {
+     "label": "Panel",
+     "value": "1.54in 240x240 IPS, ST7789, SPI",
+     "note": "Same controller and resolution as the FM-1, so the UI code ports as is"
+    },
+    {
+     "label": "Refresh",
+     "value": "SPI at 40-60 MHz with DMA, dirty-rect redraw",
+     "note": "Keeps audio interrupts clear"
+    },
+    {
+     "label": "Upgrade",
+     "value": "2.0in 320x240 later",
+     "note": "Only if the UI needs it"
+    }
+   ]
+  },
+  {
+   "id": "controls",
+   "title": "Controls",
+   "summary": "Pads, four encoders, a few buttons.",
+   "items": [
+    {
+     "label": "Pads",
+     "value": "16 velocity-sensing pads (FSR matrix or silicone over FSR)",
+     "note": "FM-1 has no velocity pads; an FSR matrix is a known DIY pattern (PJRC Teensy project)"
+    },
+    {
+     "label": "Encoders",
+     "value": "4 push encoders (the four SFA macros TONE BODY COLOR MOTION)",
+     "note": "Matches core/ SFA ONE macros"
+    },
+    {
+     "label": "Buttons",
+     "value": "12 tactile: play, rec, shift, page, track, undo...",
+     "note": "Estimate"
+    },
+    {
+     "label": "Alternative",
+     "value": "MPR121 touch pads (no velocity) as in Rheslip Pico-2 Groovebox",
+     "note": "Cheaper, worse feel"
+    }
+   ]
+  },
+  {
+   "id": "audio_io",
+   "title": "Audio I/O",
+   "summary": "Stereo out, stereo line in, headphones.",
+   "items": [
+    {
+     "label": "Codec",
+     "value": "Daisy Seed onboard stereo 24-bit up to 96 kHz (prototype); TLV320AIC3204 on the product board",
+     "note": "TLV320: 100 dB DAC SNR, 93 dB ADC SNR (LCSC listing)"
+    },
+    {
+     "label": "Out",
+     "value": "2x 3.5mm (or 6.35mm) line out + headphone",
+     "note": "Estimate"
+    },
+    {
+     "label": "In",
+     "value": "stereo line in, mic via preamp later",
+     "note": "Sampling from line is the main use"
+    },
+    {
+     "label": "USB",
+     "value": "USB-C: power, MIDI, mass storage; USB audio class unverified on Daisy",
+     "note": "Teensy 4.1 is the USB-audio fallback"
+    }
+   ]
+  },
+  {
+   "id": "midi",
+   "title": "MIDI",
+   "summary": "TRS-A in and out plus USB MIDI.",
+   "items": [
+    {
+     "label": "TRS MIDI in",
+     "value": "Type A, 6N138 optocoupler",
+     "note": "FM-1 is MIDI in only on TRS (base commit message)"
+    },
+    {
+     "label": "TRS MIDI out/thru",
+     "value": "Switchable out or thru",
+     "note": "Improvement over FM-1"
+    },
+    {
+     "label": "USB MIDI",
+     "value": "Device mode; host mode optional",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "id": "engines",
+   "title": "Engines",
+   "summary": "SFA ONE first, then ECB and Alien Stack voices ported.",
+   "items": [
+    {
+     "label": "Engine",
+     "value": "core/ SFA ONE: exciter, resonator, folder, ladder, 4 voices",
+     "note": "Plain C99 float, no allocation: ports directly"
+    },
+    {
+     "label": "CPU",
+     "value": "Four voices cost about twice ECB's whole render on host",
+     "note": "Sizes the processor; 480 MHz M7 with FPU has headroom over the FM-1's pi32v2 at 360 MHz"
+    },
+    {
+     "label": "Target",
+     "value": "8-16 voices at 48 kHz, no xruns",
+     "note": "Must be measured on hardware"
+    }
+   ]
+  },
+  {
+   "id": "sampler",
+   "title": "Sampler",
+   "summary": "Play, chop, resample; samples live in RAM and on SD.",
+   "items": [
+    {
+     "label": "RAM",
+     "value": "64 MB SDRAM on Daisy",
+     "note": "FM-1 store is 184 KB, about 4.2 s of 22.05 kHz mono; 64 MB is minutes at 48 kHz stereo"
+    },
+    {
+     "label": "Format",
+     "value": "48 kHz 16/24-bit WAV from SD",
+     "note": "Sample Lab exports for it"
+    },
+    {
+     "label": "Features",
+     "value": "auto-chop, per-pad pitch, reverse, loop, resample the mix",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "id": "sequencer",
+   "title": "Sequencer",
+   "summary": "Step sequencer with 16 steps per pad, parameter locks and song chain.",
+   "items": [
+    {
+     "label": "Resolution",
+     "value": "96 PPQN internal, MIDI clock in/out",
+     "note": "Estimate"
+    },
+    {
+     "label": "Patterns",
+     "value": "64 patterns, 16 tracks",
+     "note": "Estimate"
+    },
+    {
+     "label": "Reuse",
+     "value": "ECB step entry and GEN/BEAT generators",
+     "note": "From the existing firmware"
+    }
+   ]
+  },
+  {
+   "id": "storage",
+   "title": "Storage",
+   "summary": "microSD for samples, projects and firmware images.",
+   "items": [
+    {
+     "label": "Card",
+     "value": "microSD via SDMMC (Daisy has an SD interface)",
+     "note": "Rheslip Pico-2 Groovebox also uses microSD"
+    },
+    {
+     "label": "Internal",
+     "value": "QSPI flash for firmware; H750 has only 128 KB internal flash",
+     "note": "Product board needs external QSPI"
+    },
+    {
+     "label": "Backup",
+     "value": "Projects as plain files, drag from computer",
+     "note": ""
+    }
+   ]
+  },
+  {
+   "id": "power",
+   "title": "Power",
+   "summary": "USB-C or one LiPo cell; charge and play.",
+   "items": [
+    {
+     "label": "Battery",
+     "value": "single-cell LiPo about 2000 mAh",
+     "note": "Estimate; runtime must be measured"
+    },
+    {
+     "label": "Charger",
+     "value": "USB-C charge IC (bq25185 class)",
+     "note": "Stock varied at vendors"
+    },
+    {
+     "label": "Shipping",
+     "value": "UN 38.3 test summary and labels needed to ship cells by air",
+     "note": "Cost not stated in source"
+    }
+   ]
+  },
+  {
+   "id": "enclosure",
+   "title": "Enclosure",
+   "summary": "3D-printed first, then injection or CNC.",
+   "items": [
+    {
+     "label": "Prototype",
+     "value": "FDM or resin print, laser-cut top plate",
+     "note": "Estimate $6"
+    },
+    {
+     "label": "Size",
+     "value": "about Chompi size, roughly 180x120x30 mm",
+     "note": "Chompi page gave price, not size"
+    },
+    {
+     "label": "Product",
+     "value": "aluminium extrusion or injection ABS; tooling is a large fixed cost",
+     "note": "Open question"
+    }
+   ]
+  },
+  {
+   "id": "software",
+   "title": "Software",
+   "summary": "One portable core, many targets, simulator first.",
+   "items": [
+    {
+     "label": "Layering",
+     "value": "core/ engines + plat.h-style HAL (68 functions on FM-1) + host simulator",
+     "note": "Reuse fm1-base, MPL-2.0"
+    },
+    {
+     "label": "Loop",
+     "value": "tools/sfa sim -> render -> report before any flash",
+     "note": "Standing rule"
+    },
+    {
+     "label": "Licence",
+     "value": "SFA code own; fm1-base MPL-2.0; check Daisy hardware reuse licence",
+     "note": "Unverified"
+    }
+   ]
+  }
+ ],
+ "platforms": [
+  {
+   "name": "Daisy Seed",
+   "soc": "STM32H750, 480 MHz M7",
+   "price_usd": 21,
+   "pros": [
+    "64 MB SDRAM",
+    "stereo 96 kHz/24-bit codec on board",
+    "SD interface",
+    "DSP-audio ecosystem"
+   ],
+   "cons": [
+    "USB audio class 2 unverified",
+    "header-pin module, not a finished product",
+    "H750 internal flash is 128 KB, firmware runs from QSPI"
+   ],
+   "verdict": "choose",
+   "source_url": "https://electro-smith.com/products/daisy-seed"
+  },
+  {
+   "name": "Teensy 4.1",
+   "soc": "i.MX RT1062, 600 MHz M7",
+   "price_usd": 32,
+   "pros": [
+    "Fast",
+    "USB audio supported",
+    "microSD slot",
+    "big community"
+   ],
+   "cons": [
+    "Needs a separate audio codec board",
+    "Audio shield retired at SparkFun"
+   ],
+   "verdict": "maybe",
+   "source_url": "https://makezine.com/"
+  },
+  {
+   "name": "Pimoroni Pico Plus 2",
+   "soc": "RP2350, dual M33 150 MHz",
+   "price_usd": null,
+   "pros": [
+    "Cheap",
+    "RP2350B precedent in Rheslip Pico-2 Groovebox"
+   ],
+   "cons": [
+    "Weaker DSP than M7",
+    "Stock was out at one reseller",
+    "Price not verified"
+   ],
+   "verdict": "maybe",
+   "source_url": "https://core-electronics.com.au/"
+  },
+  {
+   "name": "ESP32-S3 board",
+   "soc": "Xtensa LX7 dual 240 MHz",
+   "price_usd": null,
+   "pros": [
+    "Cheap",
+    "Wi-Fi/BLE"
+   ],
+   "cons": [
+    "Weak for 8+ voices",
+    "Stock was out at one reseller",
+    "Price not verified"
+   ],
+   "verdict": "no",
+   "source_url": "https://core-electronics.com.au/"
+  },
+  {
+   "name": "Raspberry Pi CM5 / Zero 2 W",
+   "soc": "Linux, Cortex-A",
+   "price_usd": null,
+   "pros": [
+    "Plenty of CPU"
+   ],
+   "cons": [
+    "Boot time",
+    "Latency tuning",
+    "Over budget on CM5",
+    "Price not verified"
+   ],
+   "verdict": "no",
+   "source_url": ""
+  },
+  {
+   "name": "Custom STM32H750 board",
+   "soc": "STM32H750 + TLV320AIC3204 + QSPI + SDRAM",
+   "price_usd": null,
+   "pros": [
+    "Product path",
+    "Own form factor"
+   ],
+   "cons": [
+    "Design and FCC cost",
+    "H750 Digi-Key listing showed a 52-week lead time"
+   ],
+   "verdict": "choose (product stage)",
+   "source_url": "https://www.lcsc.com/"
+  }
+ ],
+ "bom": [
+  {
+   "ref": "U1",
+   "part": "Daisy Seed",
+   "category": "compute",
+   "qty": 1,
+   "unit_usd": 21,
+   "source": "Electro-Smith",
+   "source_url": "https://electro-smith.com/products/daisy-seed",
+   "date": "2026-11",
+   "confidence": "quote",
+   "note": "price as researched; recheck at purchase"
+  },
+  {
+   "ref": "DS1",
+   "part": "1.54in 240x240 ST7789 IPS module",
+   "category": "display",
+   "qty": 1,
+   "unit_usd": 6,
+   "source": "typical marketplace",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "P1-16",
+   "part": "FSR + silicone pad, 16 velocity pads",
+   "category": "controls",
+   "qty": 16,
+   "unit_usd": 1.5,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": "DIY matrix, unit cost assumed"
+  },
+  {
+   "ref": "E1-4",
+   "part": "Push encoder",
+   "category": "controls",
+   "qty": 4,
+   "unit_usd": 1.2,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "SW1-12",
+   "part": "Tactile button",
+   "category": "controls",
+   "qty": 12,
+   "unit_usd": 0.15,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "J1",
+   "part": "TRS MIDI in jack 3.5mm",
+   "category": "midi",
+   "qty": 1,
+   "unit_usd": 0.8,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "J2",
+   "part": "TRS MIDI out jack 3.5mm",
+   "category": "midi",
+   "qty": 1,
+   "unit_usd": 0.8,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "U2",
+   "part": "6N138 optocoupler",
+   "category": "midi",
+   "qty": 1,
+   "unit_usd": 0.6,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "J3-5",
+   "part": "Audio jacks (out L/R, in, headphone)",
+   "category": "audio",
+   "qty": 4,
+   "unit_usd": 0.8,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "SD1",
+   "part": "microSD breakout",
+   "category": "storage",
+   "qty": 1,
+   "unit_usd": 3,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "BT1",
+   "part": "LiPo 2000 mAh",
+   "category": "power",
+   "qty": 1,
+   "unit_usd": 8,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "CH1",
+   "part": "USB-C LiPo charger module",
+   "category": "power",
+   "qty": 1,
+   "unit_usd": 3,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "J6",
+   "part": "USB-C breakout",
+   "category": "power",
+   "qty": 1,
+   "unit_usd": 1.5,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "EN1",
+   "part": "3D-printed enclosure + hardware",
+   "category": "enclosure",
+   "qty": 1,
+   "unit_usd": 6,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "M1",
+   "part": "Perfboard, wire, headers, misc",
+   "category": "misc",
+   "qty": 1,
+   "unit_usd": 15,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU1",
+   "part": "STM32H750 (product board)",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 5.2328,
+   "source": "LCSC",
+   "source_url": "https://www.lcsc.com/",
+   "date": "2026-11",
+   "confidence": "quote",
+   "note": "H750 price from LCSC; Digi-Key 52-week lead time seen"
+  },
+  {
+   "ref": "PU2",
+   "part": "TLV320AIC3204IRHBR codec",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 0.9696,
+   "source": "LCSC",
+   "source_url": "https://www.lcsc.com/",
+   "date": "2026-11",
+   "confidence": "quote",
+   "note": "from this price at 100+"
+  },
+  {
+   "ref": "PU3",
+   "part": "QSPI flash 16 MB + SDRAM 32 MB",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 5,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU4",
+   "part": "Assembled 4-layer PCB",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 25,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU5",
+   "part": "Display + pads + encoders + buttons",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 30,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU6",
+   "part": "Jacks, USB-C, SD socket, power parts",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 12,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU7",
+   "part": "Battery + charger IC",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 9,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU8",
+   "part": "Enclosure, injection amortised",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 8,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  },
+  {
+   "ref": "PU9",
+   "part": "FCC/CE amortised (3-5k USD over 1000 units)",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 4,
+   "source": "compliancetesting.com",
+   "source_url": "https://www.compliancetesting.com/",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": "FCC testing roughly $3,000-5,000; CE not quoted"
+  },
+  {
+   "ref": "PU10",
+   "part": "Packaging and manual",
+   "category": "product-estimate",
+   "qty": 1,
+   "unit_usd": 3,
+   "source": "estimate",
+   "source_url": "",
+   "date": "2026-11",
+   "confidence": "estimate",
+   "note": ""
+  }
+ ],
+ "improvements": [
+  {
+   "fm1_limit": "FM-1 sample store is 184 KB, about 4.2 s at 22.05 kHz mono",
+   "prototype": "64 MB SDRAM + microSD; 48 kHz stereo samples",
+   "evidence": "base/README.md memory budget; Daisy Seed spec"
+  },
+  {
+   "fm1_limit": "TRS is MIDI in only",
+   "prototype": "MIDI in, out/thru on TRS-A",
+   "evidence": "base commit message"
+  },
+  {
+   "fm1_limit": "581 KB app slot, 464 KB packed budget",
+   "prototype": "Firmware runs from QSPI, megabytes",
+   "evidence": "base/bsp docs"
+  },
+  {
+   "fm1_limit": "pi32v2 at 360 MHz, ECB at xrun limits with four engines",
+   "prototype": "480 MHz M7 with FPU, float engines",
+   "evidence": "docs/notes.md Build 4; core/README.md"
+  },
+  {
+   "fm1_limit": "No velocity pads",
+   "prototype": "16 velocity FSR pads",
+   "evidence": "PJRC FSR matrix project"
+  },
+  {
+   "fm1_limit": "Closed USB audio-class device",
+   "prototype": "Open firmware, SD drag-and-drop",
+   "evidence": "FM-1 base notes"
+  }
+ ],
+ "open_questions": [
+  {
+   "q": "Does Daisy Seed do USB audio class 2?",
+   "why": "Computer recording without a cable matters",
+   "how_to_answer": "Check Electro-Smith libDaisy docs and test a unit"
+  },
+  {
+   "q": "Daisy hardware reuse licence?",
+   "why": "Needed before a product board copies the Seed design",
+   "how_to_answer": "Read the licence from Electro-Smith; the forum page was not reachable"
+  },
+  {
+   "q": "Can the $150-250 retail hit with this BOM?",
+   "why": "Retail is roughly 3x BOM; FM-1 street is about $70",
+   "how_to_answer": "Get real quotes for PCB, assembly and pads at 100 and 1000 units"
+  },
+  {
+   "q": "H750 supply risk (52-week lead time at Digi-Key)",
+   "why": "A product with no chips is no product",
+   "how_to_answer": "Ask LCSC/Mouser for stock; consider H743 or H723"
+  },
+  {
+   "q": "Velocity pad feel and unit cost",
+   "why": "Pads decide the instrument's character",
+   "how_to_answer": "Build 16 FSR pads, test with players"
+  },
+  {
+   "q": "FCC and CE route, UN 38.3 for the battery",
+   "why": "Gates selling and shipping",
+   "how_to_answer": "Get a test-house quote"
+  },
+  {
+   "q": "Battery runtime",
+   "why": "Sets the cell size",
+   "how_to_answer": "Measure draw on the Daisy prototype"
+  }
+ ],
+ "next_steps": [
+  "Buy one Daisy Seed and the parts in the prototype BOM.",
+  "Port core/ SFA ONE to Daisy behind plat.h and run the renders through the SFA Analyzer.",
+  "Measure CPU for 8 and 16 voices at 48 kHz.",
+  "Test USB audio class on Daisy; keep Teensy 4.1 as fallback.",
+  "Build and play the 16 FSR pad matrix.",
+  "Get real BOM quotes for the custom H750 board.",
+  "Decide go/no-go on the product board after the prototype plays."
+ ],
+ "totals": {
+  "prototype_usd": 99.5,
+  "product_estimate_usd": 102.2
+ }
+}

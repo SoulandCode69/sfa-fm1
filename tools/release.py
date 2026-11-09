@@ -72,7 +72,7 @@ def main():
     with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in out.rglob("*"):
             if p.is_file(): zf.write(p, f"{z.stem}/site/{p.relative_to(out)}")
-        for p in [ROOT / "README.md", ROOT / "tools" / "sfa_sample.py", *sorted((ROOT / "docs").glob("*.md"))]:
+        for p in [ROOT / "app" / "README.md", ROOT / "tools" / "sfa_sample.py", *sorted((ROOT / "docs").glob("*.md"))]:
             zf.write(p, f"{z.stem}/{p.relative_to(ROOT)}")
     print(f"{out}  ({product}, {len(raw)} B)\n{z}  ({z.stat().st_size // 1024} KB)")
 

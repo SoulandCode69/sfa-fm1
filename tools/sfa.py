@@ -9,9 +9,11 @@
                                    render WAVs from the simulator into renders/<unit>/<stamp>/
   tools/sfa report ecb             numbers for the latest renders (peak, true peak, LUFS, clicks, stereo) -> report.md
   tools/sfa analyze [ecb as]       render if needed, report, then open the SFA Analyzer on the renders
+  tools/sfa ports                  which FM-1s are on USB right now (one at a time, always)
   tools/sfa flash ecb              build the package and flash the unit on USB (tools/go.sh)
   tools/sfa up ecb [--no-flash]    sim -> render -> report -> flash, stopping at the first failure
   tools/sfa publish                copy the analyzer, firmware and renders to Windows: %USERPROFILE%\\SFA\\ + launchers
+  tools/sfa pack KIT ecb           pack a Sample Lab kit (folder or .zip) into a unit's sample bank
   tools/sfa console                the SFA Console: a local web page with every unit, the analyzer, the log and buttons for all of the above
   tools/sfa units                  the registered units (sfa/units.json)
 
@@ -303,6 +305,7 @@ def open_url(url):
 
 # ---------- console: a local web page that houses the tools ----------
 HUB = ROOT / "sfa" / "hub" / "index.html"
+SAMPLELAB = ROOT / "sfa" / "samplelab" / "index.html"
 def notes_for(uid):
     """The newest flash-log row for a unit, from docs/notes.md (rows are | date | unit | build | firmware | what |)."""
     pat = {"ecb": r"^ECB Build (\d+)", "as": r"^(?:ALIEN|VIS) Build (\d+)"}.get(uid)
@@ -333,6 +336,56 @@ def console_state():
     return {"units": out, "recipes": CONF["recipes"], "when": time.strftime("%H:%M:%S")}
 
 RUN_OK = {"sim": 1, "render": 1, "report": 1, "doctor": 0, "up": 1, "flash": 1, "publish": 0}
+PLAN_FILE = ROOT / "hardware" / "prototype" / "plan.json"
+def list_presets():
+    """Preset and kit names, read from the engine sources: {unit: {engine: [names]}}."""
+    import re
+    out = {}
+    for uid, u in UNITS.items():
+        d = {}
+        for f in sorted((ROOT / u["dir"] / "engine").glob("*.c")):
+            txt = f.read_text(errors="replace"); names = []
+            for m in re.finditer(r"static const (?:preset_t|bpreset_t|vkit_t) (\w+)\[[^\]]*\]\s*=\s*\{(.*?)\n\};", txt, re.S):
+                names += re.findall(r'^\s*\{"([^"]+)"', m.group(2), re.M)
+            for m in re.finditer(r"KNAME\[[^\]]*\]\s*=\s*\{([^}]*)\}", txt): names += re.findall(r'"([^"]+)"', m.group(1))
+            if names: d[f.stem] = names
+        out[uid] = d
+    return out
+def save_plan(body):
+    """plan.json is the editable prototype state (targets, parts status, questions, engine map, tags). One small JSON file, written whole."""
+    if len(body) > 400_000: raise ValueError("plan too large")
+    d = json.loads(body)
+    if not isinstance(d, dict): raise ValueError("plan must be an object")
+    PLAN_FILE.parent.mkdir(parents=True, exist_ok=True); tmp = PLAN_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(d, indent=1, sort_keys=True) + "\n"); tmp.replace(PLAN_FILE)
+
+FAV_FILE = RENDERS / "favourites.json"
+def render_history():
+    """Every render run on disk, newest first: unit, stamp, file count, verdict counts, files."""
+    runs = []
+    for uid in UNITS:
+        for d in sorted((RENDERS / uid).glob("2*"), reverse=True) if (RENDERS / uid).is_dir() else []:
+            mf = d / "manifest.json"
+            if not mf.exists(): continue
+            try: files = json.loads(mf.read_text())["files"]
+            except Exception: continue
+            ver = {}
+            if (d / "report.json").exists():
+                try:
+                    for r in json.loads((d / "report.json").read_text()): ver[r["file"]] = r["verdict"]
+                except Exception: pass
+            cnt = {}
+            for v in ver.values(): cnt[v] = cnt.get(v, 0) + 1
+            runs.append({"unit": uid, "stamp": d.name, "n": len(files), "verdicts": cnt, "files": [{"name": f["name"], "path": "/renders/" + f["path"], "verdict": ver.get(f["path"].split("/")[-1])} for f in files]})
+    return sorted(runs, key=lambda r: r["stamp"], reverse=True)[:60]
+def save_favs(body):
+    if len(body) > 100_000: raise ValueError("too large")
+    d = json.loads(body)
+    if not isinstance(d, list) or not all(isinstance(x, str) and x.startswith("/renders/") and ".." not in x for x in d): raise ValueError("bad list")
+    RENDERS.mkdir(exist_ok=True); FAV_FILE.write_text(json.dumps(sorted(set(d)), indent=1))
+DOC_DIRS = [("README.md", "README.md"), ("CHANGELOG.md", "CHANGELOG.md")] + [("docs/" + f.name, f.name) for f in sorted((ROOT / "docs").glob("*.md"))] + [("hardware/prototype/README.md", "Prototype research")]
+def doc_index(): return [{"id": p, "title": t} for p, t in DOC_DIRS if (ROOT / p).is_file()]
+
 def make_handler(port):
     import http.server, threading, mimetypes
     lock = threading.Lock(); hosts = {f"localhost:{port}", f"127.0.0.1:{port}"}
@@ -349,8 +402,24 @@ def make_handler(port):
             from urllib.parse import urlparse, parse_qs, unquote
             u = urlparse(s.path); q = parse_qs(u.query)
             if u.path == "/": return s._send(200, HUB.read_bytes(), "text/html; charset=utf-8")
+            if u.path == "/samplelab/": return s._send(200, SAMPLELAB.read_bytes(), "text/html; charset=utf-8")
             if u.path == "/analyzer/": return s._send(200, ANALYZER.read_bytes(), "text/html; charset=utf-8")
+            if u.path in ("/site", "/site/"): return s._send(200, (ROOT / "site" / "index.html").read_bytes(), "text/html; charset=utf-8")
             if u.path == "/api/state": return s._send(200, json.dumps(console_state()))
+            if u.path == "/api/ports": return s._send(200, json.dumps(usb_scan()))
+            if u.path == "/api/prototype":
+                f = ROOT / "hardware" / "prototype" / "spec.json"; return s._send(200 if f.exists() else 404, f.read_bytes() if f.exists() else b"{}")
+            if u.path == "/api/history": return s._send(200, json.dumps(render_history()))
+            if u.path == "/api/favs": return s._send(200, FAV_FILE.read_bytes() if FAV_FILE.exists() else b"[]")
+            if u.path == "/api/docs":
+                want = q.get("id", [""])[0]
+                if not want: return s._send(200, json.dumps(doc_index()))
+                if want not in [d["id"] for d in doc_index()]: return s._send(404, "no such doc", "text/plain")
+                return s._send(200, (ROOT / want).read_bytes(), "text/plain; charset=utf-8")
+            if u.path == "/api/plan": return s._send(200, PLAN_FILE.read_bytes() if PLAN_FILE.exists() else b"{}")
+            if u.path == "/api/presets": return s._send(200, json.dumps(list_presets()))
+            if u.path == "/api/compare":
+                f = ROOT / "hardware" / "prototype" / "compare.json"; return s._send(200 if f.exists() else 404, f.read_bytes() if f.exists() else b"{}")
             if u.path == "/api/doctor": return s._send(200, json.dumps([{"name": n, "ok": g, "detail": d, "need": nd} for n, g, d, nd in doctor_rows()]))
             if u.path == "/api/log":
                 t = (ROOT / "docs" / "notes.md").read_text() if (ROOT / "docs" / "notes.md").exists() else ""; return s._send(200, t, "text/plain; charset=utf-8")
@@ -370,6 +439,22 @@ def make_handler(port):
             if s.headers.get("X-SFA") != "1": return s._send(403, "missing header", "text/plain")
             from urllib.parse import urlparse, parse_qs
             u = urlparse(s.path); q = parse_qs(u.query)
+            if u.path == "/api/kit":                                 # a Sample Lab kit (zip) -> assets/lab/<name>/, packed into a unit's bank
+                uid = q.get("unit", [""])[0]
+                if uid not in UNITS: return s._send(400, "bad unit", "text/plain")
+                try:
+                    n = int(s.headers.get("Content-Length", "0")); body = s.rfile.read(min(n, 6_000_001)); d = save_kit_zip(body, q.get("name", ["KIT"])[0]); good, text = pack_kit(d, uid)
+                except Exception as e: return s._send(400, f"kit rejected: {e}", "text/plain")
+                msg = (text.splitlines()[-1] if text else "") + (f"\nBank written to {UNITS[uid]['dir']}/samples.bin; the old one is in assets/lab/_backups. Flash {UNITS[uid]['name']} to write it to the unit." if good else "\npacking failed")
+                return s._send(200 if good else 500, msg, "text/plain")
+            if u.path == "/api/favs":
+                try: save_favs(s.rfile.read(min(int(s.headers.get("Content-Length", "0")), 100_001)))
+                except Exception as e: return s._send(400, f"rejected: {e}", "text/plain")
+                return s._send(200, "saved", "text/plain")
+            if u.path == "/api/plan":
+                try: save_plan(s.rfile.read(min(int(s.headers.get("Content-Length", "0")), 400_001)))
+                except Exception as e: return s._send(400, f"plan rejected: {e}", "text/plain")
+                return s._send(200, "saved", "text/plain")
             if u.path != "/api/run": return s._send(404, "not found", "text/plain")
             cmd = q.get("cmd", [""])[0]; uid = q.get("unit", [""])[0]; extra = q.get("args", [""])[0].split()
             if cmd not in RUN_OK or (RUN_OK[cmd] and uid not in UNITS) or not all(x in ("--no-flash", "--force", "--fresh", "--build-only") or x in CONF["recipes"] for x in extra):
@@ -397,10 +482,75 @@ def cmd_console(a):
     try: srv.serve_forever()
     except KeyboardInterrupt: pass
 
+
+# ---------- sample kits: Sample Lab -> the unit's sample bank ----------
+LAB = ROOT / "assets" / "lab"
+def pack_kit(kit_dir, uid):
+    """Pack a folder of WAVs into the unit's bank (app/samples.bin or visitors/samples.bin) with tools/sfa_sample.py; the old bank is kept."""
+    u = UNITS[uid]; out = ROOT / u["dir"] / "samples.bin"
+    if out.exists():
+        (LAB / "_backups").mkdir(parents=True, exist_ok=True); shutil.copy(out, LAB / "_backups" / f"{uid}-{time.strftime('%Y%m%d-%H%M%S')}.bin")
+    r = subprocess.run([sys.executable, str(ROOT / "tools" / "sfa_sample.py"), str(kit_dir), "--out", str(out)], capture_output=True, text=True)
+    return r.returncode == 0, (r.stdout + r.stderr).strip()
+
+def save_kit_zip(data, kit):
+    import zipfile, io
+    if len(data) > 6_000_000: raise ValueError("kit is too big")
+    kit = re.sub(r"[^A-Za-z0-9_-]", "", kit)[:32] or "KIT"; dest = LAB / kit
+    z = zipfile.ZipFile(io.BytesIO(data)); members = [i for i in z.infolist() if re.fullmatch(r"\d\d_[A-Za-z0-9_-]{1,9}\.wav|kit\.json", i.filename)]
+    if not any(i.filename.endswith(".wav") for i in members) or len(members) > 20 or any(i.file_size > 400_000 for i in members): raise ValueError("not a Sample Lab kit")
+    if dest.exists(): [f.unlink() for f in dest.glob("*.wav")]
+    dest.mkdir(parents=True, exist_ok=True)
+    for i in members: (dest / i.filename).write_bytes(z.read(i))
+    return dest
+
+def cmd_pack(a):
+    uid, u = unit(a.unit); k = Path(a.kit)
+    if k.suffix == ".zip" and k.is_file(): k = save_kit_zip(k.read_bytes(), k.stem)
+    elif not k.is_dir() and (LAB / a.kit).is_dir(): k = LAB / a.kit
+    if not k.is_dir(): sys.exit(bad(f"no kit folder '{a.kit}' (a folder of WAVs, a Sample Lab .zip, or a name under assets/lab/)"))
+    good, text = pack_kit(k, uid); print(text)
+    if not good: sys.exit(bad("packing failed"))
+    print(ok(f"{u['name']}: bank written to {u['dir']}/samples.bin") + dim(f"  (the old one is in assets/lab/_backups). Flash with: tools/sfa up {uid}"))
+
+
+# ---------- USB: which FM-1 is plugged in ----------
+FW_UNIT = {"ecb": "ecb", "alien": "as"}                           # the firmware name a unit answers with -> its unit id
+def usb_scan():
+    """The FM-1s on USB now, via Windows Python when under WSL: {'found': [{'port','firmware','unit'}], 'busy': [...]} or {'error': ...}."""
+    script = ROOT / "tools" / "fm1_usb.py"; wpy = shutil.which("python.exe")
+    try:
+        cmd = [wpy, subprocess.run(["wslpath", "-w", str(script)], capture_output=True, text=True).stdout.strip()] if wpy else [sys.executable, str(script)]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+        d = json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception as e: return {"error": f"could not look at USB: {e}"}
+    for f in d.get("found", []): f["unit"] = FW_UNIT.get((f.get("firmware") or "").lower())
+    return d
+
+def usb_gate(uid):
+    """Exactly one FM-1 must be on USB before a flash. Returns (ok, message)."""
+    d = usb_scan(); u = UNITS[uid]
+    if "error" in d: return True, warn(f"USB check skipped: {d['error']}")
+    n = len(d.get("found", []))
+    if n == 0: return False, "No FM-1 answered on USB." + (f" A port is busy (close the mirror tab or other MIDI program): {', '.join(d['busy'])}." if d.get("busy") else " Plug in the unit you want to flash.")
+    if n > 1: return False, f"{n} FM-1s are on USB ({', '.join((f['firmware'] or '?') for f in d['found'])}). Unplug all but the one to flash."
+    f = d["found"][0]; now = UNITS.get(f.get("unit"), {}).get("name") or f"firmware {f.get('firmware')}"
+    return True, f"One FM-1 on USB, running {now}. It will become {u['name']}."
+
+def cmd_ports(a):
+    d = usb_scan()
+    if "error" in d: sys.exit(bad(d["error"]))
+    if not d["found"]: print(warn("No FM-1 answered.") + (f" Busy ports: {', '.join(d['busy'])} (close the mirror tab or any MIDI program)." if d["busy"] else " Plug one in."))
+    for f in d["found"]: print(ok("FM-1") + f"  running {UNITS.get(f['unit'], {}).get('name', f['firmware'])}  {dim(f['port'])}")
+    print(dim(f"{len(d['found'])} found. Flash one at a time."))
+
 # ---------- flash / up ----------
 def cmd_flash(a):
     uid, u = unit(a.unit); app = u["dir"]
     print(bold(f"flashing {u['name']}: one unit on USB, mirror tabs closed"))
+    if not a.build_only and not getattr(a, "skip_usb", False):
+        good, msg = usb_gate(uid); print("  " + msg)
+        if not good: sys.exit(bad("not flashing. Fix the USB and run it again."))
     r = subprocess.run(["sh", str(ROOT / "tools" / "go.sh"), app] + (["--no-flash"] if a.build_only else []), cwd=ROOT)
     if r.returncode: sys.exit(r.returncode)
     return 0
@@ -414,7 +564,7 @@ def cmd_up(a):
     flagged = [m["file"] for m in rep if m["verdict"] == "flag"]
     if flagged and not a.force: sys.exit(bad(f"\nstopping: flagged renders ({', '.join(flagged[:5])}). Open them with tools/sfa analyze {uid}, fix, or use --force."))
     if a.no_flash: print(ok("\nready to flash (skipped: --no-flash)")); return
-    cmd_flash(argparse.Namespace(unit=uid, build_only=False))
+    cmd_flash(argparse.Namespace(unit=uid, build_only=False, skip_usb=a.skip_usb))
     sync_renders_site(list(UNITS))
 
 # ---------- publish to Windows ----------
@@ -450,9 +600,10 @@ def main():
     p = sp.add_parser("render"); p.add_argument("unit"); p.add_argument("recipes", nargs="*"); p.add_argument("--rebuild", action="store_true"); p.set_defaults(f=cmd_render)
     p = sp.add_parser("report"); p.add_argument("units", nargs="*"); p.add_argument("--only", help="only files whose name contains this"); p.set_defaults(f=cmd_report)
     p = sp.add_parser("analyze"); p.add_argument("units", nargs="*"); p.add_argument("--fresh", action="store_true", help="render again first"); p.add_argument("--recipes", nargs="*"); p.add_argument("--port", type=int, default=8590); p.add_argument("--no-open", action="store_true"); p.set_defaults(f=cmd_analyze)
-    p = sp.add_parser("flash"); p.add_argument("unit"); p.add_argument("--build-only", action="store_true"); p.set_defaults(f=cmd_flash)
-    p = sp.add_parser("up"); p.add_argument("unit"); p.add_argument("recipes", nargs="*"); p.add_argument("--no-flash", action="store_true"); p.add_argument("--force", action="store_true"); p.set_defaults(f=cmd_up)
-    sp.add_parser("publish").set_defaults(f=cmd_publish)
+    p = sp.add_parser("flash"); p.add_argument("unit"); p.add_argument("--build-only", action="store_true"); p.add_argument("--skip-usb-check", dest="skip_usb", action="store_true"); p.set_defaults(f=cmd_flash)
+    p = sp.add_parser("up"); p.add_argument("unit"); p.add_argument("recipes", nargs="*"); p.add_argument("--no-flash", action="store_true"); p.add_argument("--force", action="store_true"); p.add_argument("--skip-usb-check", dest="skip_usb", action="store_true"); p.set_defaults(f=cmd_up)
+    sp.add_parser("publish").set_defaults(f=cmd_publish); sp.add_parser("ports").set_defaults(f=cmd_ports)
+    p = sp.add_parser("pack"); p.add_argument("kit"); p.add_argument("unit"); p.set_defaults(f=cmd_pack)
     p = sp.add_parser("console"); p.add_argument("--port", type=int, default=8590); p.add_argument("--no-open", action="store_true"); p.set_defaults(f=cmd_console)
     a = ap.parse_args(); a.f(a)
 

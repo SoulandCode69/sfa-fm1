@@ -18,24 +18,25 @@ one is a few lines in `units.json`. Everything in the console reads that file, s
 
 ## What exists
 
-* **SFA Analyzer** (`sfa/analyzer/index.html`): one file, no install, our own code. Spectrum with peak hold, smoothing and
-  slope; spectrogram with a time axis shared with the waveform; peak, true peak, RMS, crest; BS.1770 loudness (integrated,
-  momentary, short-term, range); stereo correlation, side energy and a goniometer; a click finder that marks the waveform;
-  A/B overlay of up to five files; a compare table with CSV export; playback of a selection.
-* **`tools/sfa`**: doctor, sim, render, report, analyze, flash, up, publish, console.
-* **SFA Console** (`tools/sfa console`, a page at localhost:8590): one card per unit with its simulator and package status, latest render verdicts and
-  the latest build from the flash log; buttons for Sim, Render, Report, Check all and Flash (with a confirm step) that stream their output into
-  the page; the Analyzer embedded and fed with the latest renders; the doctor; the flash log; the roadmap. It listens on 127.0.0.1 only, checks the
-  Host header, and accepts actions only with a custom header, from a fixed list of commands.
+* **SFA Analyzer** (`sfa/analyzer/index.html`): one file, no install, our own code. Spectrum, spectrogram, peak / true peak / RMS,
+  BS.1770 loudness, stereo, click finder, A/B with loudness matching and a difference plot, a compare table with CSV export,
+  render history and favourites (from the console).
+* **SFA Sample Lab** (`sfa/samplelab/index.html`): chop by transients, equal parts, beat grid or silence; preview as the unit
+  hears it; export a kit zip or send it to a unit's bank (`tools/sfa pack`, with a backup of the old bank).
+* **`tools/sfa`**: doctor, units, sim, render, report, analyze, flash, up, ports, pack, publish, console.
+* **SFA Console** (`tools/sfa console`, localhost:8590): Units (sim, render, report, check, flash with a one-FM-1-on-USB check),
+  Analyzer and Sample Lab embedded, and the hardware pages: Planner, Decisions, Engine map, Architecture, Presets, Compare, Research.
+  Docs and changelog, the doctor, the flash log and the roadmap sit under System. It listens on 127.0.0.1 only, checks the Host
+  header, and accepts actions only with a custom header, from a fixed list of commands. Plan edits save to `hardware/prototype/plan.json`.
+* **Site** (`site/`): a static public page, previewed at `/site/`.
 * **The simulator**: the real firmware compiled for the host, driven by scripts, with WAV capture and screenshots.
 
 ## Next, in order
 
-1. **Preset browser**: the audit already renders every Otter, Fox and Greys preset. Show them as a grid with their spectra, so
-   a harsh or quiet preset is visible before it is chosen.
-2. **Engine template**: one folder to copy for a new engine (`engine.h` API, a test script, a render recipe, an audit entry).
-3. **Sample lab**: drop a WAV in, slice it, audition it against the engines, pack it for the unit (`sfa_sample.py` is the packer).
-4. **Prototype target**: `core/` (the portable SFA ONE engine) built for a second platform behind the same console.
+1. **Engine v2 and packs** (see ARCHITECTURE.md): engine `id` and `version`, `SR` as a build flag, `tools/sfa pack`, simulator loads a pack.
+2. **FM-1 data region spike**: can presets live as data on the FM-1?
+3. **Engine template**: one folder to copy for a new engine.
+4. **Prototype target**: `core/` and one engine on a development board, compared render for render with the host.
 
 ## Principles
 

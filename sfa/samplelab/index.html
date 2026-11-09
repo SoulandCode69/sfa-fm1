@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>SFA Sample Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap">
+<style>
+/* Layout: source list left, the waveform with its cut markers in the middle, the slice table and the bank budget below it. */
+:root {
+  --bg: #f1eef3; --panel: #ffffff; --panel2: #e8e4ec; --rule: #cfc8d8; --fg: #1a1620; --dim: #6a6277;
+  --accent: #d1174a; --accent-fg: #ffffff; --good: #1f8a52; --warn: #b9770e; --bad: #c4162f;
+  --plot: #fbf9fc; --grid: #ddd6e4; --wave: #3b3447; --c1: #d1174a; --c2: #0f9c8c;
+  --display: "Syne", "Arial Black", system-ui, sans-serif; --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
+  --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; --c1: #ff3d6e; --c2: #38d6c4; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
+  --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; --c1: #ff3d6e; --c2: #38d6c4; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 var(--body); min-height: 100vh; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 24px; }
+button, select, input { font: inherit; color: inherit; }
+button { background: var(--panel2); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--dim); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button.on { border-color: var(--accent); color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible, .src:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select, input[type=text], input[type=number] { background: var(--panel2); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 6px; }
+input[type=range] { accent-color: var(--accent); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.mark { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+.mark b { font: 800 19px/1 var(--display); letter-spacing: .02em; }
+.mark span { font: 500 11px/1 var(--mono); letter-spacing: .14em; color: var(--dim); text-transform: uppercase; }
+.sp { flex: 1 1 auto; }
+.readout { font: 500 12px/1.2 var(--mono); color: var(--dim); }
+.readout b { color: var(--fg); font-weight: 500; }
+.shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 10px; }
+.drop { border: 1px dashed var(--dim); border-radius: 6px; padding: 14px 12px; text-align: center; color: var(--dim); cursor: pointer; background: var(--panel); }
+.drop.over { border-color: var(--accent); color: var(--accent); background: var(--panel2); }
+.drop b { display: block; color: var(--fg); font: 700 14px/1.2 var(--display); margin-bottom: 4px; }
+.srcs { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow: auto; }
+.src { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; padding: 7px 9px; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; }
+.src.act { border-color: var(--accent); background: var(--panel2); }
+.src .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.src .sub { grid-column: 1 / 3; font: 400 11px/1.3 var(--mono); color: var(--dim); }
+.src .x { border: 0; background: none; padding: 0 2px; color: var(--dim); }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+.card h3 { margin: 0 0 8px; font: 500 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.plot { position: relative; width: 100%; height: 220px; }
+.plot canvas { display: block; width: 100%; height: 100%; border-radius: 3px; touch-action: none; cursor: crosshair; }
+.chop { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 16px; align-items: end; }
+.chop label { display: flex; flex-direction: column; gap: 3px; font: 500 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.chop label span { font: 500 12px/1 var(--mono); letter-spacing: 0; color: var(--fg); }
+.modes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.budget { height: 22px; border-radius: 4px; background: var(--panel2); border: 1px solid var(--rule); display: flex; overflow: hidden; position: relative; }
+.budget i { display: block; height: 100%; border-right: 1px solid var(--panel); }
+.budget.over { border-color: var(--bad); }
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font: 400 12px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+th, td { padding: 4px 8px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+th { font-weight: 500; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+th:first-child, td:first-child, td:nth-child(2), th:nth-child(2) { text-align: left; }
+tr.act td { background: var(--panel2); }
+td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: uppercase; }
+.key { display: inline-block; min-width: 1.6em; text-align: center; border: 1px solid var(--rule); border-radius: 3px; font: 500 11px/1.5 var(--mono); color: var(--dim); }
+.status { color: var(--dim); font: 400 11px/1.3 var(--mono); }
+.note { color: var(--dim); font-size: 12px; margin: 8px 0 0; max-width: 90ch; }
+.bad { color: var(--bad); } .ok { color: var(--good); } .wn { color: var(--warn); }
+@media (max-width: 800px) { .shell { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="5" fill="var(--accent)"/><g fill="var(--accent-fg)"><rect x="4" y="12" width="3" height="6"/><rect x="9" y="8" width="3" height="14"/><rect x="14" y="4" width="3" height="22"/><rect x="19" y="9" width="3" height="12"/><rect x="24" y="13" width="2" height="4"/></g></svg>
+    <div><b>SFA</b> <span>Sample Lab</span></div>
+  </div>
+  <button class="primary" id="bOpen">Open samples</button>
+  <input type="file" id="fIn" accept=".wav,.mp3,.flac,.ogg,.m4a,.aif,.aiff,.opus,audio/*" multiple hidden>
+  <button id="bPlaySrc" title="Space">Play source</button>
+  <button id="bStop">Stop</button>
+  <label class="readout"><input type="checkbox" id="cUnit" checked> hear it as the unit will (22.05 kHz, 16 bit)</label>
+  <span class="sp"></span>
+  <span class="readout" id="rdBank"></span>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Drop audio files here or press Enter to browse"><b>Drop samples here</b>loops, one-shots, whole songs. WAV, MP3, FLAC, OGG, M4A</div>
+    <div class="srcs" id="srcs"></div>
+    <div class="status" id="status">Drop a sample to start.</div>
+  </aside>
+
+  <main class="main">
+    <div class="card"><h3><span id="tName">Waveform</span><span class="tools"><span class="readout" id="rdCursor"></span><button id="bZoomOut">Fit</button></span></h3>
+      <div class="plot" id="pWave"><canvas></canvas></div>
+      <p class="note">Click to add a cut. Drag a cut to move it. Double-click a cut to remove it. Wheel zooms, shift + wheel pans. Click a slice in the table or press <span class="key">1</span>-<span class="key">9</span> <span class="key">0</span> <span class="key">Q</span>-<span class="key">Y</span> to hear it.</p></div>
+
+    <div class="card"><h3><span>Auto-chop</span><span class="tools"><button id="bClear">Clear cuts</button></span></h3>
+      <div class="modes" id="modes"><button data-m="transient" class="on">Transients</button><button data-m="equal">Equal</button><button data-m="grid">Beat grid</button><button data-m="silence">Silence</button></div>
+      <div class="chop" id="chopCtl"></div>
+      <div class="tools" style="margin-top:10px"><label class="readout"><input type="checkbox" id="cZero" checked> snap cuts to zero crossings</label><label class="readout"><input type="checkbox" id="cTrim" checked> trim silence off each slice</label><button class="primary" id="bChop">Chop</button></div>
+    </div>
+
+    <div class="card"><h3><span>Slices</span><span class="tools"><span class="readout" id="rdSlices"></span></span></h3>
+      <div class="budget" id="budget" title="The unit's sample bank: 184 KB shared by every slice"></div>
+      <div class="readout" id="budgetTxt" style="margin:6px 0 8px"></div>
+      <div class="tw"><table id="tbl"></table></div>
+      <p class="note">The bank holds up to 16 samples and about 4.2 s of audio in all, mono, 22.05 kHz, 16 bit. Every sample is normalised to -1 dB by the packer, so relative levels between slices are not kept. Fades of 1.5 ms in and 6 ms out stop clicks at the cut.</p>
+    </div>
+
+    <div class="card"><h3><span>Export</span></h3>
+      <div class="tools">
+        <label class="readout">Kit name <input type="text" id="kitName" value="MYKIT" maxlength="24" style="width:14ch"></label>
+        <button class="primary" id="bZip">Download kit (.zip)</button>
+        <span id="sendBox" style="display:none" class="tools"><span class="readout">or send to</span><button data-send="ecb">Earth Creature Beats</button><button data-send="as">Alien Stack</button></span>
+      </div>
+      <p class="note" id="exportNote">The zip holds NN_NAME.wav files (22.05 kHz, mono, 16 bit) and kit.json. To put them on a unit: unzip into a folder, run <span class="mono">tools/sfa pack FOLDER ecb</span> (or <span class="mono">as</span>), then flash with <span class="mono">tools/sfa up ecb</span>. Open this page from the SFA Console to send a kit straight to a unit's bank.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const say = t => { $("#status").textContent = t; };
+const RATE = 22050, MAXN = 92000, REGION = 46 * 4096 - 64, MAXS = 16;
+const bankSamples = n => Math.floor((REGION - 8 - 20 * Math.max(1, n)) / 2);       /* PCM samples the bank holds for n samples: the packer's budget */
+const fmtT = s => s < 1 ? (s * 1000).toFixed(0) + " ms" : s.toFixed(2) + " s";
+
+/* ---------- reading audio: our own WAV parser, the browser's decoder for everything else ---------- */
+function parseWav(buf) {
+  const dv = new DataView(buf), tag = o => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+  if (buf.byteLength < 44 || (tag(0) !== "RIFF" && tag(0) !== "RF64") || tag(8) !== "WAVE") throw new Error("not a WAV");
+  let o = 12, f = null, d = null;
+  while (o + 8 <= buf.byteLength) {
+    const id = tag(o); let sz = dv.getUint32(o + 4, true); const b = o + 8;
+    if (id === "fmt ") { let code = dv.getUint16(b, true); if (code === 0xFFFE && sz >= 26) code = dv.getUint16(b + 24, true); f = { code, ch: dv.getUint16(b + 2, true), sr: dv.getUint32(b + 4, true), bits: dv.getUint16(b + 14, true) }; }
+    else if (id === "data") { if (sz === 0 || sz === 0xFFFFFFFF || b + sz > buf.byteLength) sz = buf.byteLength - b; d = { b, sz }; break; }
+    o = b + sz + (sz & 1);
+  }
+  if (!f || !d || !(f.code === 1 || f.code === 3)) throw new Error("unsupported WAV");
+  const bps = f.bits >> 3, n = Math.floor(d.sz / (bps * f.ch)), out = new Float32Array(n), step = bps * f.ch;
+  for (let i = 0, p = d.b; i < n; i++, p += step) {
+    let acc = 0;
+    for (let c = 0; c < f.ch; c++) { const q = p + c * bps; let v;
+      if (f.code === 3) v = f.bits === 64 ? dv.getFloat64(q, true) : dv.getFloat32(q, true);
+      else if (f.bits === 16) v = dv.getInt16(q, true) / 32768; else if (f.bits === 24) { let t = dv.getUint8(q) | dv.getUint8(q + 1) << 8 | dv.getUint8(q + 2) << 16; if (t & 0x800000) t -= 0x1000000; v = t / 8388608; }
+      else if (f.bits === 32) v = dv.getInt32(q, true) / 2147483648; else v = (dv.getUint8(q) - 128) / 128;
+      acc += v; }
+    out[i] = acc / f.ch;
+  }
+  return { sr: f.sr, mono: out, ch: f.ch };
+}
+async function readAudio(buf) {
+  try { return parseWav(buf); } catch (e) {
+    const C = window.AudioContext || window.webkitAudioContext, ctx = new C();
+    try { const ab = await ctx.decodeAudioData(buf.slice(0)), n = ab.length, out = new Float32Array(n), cs = ab.numberOfChannels;
+      for (let c = 0; c < cs; c++) { const d = ab.getChannelData(c); for (let i = 0; i < n; i++) out[i] += d[i] / cs; }
+      return { sr: ab.sampleRate, mono: out, ch: cs };
+    } catch (e2) { throw new Error("could not read this as audio"); } finally { if (ctx.close) ctx.close(); }
+  }
+}
+
+/* ---------- state ---------- */
+const S = { src: [], act: -1, mode: "transient", view: null, hover: null, drag: null, sel: -1, ctx: null, node: null,
+  p: { sens: 55, gap: 70, n: 8, bpm: 120, div: 4, off: 0, thr: -45, minsil: 120 } };
+const cur = () => S.src[S.act] || null;
+let uid = 0;
+
+async function addFiles(list) {
+  const arr = Array.from(list).filter(f => /\.(wav|mp3|flac|oga|ogg|m4a|aac|aif|aiff|opus)$/i.test(f.name) || /^audio\//.test(f.type));
+  if (!arr.length) { say("Those are not audio files."); return; }
+  for (const f of arr) {
+    try {
+      const a = await readAudio(await f.arrayBuffer());
+      const s = { id: ++uid, name: f.name.replace(/\.[^.]+$/, ""), sr: a.sr, x: a.mono, n: a.mono.length, dur: a.mono.length / a.sr, ch: a.ch, marks: [], props: [{ name: "", keep: true, rev: false }], bpm: 0 };
+      S.src.push(s); S.act = S.src.length - 1; S.view = null; autoChop(s, true);
+    } catch (e) { say(f.name + ": " + e.message); }
+  }
+  render();
+}
+
+/* ---------- cut finding ---------- */
+function envelope(s, hop) {
+  const n = Math.floor(s.n / hop), e = new Float32Array(n), x = s.x;
+  for (let i = 0; i < n; i++) { let a = 0; const b = i * hop, win = Math.min(s.n - 1, b + hop * 2); for (let j = b; j < win; j++) { const d = x[j + 1] - x[j]; a += d * d; } e[i] = Math.sqrt(a / (hop * 2)); }
+  return e;
+}
+function nearestZero(x, p, r) { let best = p, bv = Math.abs(x[p] || 0); for (let k = 1; k <= r; k++) for (const q of [p - k, p + k]) { if (q > 0 && q < x.length && Math.abs(x[q]) < bv) { bv = Math.abs(x[q]); best = q; } } return best; }
+function detectTransients(s, sens, gapMs) {
+  const hop = Math.max(16, Math.round(s.sr * 0.003)), e = envelope(s, hop), n = e.length, le = e.map(v => Math.log(v + 1e-5)), on = new Float32Array(n), W = 10;
+  for (let i = W; i < n; i++) { let m = 0; for (let k = 1; k <= W; k++) m += le[i - k]; on[i] = Math.max(0, le[i] - m / W); }
+  const th = 2.4 - sens * 0.022, gap = Math.max(2, Math.round(gapMs / 3)), cand = [];
+  for (let i = W; i < n - 1; i++) { if (on[i] > th && on[i] >= on[i - 1] && on[i] >= on[i + 1]) cand.push({ i, v: on[i] }); }
+  cand.sort((a, b) => b.v - a.v); const keep = [];
+  for (const c of cand) if (keep.every(k => Math.abs(k.i - c.i) >= gap)) keep.push(c);
+  keep.sort((a, b) => a.i - b.i);
+  return keep.map(c => { let p = c.i * hop, lo = Math.max(1, p - Math.round(s.sr * 0.012)), bp = p, bv = 9;                  // step back to the quiet point just before the attack
+    for (let q = p; q >= lo; q--) { const v = Math.abs(s.x[q]) + Math.abs(s.x[q - 1] || 0); if (v < bv) { bv = v; bp = q; } }
+    return { pos: bp, v: c.v }; });
+}
+function autoChop(s, quiet) {
+  const P = S.p, zs = $("#cZero").checked, marks = [];
+  if (S.mode === "transient") { let d = detectTransients(s, P.sens, P.gap); while (d.length > MAXS - 1) { let k = 0; for (let i = 1; i < d.length; i++) if (d[i].v < d[k].v) k = i; d.splice(k, 1); } d.forEach(c => marks.push(c.pos)); }
+  else if (S.mode === "equal") { for (let i = 1; i < P.n; i++) marks.push(Math.round(s.n * i / P.n)); }
+  else if (S.mode === "grid") { const step = s.sr * 60 / P.bpm * 4 / P.div; for (let t = P.off / 1000 * s.sr + step; t < s.n - 1 && marks.length < MAXS - 1; t += step) marks.push(Math.round(t)); if (P.off > 0) marks.unshift(Math.round(P.off / 1000 * s.sr)); }
+  else if (S.mode === "silence") {
+    const win = Math.round(s.sr * 0.005), th = Math.pow(10, P.thr / 20), minS = Math.round(P.minsil / 1000 * s.sr); let run = 0, start = -1;
+    for (let i = 0; i + win < s.n; i += win) { let a = 0; for (let j = i; j < i + win; j++) a = Math.max(a, Math.abs(s.x[j])); if (a < th) { if (!run) start = i; run += win; } else { if (run >= minS && start > 0) marks.push(Math.round(start + run * 0.5)); run = 0; } }
+    while (marks.length > MAXS - 1) marks.pop();
+  }
+  const out = [...new Set(marks.map(m => zs ? nearestZero(s.x, clamp(m, 1, s.n - 2), Math.round(s.sr * 0.0015)) : clamp(m, 1, s.n - 2)))].sort((a, b) => a - b);
+  s.marks = out.filter((m, i) => m > s.sr * 0.01 && (i === 0 || m - out[i - 1] > s.sr * 0.01));
+  s.props = Array.from({ length: s.marks.length + 1 }, (_, i) => s.props[i] && !quiet && S.keepProps ? s.props[i] : { name: "", keep: true, rev: false });
+  if (!quiet) say(s.marks.length + 1 + " slices from " + (S.mode === "transient" ? "transients" : S.mode) + ".");
+}
+function slices(s) { const e = [0, ...s.marks, s.n]; return Array.from({ length: e.length - 1 }, (_, i) => ({ i, a: e[i], b: e[i + 1], p: s.props[i] })); }
+
+/* ---------- making the unit's sample: resample, trim, fade, normalise ---------- */
+function resample(x, sr, to) {
+  if (sr === to) return Float32Array.from(x);
+  const r = sr / to, n = Math.floor(x.length / r), y = new Float32Array(n), fc = Math.min(1, to / sr) * 0.97, W = 12;
+  for (let i = 0; i < n; i++) {
+    const p = i * r, c = Math.floor(p); let s = 0, ws = 0;
+    for (let k = -W + 1; k <= W; k++) { const j = c + k; if (j < 0 || j >= x.length) continue; const t = (j - p) * fc, h = (t === 0 ? 1 : Math.sin(Math.PI * t) / (Math.PI * t)) * (0.5 + 0.5 * Math.cos(Math.PI * (j - p) / W)) * fc; s += x[j] * h; ws += h; }
+    y[i] = ws ? s / ws : 0;
+  }
+  return y;
+}
+function makeSample(s, sl, trim) {
+  let a = sl.a, b = sl.b;
+  if (trim) { const th = 0.0015; while (a < b - 2 && Math.abs(s.x[a]) < th) a++; while (b > a + 2 && Math.abs(s.x[b - 1]) < th) b--; }
+  let y = resample(s.x.subarray(a, b), s.sr, RATE);
+  if (sl.p.rev) y.reverse();
+  const fi = Math.min(y.length >> 1, Math.round(RATE * 0.0015)), fo = Math.min(y.length >> 1, Math.round(RATE * 0.006));
+  for (let i = 0; i < fi; i++) y[i] *= i / fi; for (let i = 0; i < fo; i++) y[y.length - 1 - i] *= i / fo;
+  let pk = 0; for (let i = 0; i < y.length; i++) pk = Math.max(pk, Math.abs(y[i]));
+  const g = pk > 0 ? 0.891 / pk : 0; const out = new Int16Array(Math.min(y.length, MAXN));
+  for (let i = 0; i < out.length; i++) out[i] = Math.max(-32768, Math.min(32767, Math.round(y[i] * g * 32767)));
+  return out;
+}
+function plan(s) {                                                                    /* what would be exported now: kept slices, in order, fitted to the bank */
+  const sl = slices(s).filter(q => q.p.keep).slice(0, MAXS), trim = $("#cTrim").checked;
+  const smp = sl.map(q => ({ q, pcm: makeSample(s, q, trim) })), total = smp.reduce((a, b) => a + b.pcm.length, 0);
+  return { smp, total, cap: bankSamples(smp.length), cut: Math.max(0, slices(s).filter(q => q.p.keep).length - MAXS) };
+}
+function fitPlan(pl) {                                                                /* water-fill: the longest samples give up their tails first */
+  if (pl.total <= pl.cap) return pl;
+  const lens = pl.smp.map(m => m.pcm.length); let lo = 0, hi = Math.max(...lens);
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (lens.reduce((a, l) => a + Math.min(l, mid), 0) > pl.cap) hi = mid; else lo = mid; }
+  pl.smp.forEach(m => { if (m.pcm.length > lo) { const o = m.pcm.slice(0, lo), f = Math.min(lo >> 1, Math.round(RATE * 0.006)); for (let i = 0; i < f; i++) o[o.length - 1 - i] = Math.round(o[o.length - 1 - i] * (i / f)); m.pcm = o; } });
+  pl.total = pl.smp.reduce((a, b) => a + b.pcm.length, 0); return pl;
+}
+
+/* ---------- drawing ---------- */
+const ML = 10, MR = 10;
+function vr(s) { return S.view || [0, s.n]; }
+const xOf = (p, s, w) => ML + (p - vr(s)[0]) / (vr(s)[1] - vr(s)[0]) * (w - ML - MR);
+const pOf = (x, s, w) => Math.round(vr(s)[0] + (x - ML) / (w - ML - MR) * (vr(s)[1] - vr(s)[0]));
+function drawWave() {
+  const host = $("#pWave"), cv = $("canvas", host), dpr = window.devicePixelRatio || 1, w = host.clientWidth, h = host.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = cssv("--plot"); c.fillRect(0, 0, w, h);
+  const s = cur(); if (!s) { c.fillStyle = cssv("--dim"); c.font = "13px " + cssv("--body"); c.textAlign = "center"; c.fillText("Drop a sample to start", w / 2, h / 2); return; }
+  const [v0, v1] = vr(s), pw = w - ML - MR, bot = h - 16, mid = (bot) / 2, sl = slices(s);
+  sl.forEach(q => { const x0 = xOf(q.a, s, w), x1 = xOf(q.b, s, w); if (x1 < 0 || x0 > w) return; c.fillStyle = cssv(q.i === S.sel ? "--accent" : q.i % 2 ? "--grid" : "--plot"); c.globalAlpha = q.i === S.sel ? .22 : .7; c.fillRect(Math.max(ML, x0), 0, Math.min(w - MR, x1) - Math.max(ML, x0), bot); c.globalAlpha = 1;
+    if (!q.p.keep) { c.fillStyle = cssv("--bad"); c.globalAlpha = .15; c.fillRect(Math.max(ML, x0), 0, Math.min(w - MR, x1) - Math.max(ML, x0), bot); c.globalAlpha = 1; } });
+  c.strokeStyle = cssv("--grid"); c.beginPath(); c.moveTo(ML, Math.round(mid) + .5); c.lineTo(w - MR, Math.round(mid) + .5); c.stroke();
+  c.fillStyle = cssv("--wave");
+  for (let px = 0; px < pw; px++) {
+    const a = Math.floor(v0 + px / pw * (v1 - v0)), b = Math.max(a + 1, Math.floor(v0 + (px + 1) / pw * (v1 - v0))), st = Math.max(1, Math.floor((b - a) / 48)); let mn = 1, mx = -1;
+    for (let i = a; i < b && i < s.n; i += st) { const v = s.x[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+    if (mn > mx) continue; c.fillRect(ML + px, mid - mx * mid * .95, 1, Math.max(1, (mx - mn) * mid * .95));
+  }
+  c.font = "10px " + cssv("--mono"); c.textAlign = "center";
+  sl.forEach(q => { const x0 = xOf(q.a, s, w), x1 = xOf(q.b, s, w); if (x1 - x0 > 16 && x0 < w && x1 > 0) { c.fillStyle = cssv("--dim"); c.fillText(q.i + 1, clamp((Math.max(x0, ML) + Math.min(x1, w - MR)) / 2, 12, w - 12), 12); } });
+  s.marks.forEach((m, i) => { const x = xOf(m, s, w); if (x < ML - 1 || x > w - MR + 1) return; c.fillStyle = cssv("--accent"); c.fillRect(Math.round(x) - 1, 0, 2, bot); c.beginPath(); c.moveTo(x - 5, bot); c.lineTo(x + 5, bot); c.lineTo(x, bot - 8); c.fill(); });
+  c.fillStyle = cssv("--dim"); c.textAlign = "center";
+  const span = (v1 - v0) / s.sr, steps = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60], st = steps.find(q => span / q <= pw / 80) || 60;
+  for (let t = Math.ceil(v0 / s.sr / st) * st; t <= v1 / s.sr; t += st) c.fillText(t.toFixed(span < 2 ? 2 : 1), xOf(t * s.sr, s, w), h - 3);
+  if (S.hover != null && !S.drag) { const x = xOf(S.hover, s, w); c.fillStyle = cssv("--fg"); c.globalAlpha = .35; c.fillRect(Math.round(x), 0, 1, bot); c.globalAlpha = 1; }
+  if (S.play && S.play.s === s) { const x = xOf(S.play.pos, s, w); c.fillStyle = cssv("--fg"); c.fillRect(Math.round(x), 0, 1, bot); }
+}
+
+/* ---------- panels ---------- */
+function renderSrcs() {
+  $("#srcs").innerHTML = S.src.map((s, i) => '<div class="src ' + (i === S.act ? "act" : "") + '" data-i="' + i + '" tabindex="0" role="button"><span class="nm" title="' + esc(s.name) + '">' + esc(s.name) + '</span><button class="x" data-x="' + i + '" title="Remove" aria-label="Remove">×</button><span class="sub">' + fmtT(s.dur) + " · " + (s.sr / 1000) + " kHz · " + s.marks.length + " cuts</span></div>").join("");
+}
+const CTL = {
+  transient: () => [["Sensitivity", "sens", 0, 100, 1, v => v + ""], ["Min gap", "gap", 20, 400, 5, v => v + " ms"]],
+  equal: () => [["Slices", "n", 2, 16, 1, v => v + ""]],
+  grid: () => [["Tempo", "bpm", 40, 220, 1, v => v + " BPM"], ["Division", "div", 1, 16, 1, v => "1/" + v], ["Start offset", "off", 0, 2000, 5, v => v + " ms"]],
+  silence: () => [["Silence below", "thr", -70, -20, 1, v => v + " dB"], ["For at least", "minsil", 20, 1000, 10, v => v + " ms"]],
+};
+function renderChop() {
+  document.querySelectorAll("#modes button").forEach(b => b.classList.toggle("on", b.dataset.m === S.mode));
+  $("#chopCtl").innerHTML = CTL[S.mode]().map(([n, k, lo, hi, st, f]) => '<label>' + n + ' <span id="v_' + k + '">' + f(S.p[k]) + '</span><input type="range" min="' + lo + '" max="' + hi + '" step="' + st + '" value="' + S.p[k] + '" data-k="' + k + '"></label>').join("");
+  $("#chopCtl").querySelectorAll("input").forEach(el => el.oninput = () => { S.p[el.dataset.k] = +el.value; const c = CTL[S.mode]().find(q => q[1] === el.dataset.k); $("#v_" + el.dataset.k).textContent = c[5](+el.value); if (cur()) { autoChop(cur(), true); render(); } });
+}
+let planCache = null;
+function renderSlices() {
+  const s = cur(); if (!s) { $("#tbl").innerHTML = ""; $("#budget").innerHTML = ""; $("#budgetTxt").textContent = ""; $("#rdSlices").textContent = ""; $("#rdBank").textContent = ""; return; }
+  const pl = planCache = plan(s), over = pl.total > pl.cap, keepAll = slices(s);
+  const cols = ["--c1", "--c2", "--accent"]; let used = 0;
+  $("#budget").className = "budget" + (over ? " over" : "");
+  $("#budget").innerHTML = pl.smp.map((m, i) => { const wd = m.pcm.length / pl.cap * 100; used += wd; return '<i style="width:' + wd.toFixed(2) + '%;background:' + (i % 2 ? "var(--c2)" : "var(--c1)") + ';opacity:' + (over ? .55 : .85) + '"></i>'; }).join("");
+  $("#budgetTxt").innerHTML = "<b class=\"" + (over ? "wn" : "ok") + "\">" + (pl.total / RATE).toFixed(2) + " s</b> of " + (pl.cap / RATE).toFixed(2) + " s in the bank (" + (pl.total * 2 / 1024).toFixed(0) + " of " + (pl.cap * 2 / 1024).toFixed(0) + " KB)" + (over ? ' \u00B7 <span class="wn">over by ' + ((pl.total - pl.cap) / RATE).toFixed(2) + " s: the export trims the longest slices' tails to fit. Untick slices to keep the rest whole.</span>" : "") + (pl.cut ? ' \u00B7 <span class="wn">' + pl.cut + " slice(s) past 16 are left out</span>" : "");
+  $("#rdSlices").textContent = keepAll.length + " slices, " + keepAll.filter(q => q.p.keep).length + " kept";
+  $("#rdBank").innerHTML = "bank <b>" + (pl.total / RATE).toFixed(2) + " / " + (pl.cap / RATE).toFixed(2) + " s</b>";
+  const keys = "1234567890qwerty"; let n = 0;
+  $("#tbl").innerHTML = "<thead><tr><th>Key</th><th>Name</th><th>Start</th><th>Length</th><th>Out</th><th>Keep</th><th>Rev</th><th></th></tr></thead><tbody>" + keepAll.map(q => {
+    const idx = q.p.keep ? n++ : -1, len = idx >= 0 && idx < pl.smp.length ? pl.smp[idx].pcm.length / RATE : 0;
+    return '<tr data-s="' + q.i + '" class="' + (q.i === S.sel ? "act" : "") + '"><td><span class="key">' + (keys[q.i] || "") + '</span></td><td><input type="text" maxlength="9" data-name="' + q.i + '" value="' + esc(q.p.name) + '" placeholder="' + (idx >= 0 ? "S" + String(idx + 1).padStart(2, "0") : "") + '" aria-label="Name"></td><td>' + (q.a / s.sr).toFixed(3) + "</td><td>" + ((q.b - q.a) / s.sr).toFixed(3) + "</td><td>" + (idx >= 0 ? len.toFixed(3) : "-") + '</td><td><input type="checkbox" data-keep="' + q.i + '" ' + (q.p.keep ? "checked" : "") + ' aria-label="Keep"></td><td><input type="checkbox" data-rev="' + q.i + '" ' + (q.p.rev ? "checked" : "") + ' aria-label="Reverse"></td><td><button data-play="' + q.i + '">Play</button></td></tr>';
+  }).join("") + "</tbody>";
+  $("#sendBox").style.display = serverUp ? "flex" : "none";
+}
+function render() { renderSrcs(); const s = cur(); $("#tName").textContent = s ? s.name : "Waveform"; renderSlices(); requestAnimationFrame(drawWave); }
+
+/* ---------- playback ---------- */
+function ac() { if (!S.ctx) S.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (S.ctx.state === "suspended") S.ctx.resume(); return S.ctx; }
+function stopAll() { if (S.node) { try { S.node.onended = null; S.node.stop(); } catch (e) {} S.node = null; } S.play = null; drawWave(); }
+function playBuf(buf, s, startPos, secs) {
+  stopAll(); const ctx = ac(), src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination); const t0 = ctx.currentTime; src.start(); S.node = src;
+  S.play = { s, pos: startPos }; const rate = buf.sampleRate / s.sr;
+  src.onended = () => { if (S.node === src) { S.node = null; S.play = null; drawWave(); } };
+  (function tick() { if (!S.play || S.node !== src) return; S.play.pos = startPos + (ctx.currentTime - t0) * s.sr; drawWave(); requestAnimationFrame(tick); })();
+}
+function playSlice(i) {
+  const s = cur(); if (!s) return; const sl = slices(s)[i]; if (!sl) return; S.sel = i;
+  if ($("#cUnit").checked) {
+    const m = makeSample(s, sl, $("#cTrim").checked), ctx = ac(), b = ctx.createBuffer(1, Math.max(1, m.length), RATE), d = b.getChannelData(0); for (let k = 0; k < m.length; k++) d[k] = m[k] / 32768; playBuf(b, s, sl.a, m.length / RATE);
+  } else { const ctx = ac(), b = ctx.createBuffer(1, sl.b - sl.a, s.sr); b.copyToChannel(s.x.subarray(sl.a, sl.b), 0); playBuf(b, s, sl.a); }
+  renderSlices();
+}
+function playSource() { const s = cur(); if (!s) return; const ctx = ac(), b = ctx.createBuffer(1, s.n, s.sr); b.copyToChannel(s.x, 0); playBuf(b, s, 0); }
+
+/* ---------- export: WAV files in a zip we write ourselves ---------- */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function wavBytes(pcm) {
+  const n = pcm.length, b = new DataView(new ArrayBuffer(44 + n * 2)), W = (o, t) => { for (let i = 0; i < t.length; i++) b.setUint8(o + i, t.charCodeAt(i)); };
+  W(0, "RIFF"); b.setUint32(4, 36 + n * 2, true); W(8, "WAVEfmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true); b.setUint16(22, 1, true); b.setUint32(24, RATE, true); b.setUint32(28, RATE * 2, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true); W(36, "data"); b.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) b.setInt16(44 + i * 2, pcm[i], true); return new Uint8Array(b.buffer);
+}
+function zipBlob(files) {
+  const enc = new TextEncoder(), parts = [], cd = [], d = new Date(); let off = 0;
+  const dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(), tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  for (const f of files) {
+    const nm = enc.encode(f.name), crc = crc32(f.data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(10, tm, true); h.setUint16(12, dt, true); h.setUint32(14, crc, true); h.setUint32(18, f.data.length, true); h.setUint32(22, f.data.length, true); h.setUint16(26, nm.length, true);
+    parts.push(new Uint8Array(h.buffer), nm, f.data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(12, tm, true); c.setUint16(14, dt, true); c.setUint32(16, crc, true); c.setUint32(20, f.data.length, true); c.setUint32(24, f.data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+    cd.push(new Uint8Array(c.buffer), nm); off += 30 + nm.length + f.data.length;
+  }
+  const size = cd.reduce((a, b) => a + b.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cd, new Uint8Array(e.buffer)], { type: "application/zip" });
+}
+function buildKit() {
+  const s = cur(); if (!s) return null; const pl = fitPlan(plan(s)); if (!pl.smp.length) { say("No slices are kept."); return null; }
+  const kit = ($("#kitName").value || "KIT").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 24) || "KIT", files = [], meta = [];
+  pl.smp.forEach((m, i) => {
+    const nm = ((m.q.p.name || "S" + String(i + 1).padStart(2, "0")).toUpperCase().replace(/[^A-Z0-9_-]/g, "") || "S" + (i + 1)).slice(0, 9), fn = String(i + 1).padStart(2, "0") + "_" + nm + ".wav";
+    files.push({ name: fn, data: wavBytes(m.pcm) }); meta.push({ file: fn, seconds: +(m.pcm.length / RATE).toFixed(3), from: +(m.q.a / s.sr).toFixed(4), to: +(m.q.b / s.sr).toFixed(4), reversed: !!m.q.p.rev });
+  });
+  files.push({ name: "kit.json", data: new TextEncoder().encode(JSON.stringify({ kit, source: s.name, rate: RATE, bits: 16, channels: 1, bankSeconds: +(pl.total / RATE).toFixed(3), samples: meta }, null, 1)) });
+  return { kit, blob: zipBlob(files), pl };
+}
+function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
+
+/* ---------- wiring ---------- */
+let serverUp = false;
+$("#bOpen").onclick = $("#drop").onclick = () => $("#fIn").click();
+$("#drop").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#fIn").click(); } };
+$("#fIn").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
+["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); $("#drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === "drop" || e.target === document.documentElement) $("#drop").classList.remove("over"); }));
+document.addEventListener("drop", async e => {
+  const files = [], items = e.dataTransfer && e.dataTransfer.items ? Array.from(e.dataTransfer.items) : [];
+  const walk = async en => { if (!en) return; if (en.isFile) await new Promise(r => en.file(f => { files.push(f); r(); }, r)); else if (en.isDirectory) { const rd = en.createReader(); let b; do { b = await new Promise(r => rd.readEntries(r, () => r([]))); for (const c of b) await walk(c); } while (b.length); } };
+  if (items.length && items[0].webkitGetAsEntry) { for (const it of items) await walk(it.webkitGetAsEntry()); } else files.push(...Array.from(e.dataTransfer.files));
+  addFiles(files);
+});
+$("#srcs").addEventListener("click", e => { const x = e.target.closest("[data-x]"), r = e.target.closest(".src"); if (x) { S.src.splice(+x.dataset.x, 1); S.act = Math.min(S.act, S.src.length - 1); S.sel = -1; stopAll(); render(); e.stopPropagation(); } else if (r) { S.act = +r.dataset.i; S.view = null; S.sel = -1; render(); } });
+$("#modes").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; S.mode = b.dataset.m; renderChop(); if (cur()) { autoChop(cur(), true); render(); } });
+$("#bChop").onclick = () => { if (cur()) { autoChop(cur()); render(); } };
+$("#bClear").onclick = () => { const s = cur(); if (s) { s.marks = []; s.props = [{ name: "", keep: true, rev: false }]; render(); say("Cuts cleared."); } };
+$("#cZero").onchange = $("#cTrim").onchange = () => { if (cur()) { if ($("#cZero").checked) autoChop(cur(), true); render(); } };
+$("#bPlaySrc").onclick = playSource; $("#bStop").onclick = stopAll;
+$("#bZoomOut").onclick = () => { S.view = null; drawWave(); };
+$("#tbl").addEventListener("click", e => { const p = e.target.closest("[data-play]"), r = e.target.closest("tr[data-s]"); if (p) playSlice(+p.dataset.play); else if (r && !e.target.closest("input")) { S.sel = +r.dataset.s; renderSlices(); drawWave(); } });
+$("#tbl").addEventListener("change", e => { const s = cur(), t = e.target; if (!s) return; const i = t.dataset.keep ?? t.dataset.rev ?? t.dataset.name; if (i === undefined) return; if (t.dataset.keep !== undefined) s.props[+i].keep = t.checked; else if (t.dataset.rev !== undefined) s.props[+i].rev = t.checked; else s.props[+i].name = t.value; render(); });
+$("#bZip").onclick = () => { const k = buildKit(); if (!k) return; download(k.blob, k.kit + ".zip"); say("Saved " + k.kit + ".zip: " + k.pl.smp.length + " samples, " + (k.pl.total / RATE).toFixed(2) + " s."); };
+document.querySelectorAll("[data-send]").forEach(b => b.onclick = async () => {
+  const k = buildKit(); if (!k) return; b.disabled = true; say("Sending " + k.kit + " to " + b.dataset.send + "...");
+  try { const r = await fetch("/api/kit?name=" + encodeURIComponent(k.kit) + "&unit=" + b.dataset.send, { method: "POST", headers: { "X-SFA": "1" }, body: k.blob }); say((await r.text()).split("\n").filter(Boolean).slice(-2).join(" ")); } catch (e) { say("Could not send: " + e.message); }
+  b.disabled = false;
+});
+/* the waveform: add, drag, remove cuts; wheel zoom */
+(() => {
+  const host = $("#pWave"), near = (s, x, w) => s.marks.findIndex(m => Math.abs(xOf(m, s, w) - x) < 7);
+  host.addEventListener("pointerdown", e => { const s = cur(); if (!s) return; const r = host.getBoundingClientRect(), x = e.clientX - r.left, i = near(s, x, r.width); host.setPointerCapture(e.pointerId); S.drag = { i, x0: x, moved: false }; });
+  host.addEventListener("pointermove", e => { const s = cur(); if (!s) return; const r = host.getBoundingClientRect(), x = e.clientX - r.left; S.hover = clamp(pOf(x, s, r.width), 0, s.n); $("#rdCursor").textContent = (S.hover / s.sr).toFixed(3) + " s";
+    if (S.drag && S.drag.i >= 0 && Math.abs(x - S.drag.x0) > 2) { S.drag.moved = true; const lo = (s.marks[S.drag.i - 1] || 0) + 8, hi = (s.marks[S.drag.i + 1] || s.n) - 8; s.marks[S.drag.i] = clamp(pOf(x, s, r.width), lo, hi); }
+    host.querySelector("canvas").style.cursor = near(s, x, r.width) >= 0 ? "ew-resize" : "crosshair"; drawWave(); });
+  host.addEventListener("pointerup", e => { const s = cur(); if (!s || !S.drag) return; const r = host.getBoundingClientRect(), x = e.clientX - r.left, d = S.drag; S.drag = null;
+    if (d.i >= 0 && d.moved) { if ($("#cZero").checked) s.marks[d.i] = nearestZero(s.x, s.marks[d.i], Math.round(s.sr * 0.0015)); render(); }
+    else if (d.i < 0) { const p = clamp(pOf(x, s, r.width), 8, s.n - 8); let k = s.marks.findIndex(m => m > p); if (k < 0) k = s.marks.length; s.marks.splice(k, 0, $("#cZero").checked ? nearestZero(s.x, p, Math.round(s.sr * 0.0015)) : p); s.props.splice(k, 0, { name: "", keep: true, rev: false }); if (s.marks.length + 1 > MAXS) say("More than 16 slices: only the first 16 kept ones are exported."); render(); } });
+  host.addEventListener("dblclick", e => { const s = cur(); if (!s) return; const r = host.getBoundingClientRect(), i = near(s, e.clientX - r.left, r.width); if (i >= 0) { s.marks.splice(i, 1); s.props.splice(i + 1, 1); render(); } });
+  host.addEventListener("pointerleave", () => { S.hover = null; drawWave(); });
+  host.addEventListener("wheel", e => { const s = cur(); if (!s) return; e.preventDefault(); const r = host.getBoundingClientRect(), [a, b] = vr(s), c = pOf(e.clientX - r.left, s, r.width);
+    if (e.shiftKey) { const d = (b - a) * 0.1 * Math.sign(e.deltaY); S.view = [clamp(a + d, 0, s.n - (b - a)), clamp(b + d, b - a, s.n)]; }
+    else { const f = e.deltaY > 0 ? 1.25 : 0.8, na = clamp(c - (c - a) * f, 0, s.n), nb = clamp(c + (b - c) * f, 0, s.n); S.view = nb - na < 200 ? S.view : (nb - na >= s.n ? null : [na, nb]); }
+    drawWave(); }, { passive: false });
+})();
+document.addEventListener("keydown", e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && e.target.type !== "checkbox" && e.target.type !== "range") return;
+  if (e.code === "Space") { e.preventDefault(); S.node ? stopAll() : playSource(); return; }
+  const k = "1234567890qwerty".indexOf(e.key.toLowerCase()); if (k >= 0 && !e.ctrlKey && !e.metaKey && !e.altKey) playSlice(k);
+});
+new ResizeObserver(() => requestAnimationFrame(drawWave)).observe(document.body);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
+window.LAB = { S, makeSample, plan, fitPlan, buildKit, detectTransients, autoChop, resample, zipBlob, addFiles, bankSamples, wavBytes };
+renderChop(); render();
+if (location.protocol.startsWith("http")) fetch("/api/state", { headers: {} }).then(r => { serverUp = r.ok; renderSlices(); }).catch(() => {});
+</script>
+</body>
+</html>

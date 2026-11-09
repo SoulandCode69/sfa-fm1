@@ -80,7 +80,40 @@ th:first-child, td:first-child { text-align: left; }
 .plan .card h2 { font-size: 16px; }
 .plan p { margin: 0; color: var(--dim); font-size: 13px; }
 pre.log { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; font: 400 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 70vh; overflow: auto; }
+.ed input, .ed select, .ed textarea, .row > input, .row > select, .sub + .card input { background: var(--panel2); color: var(--fg); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 7px; font: 13px var(--mono); max-width: 100%; }
+.ed textarea { width: 100%; box-sizing: border-box; font-family: inherit; } .ed td input[type=number] { width: 80px; } .ed td input[type=text] { width: 100%; box-sizing: border-box; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 14px; margin-bottom: 10px; } .fld span { display: block; font: 500 11px var(--mono); color: var(--dim); margin-bottom: 3px; } .fld input { width: 100%; box-sizing: border-box; }
+.sub { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+button.on, .sub button.on { border-color: var(--accent); color: var(--accent); }
+.usb { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; margin-bottom: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+.usb.good { border-color: var(--good); } .usb.bad { border-color: var(--bad); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; }
+.kpi label { display: block; font: 500 10px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.kpi output { display: block; font: 500 22px/1.3 var(--mono); }
+.bar { height: 10px; border-radius: 5px; background: var(--panel2); overflow: hidden; margin-top: 6px; } .bar i { display: block; height: 100%; background: var(--good); } .bar.over i { background: var(--bad); }
+.items { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 6px 14px; font-size: 13px; margin-top: 8px; } .items b { font-weight: 500; } .items small { color: var(--dim); display: block; }
+.est { color: var(--warn); } .q { color: var(--good); }
+ul.clean { margin: 6px 0 0; padding-left: 18px; } ul.clean li { margin: 3px 0; }
 @media (max-width: 800px) { .shell { grid-template-columns: minmax(0, 1fr); } nav { flex-direction: row; flex-wrap: wrap; position: static; } nav .grp { display: none; } nav a small { display: none; } .cards { grid-template-columns: minmax(0, 1fr); } }
+/* polish: rhythm, hierarchy, dark refinement */
+body { font-size: 14px; letter-spacing: .005em; -webkit-font-smoothing: antialiased; }
+header { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); padding: 12px 0; }
+h1 { font-size: 26px; letter-spacing: -.01em; margin-bottom: 6px; } main > .row:first-child { margin-bottom: 4px; }
+.lede { font-size: 14.5px; margin-bottom: 22px; }
+nav { gap: 2px; top: 76px; } nav a { padding: 8px 12px; border-left: 3px solid transparent; border-radius: 6px; transition: background .12s, border-color .12s; } nav a.on { border-color: transparent; border-left-color: var(--accent); background: var(--panel); box-shadow: 0 1px 0 var(--rule); }
+nav .grp { padding-top: 20px; } nav .grp:first-child { padding-top: 6px; }
+.card, .kpi, .usb { box-shadow: 0 1px 2px rgba(20,10,30,.05); } .card { padding: 16px; } .kpis { gap: 12px; margin-bottom: 20px; } .kpi { padding: 12px 14px; } .cards { gap: 16px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card, :root:not([data-theme="light"]) .kpi, :root:not([data-theme="light"]) .usb { box-shadow: none; } }
+:root[data-theme="dark"] .card, :root[data-theme="dark"] .kpi, :root[data-theme="dark"] .usb { box-shadow: none; }
+button { border-radius: 6px; transition: border-color .12s, background .12s; } button:active:not(:disabled) { transform: translateY(1px); } button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+tr:hover td { background: color-mix(in srgb, var(--panel2) 55%, transparent); } th { position: sticky; top: 0; background: var(--panel); }
+.stack { display: grid; gap: 8px; } .layer { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--c); border-radius: 6px; } .layer b { font: 500 11px var(--mono); letter-spacing: .14em; color: var(--dim); } .layer strong { display: block; font-weight: 600; } .layer span { color: var(--dim); font-size: 13px; }
+.docs { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 22px; align-items: start; } .doclist { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 76px; } .doclist a { padding: 6px 10px; border-radius: 5px; color: var(--fg); text-decoration: none; font: 500 12px var(--mono); } .doclist a:hover { background: var(--panel); } .doclist a.on { background: var(--panel); color: var(--accent); }
+.md { max-width: 78ch; line-height: 1.65; } .md h1 { font-size: 24px; margin: 0 0 12px; } .md h2 { font: 700 18px var(--display); margin: 28px 0 8px; padding-top: 14px; border-top: 1px solid var(--rule); } .md h3 { font: 700 15px var(--display); margin: 20px 0 6px; } .md pre { background: var(--term); color: var(--term-fg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; font: 12px/1.5 var(--mono); } .md code { font: 12px var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 3px; } .md pre code { background: none; padding: 0; } .md p, .md li { margin: 8px 0; } .md ul, .md ol { padding-left: 22px; }
+.card.dec { margin-bottom: 10px; gap: 8px; } .card.dec textarea { width: 100%; background: var(--panel2); color: var(--fg); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; font: inherit; resize: vertical; } .card.dec input { background: var(--panel2); color: var(--fg); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; font: inherit; }
+@media (max-width: 800px) { .docs { grid-template-columns: minmax(0, 1fr); } .doclist { position: static; flex-direction: row; flex-wrap: wrap; } nav { top: 0; } header { position: static; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -91,6 +124,7 @@ pre.log { background: var(--panel); border: 1px solid var(--rule); border-radius
     <div><b>SFA</b> <span>Console</span></div>
   </div>
   <span class="sp"></span>
+  <button id="themeBtn" title="Colour theme: auto, dark, light" style="font:500 11px var(--mono)">Auto</button>
   <div class="live" id="live"><i></i><span id="liveTxt">connecting</span></div>
 </header>
 
@@ -99,7 +133,17 @@ pre.log { background: var(--panel); border: 1px solid var(--rule); border-radius
     <div class="grp">Rack</div>
     <a href="#units" data-p="units">Units <small>flash</small></a>
     <a href="#analyzer" data-p="analyzer">Analyzer <small>ears</small></a>
+    <a href="#samplelab" data-p="samplelab">Sample Lab <small>chop</small></a>
+    <div class="grp">Hardware</div>
+    <a href="#planner" data-p="planner">Planner <small>specs</small></a>
+    <a href="#decisions" data-p="decisions">Decisions <small>log</small></a>
+    <a href="#engines" data-p="engines">Engine map <small>scope</small></a>
+    <a href="#arch" data-p="arch">Architecture <small>design</small></a>
+    <a href="#presets" data-p="presets">Presets <small>tags</small></a>
+    <a href="#compare" data-p="compare">Compare <small>board</small></a>
+    <a href="#prototype" data-p="prototype">Research <small>parts</small></a>
     <div class="grp">System</div>
+    <a href="#docs" data-p="docs">Docs <small>changelog</small></a>
     <a href="#doctor" data-p="doctor">Doctor</a>
     <a href="#log" data-p="log">Flash log</a>
     <a href="#roadmap" data-p="roadmap">Roadmap</a>
@@ -109,6 +153,7 @@ pre.log { background: var(--panel); border: 1px solid var(--rule); border-radius
 
 <script>
 "use strict";
+document.addEventListener("DOMContentLoaded", () => initTheme());
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const f1 = (v, d = 1) => (v === null || v === undefined || !isFinite(v)) ? "-" : (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
@@ -135,16 +180,26 @@ function updOut() { const p = $("#outPre"); if (!p) return; $("#outTitle").textC
 const page = () => (location.hash || "#units").slice(1) || "units";
 function route() {
   const p = page(); document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.p === p));
-  ({ units: viewUnits, analyzer: viewAnalyzer, doctor: viewDoctor, log: viewLog, roadmap: viewRoadmap }[p] || viewUnits)();
+  ({ units: viewUnits, analyzer: viewAnalyzer, samplelab: viewLab, planner: viewPlanner, decisions: viewDecisions, arch: viewArch, docs: viewDocs, engines: viewEngines, presets: viewPresets, compare: viewCompare, prototype: viewProto, doctor: viewDoctor, log: viewLog, roadmap: viewRoadmap }[p] || viewUnits)();
 }
 window.addEventListener("hashchange", route);
 
 /* ---- units ---- */
 function pills(files) { const c = { clean: 0, watch: 0, flag: 0 }; files.forEach(f => c[f.verdict] = (c[f.verdict] || 0) + 1); return ["clean", "watch", "flag"].filter(k => c[k]).map(k => '<span class="pill ' + k + '">' + c[k] + " " + k + "</span>").join(" ") || '<span class="pill none">no files</span>'; }
 function viewUnits() {
-  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Each unit is a firmware on its own FM-1. Run the checks here, look at the renders in the Analyzer, then flash. Only the unit you are flashing should be on USB, and any mirror tab should be closed.</p><div class="cards" id="cards"></div><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div>';
-  renderUnits(); updOut();
+  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Each unit is a firmware on its own FM-1. Run the checks here, look at the renders in the Analyzer, then flash. Only the unit you are flashing should be on USB, and any mirror tab should be closed.</p><div class="usb" id="usb"><b>On USB now</b><span id="usbTxt" style="flex:1;min-width:200px">not checked</span><button id="usbBtn">Check</button></div><div class="cards" id="cards"></div><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div>';
+  renderUnits(); updOut(); $("#usbBtn").onclick = () => checkUsb(); checkUsb();
 }
+let usb = null;
+async function checkUsb() {
+  const box = $("#usb"), txt = $("#usbTxt"); if (!box) return; txt.textContent = "looking..."; box.className = "usb";
+  try { usb = await (await api("/api/ports")).json(); } catch (e) { usb = { error: e.message }; }
+  if (usb.error) { txt.textContent = "Cannot look at USB from here (" + usb.error + "). Flash will still be checked by the installer."; return usb; }
+  const n = usb.found.length;
+  txt.innerHTML = n === 1 ? '<span class="q">1 FM-1</span> running <b>' + esc(unitName(usb.found[0]) ) + "</b>. Ready to flash one." : n === 0 ? 'No FM-1 answered.' + (usb.busy.length ? " A port is busy: close the mirror tab or any MIDI program (" + esc(usb.busy.join(", ")) + ")." : " Plug in the unit you want to flash.") : '<b style="color:var(--bad)">' + n + " FM-1s on USB</b> (" + usb.found.map(f => esc(f.firmware || "?")).join(", ") + "). Unplug all but one.";
+  box.className = "usb " + (n === 1 ? "good" : "bad"); return usb;
+}
+const unitName = f => { const u = S && S.units.find(x => x.id === f.unit); return u ? u.name : "firmware " + (f.firmware || "?"); };
 function renderUnits() {
   const el = $("#cards"); if (!el) return;
   if (!S) { el.innerHTML = '<div class="card">Waiting for the console server...</div>'; return; }
@@ -161,11 +216,262 @@ function renderUnits() {
 document.addEventListener("click", e => {
   const b = e.target.closest("button"), card = e.target.closest("[data-u]");
   if (b && b.dataset.c && card) run(b.dataset.c, card.dataset.u, b.dataset.a ? [b.dataset.a] : []);
-  else if (b && b.dataset.flash) { const c = card.querySelector("[data-confirm]"); c.innerHTML = '<div class="confirm"><span>Flash <b>' + esc(S.units.find(u => u.id === b.dataset.flash).name) + '</b> now? Only this unit on USB, mirror tabs closed.</span><button class="danger" data-go="' + b.dataset.flash + '">Flash it</button><button data-no>Cancel</button></div>'; }
+  else if (b && b.dataset.flash) { flashAsk(b.dataset.flash, card); }
+  else if (false) { const c = card.querySelector("[data-confirm]"); c.innerHTML = '<div class="confirm"><span>Flash <b>' + esc(S.units.find(u => u.id === b.dataset.flash).name) + '</b> now? Only this unit on USB, mirror tabs closed.</span><button class="danger" data-go="' + b.dataset.flash + '">Flash it</button><button data-no>Cancel</button></div>'; }
   else if (b && b.dataset.go) { card.querySelector("[data-confirm]").innerHTML = ""; run("up", b.dataset.go, []); }
   else if (b && "no" in b.dataset) card.querySelector("[data-confirm]").innerHTML = "";
   else if (e.target.closest("[data-an]")) anUnits = e.target.closest("[data-an]").dataset.an;
 });
+async function flashAsk(id, card) {
+  const c = card.querySelector("[data-confirm]"), name = S.units.find(u => u.id === id).name; c.innerHTML = '<div class="confirm">Checking USB...</div>';
+  const d = await checkUsb(), n = d && d.found ? d.found.length : -1;
+  if (n === 0 || n > 1) { c.innerHTML = '<div class="confirm"><span>' + (n === 0 ? "No FM-1 answered on USB. Plug in the unit and close any mirror tab, then try again." : n + " FM-1s are on USB. Unplug all but the one to flash.") + '</span><button data-no>OK</button></div>'; return; }
+  const cur = n === 1 ? unitName(d.found[0]) : "";
+  c.innerHTML = '<div class="confirm"><span>' + (n === 1 ? "The FM-1 on USB runs <b>" + esc(cur) + "</b>. Replace it with <b>" + esc(name) + "</b>?" : "Could not check USB. Flash <b>" + esc(name) + "</b> to whichever FM-1 is plugged in?") + '</span><button class="danger" data-go="' + id + '">Flash it</button><button data-no>Cancel</button></div>';
+}
+/* ---- sample lab, inside the console ---- */
+function viewLab() { $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Sample Lab</h1><a href="/samplelab/" target="_blank" rel="noopener"><button>Open on its own</button></a></div><iframe class="frame" src="/samplelab/" title="SFA Sample Lab"></iframe>'; }
+/* ---- prototype: the plan for our own box, from hardware/prototype/spec.json ---- */
+let spec = null, protoTab = "overview", mult = 3;
+const money = v => "$" + (+v).toFixed(2).replace(/\.00$/, "");
+async function viewProto() {
+  $("#main").innerHTML = '<h1>Prototype</h1><p class="lede">Our own small groovebox: the plan, the parts and what is still open. Prices are marked as quotes (seen on a vendor page) or estimates (not verified).</p><div id="protoBox">Loading...</div>';
+  try { spec = spec || await (await api("/api/prototype")).json(); } catch (e) { $("#protoBox").textContent = "hardware/prototype/spec.json is not here yet."; return; }
+  drawProto();
+}
+function drawProto() {
+  const sp = spec, tabs = [["overview", "Overview"], ["spec", "Spec"], ["parts", "Parts and cost"], ["platforms", "Platforms"], ["fm1", "Versus the FM-1"], ["open", "Open questions"]];
+  const rowsP = sp.bom.filter(r => r.category !== "product-estimate"), rowsX = sp.bom.filter(r => r.category === "product-estimate"), sum = a => a.reduce((t, r) => t + r.qty * r.unit_usd, 0);
+  const tp = sum(rowsP), tx = sum(rowsX), tg = sp.target;
+  let h = '<div class="sub">' + tabs.map(t => '<button data-pt="' + t[0] + '" class="' + (t[0] === protoTab ? "on" : "") + '">' + t[1] + "</button>").join("") + "</div>";
+  if (protoTab === "overview") {
+    h += '<div class="kpis"><div class="kpi"><label>Retail target</label><output>' + money(tg.retail_min) + "\u2013" + money(tg.retail_max) + '</output></div><div class="kpi"><label>BOM target</label><output>' + money(tg.bom_target_max) + '</output></div><div class="kpi"><label>First prototype parts</label><output>' + money(tp) + '</output></div><div class="kpi"><label>Product BOM estimate</label><output class="' + (tx > tg.bom_target_max ? "est" : "q") + '">' + money(tx) + "</output></div></div>" +
+      '<div class="card"><p style="margin:0">' + esc(sp.summary) + '</p><p style="color:var(--dim);margin:10px 0 0">' + esc(tg.assumptions) + "</p></div>" +
+      '<h2 style="font:700 16px var(--display);margin:18px 0 6px">Next steps</h2><ul class="clean">' + sp.next_steps.map(x => "<li>" + esc(x) + "</li>").join("") + "</ul>" +
+      '<p style="color:var(--dim);font-size:12px;margin-top:14px">Plan last updated ' + esc(sp.updated) + ". Written from web research; check any price or spec before you rely on it. Full text: hardware/prototype/README.md.</p>";
+  } else if (protoTab === "spec") {
+    h += sp.sections.map(x => '<div class="card" style="margin-bottom:12px"><h2 style="margin:0 0 4px;font:700 16px var(--display)">' + esc(x.title) + '</h2><div style="color:var(--dim)">' + esc(x.summary) + '</div><div class="items">' + x.items.map(i => "<b>" + esc(i.label) + "</b><div>" + esc(i.value) + (i.note ? "<small>" + esc(i.note) + "</small>" : "") + "</div>").join("") + "</div></div>").join("");
+  } else if (protoTab === "parts") {
+    const need = n => n / mult, ok = tx <= tg.bom_target_max;
+    h += '<div class="kpis"><div class="kpi"><label>Product BOM</label><output>' + money(tx) + '</output><div class="bar ' + (ok ? "" : "over") + '"><i style="width:' + Math.min(100, tx / tg.bom_target_max * 100) + '%"></i></div></div><div class="kpi"><label>Retail at <select id="multSel"><option>2</option><option>2.5</option><option>3</option><option>3.5</option><option>4</option></select> x BOM</label><output>' + money(tx * mult) + '</output></div><div class="kpi"><label>BOM that hits $199</label><output>' + money(need(199)) + '</output></div><div class="kpi"><label>Gap to the target</label><output class="' + (ok ? "q" : "est") + '">' + (ok ? "none" : money(tx - tg.bom_target_max) + " over") + "</output></div></div>" +
+      '<h2 style="font:700 16px var(--display);margin:6px 0">First prototype (off-the-shelf parts): ' + money(tp) + '</h2><div class="tw card" style="padding:0">' + bomTable(rowsP) + '</div><h2 style="font:700 16px var(--display);margin:18px 0 6px">Product estimate (custom board, volume): ' + money(tx) + '</h2><div class="tw card" style="padding:0">' + bomTable(rowsX) + '</div><p style="color:var(--dim);font-size:12px;margin-top:10px">' + sp.bom.filter(r => r.confidence === "quote").length + " of " + sp.bom.length + " lines are quotes; the rest are estimates and need a real quote before they mean anything.</p>";
+  } else if (protoTab === "platforms") {
+    h += '<div class="card tw" style="padding:0"><table><tr><th>Platform</th><th>SoC</th><th>Price</th><th>Verdict</th><th style="text-align:left">For</th><th style="text-align:left">Against</th></tr>' + sp.platforms.map(p => "<tr><td>" + esc(p.name) + "</td><td>" + esc(p.soc) + "</td><td>" + (p.price_usd == null ? '<span class="est">unverified</span>' : money(p.price_usd)) + '</td><td><span class="pill ' + (/choose/.test(p.verdict) ? "clean" : p.verdict === "maybe" ? "watch" : "none") + '">' + esc(p.verdict) + '</span></td><td style="text-align:left;white-space:normal;min-width:220px">' + p.pros.map(esc).join("; ") + '</td><td style="text-align:left;white-space:normal;min-width:240px">' + p.cons.map(esc).join("; ") + "</td></tr>").join("") + "</table></div>";
+  } else if (protoTab === "fm1") {
+    h += '<div class="card tw" style="padding:0"><table><tr><th style="text-align:left">FM-1 limit</th><th style="text-align:left">Prototype</th><th style="text-align:left">Evidence</th></tr>' + sp.improvements.map(i => '<tr><td style="text-align:left;white-space:normal;min-width:240px">' + esc(i.fm1_limit) + '</td><td style="text-align:left;white-space:normal;min-width:240px">' + esc(i.prototype) + '</td><td style="text-align:left;white-space:normal;color:var(--dim)">' + esc(i.evidence) + "</td></tr>").join("") + "</table></div>";
+  } else {
+    h += sp.open_questions.map(q => '<div class="card" style="margin-bottom:10px"><b>' + esc(q.q) + '</b><div style="color:var(--dim);margin-top:4px">' + esc(q.why) + '</div><div style="margin-top:4px"><small class="mono" style="color:var(--dim)">HOW TO ANSWER</small> ' + esc(q.how_to_answer) + "</div></div>").join("");
+  }
+  $("#protoBox").innerHTML = h; const m = $("#multSel"); if (m) { m.value = String(mult); m.onchange = () => { mult = +m.value; drawProto(); }; }
+}
+function bomTable(rows) {
+  return "<table><tr><th>Ref</th><th style=\"text-align:left\">Part</th><th>Qty</th><th>Each</th><th>Line</th><th></th><th style=\"text-align:left\">Source</th></tr>" + rows.map(r => "<tr><td>" + esc(r.ref) + '</td><td style="text-align:left;white-space:normal;min-width:200px">' + esc(r.part) + (r.note ? '<br><span style="color:var(--dim);font-size:11px">' + esc(r.note) + "</span>" : "") + "</td><td>" + r.qty + "</td><td>" + money(r.unit_usd) + "</td><td>" + money(r.qty * r.unit_usd) + '</td><td><span class="pill ' + (r.confidence === "quote" ? "clean" : "watch") + '">' + r.confidence + '</span></td><td style="text-align:left">' + (r.source_url ? '<a href="' + esc(r.source_url) + '" target="_blank" rel="noopener">' + esc(r.source || "link") + "</a>" : esc(r.source || "")) + "</td></tr>").join("") + "</table>";
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-pt]"); if (t) { protoTab = t.dataset.pt; drawProto(); } });
+/* ---- shared plan state (hardware/prototype/plan.json): edited here, saved to the repo folder ---- */
+let P = null, saveT = null;
+const pget = (path, d) => { let o = P; for (const k of path) { if (o == null) return d; o = o[k]; } return o == null ? d : o; };
+function pset(path, v) { let o = P; path.slice(0, -1).forEach(k => { if (typeof o[k] !== "object" || o[k] === null) o[k] = {}; o = o[k]; }); o[path[path.length - 1]] = v; psave(); }
+function psave() {
+  const st = $("#saveSt"); if (st) st.textContent = "saving...";
+  clearTimeout(saveT); saveT = setTimeout(async () => {
+    try { await api("/api/plan", { method: "POST", headers: { "X-SFA": "1" }, body: JSON.stringify(P) }); if ($("#saveSt")) $("#saveSt").textContent = "saved to hardware/prototype/plan.json"; }
+    catch (e) { if ($("#saveSt")) $("#saveSt").textContent = "NOT saved: " + e.message; }
+  }, 400);
+}
+async function loadAll() {
+  if (!P) { try { P = await (await api("/api/plan")).json(); } catch (e) { P = {}; } }
+  if (!spec) { try { spec = await (await api("/api/prototype")).json(); } catch (e) { spec = null; } }
+}
+/* an editable control: kind input|num|text|sel|area|chk, bound to a path in P */
+const dk = p => esc(JSON.stringify(p));
+function ctl(path, def, kind, opts) {
+  const v = pget(path, def), a = ' data-k="' + dk(path) + '" data-d="' + esc(JSON.stringify(def)) + '"';
+  if (kind === "area") return "<textarea" + a + ' rows="2">' + esc(v) + "</textarea>";
+  if (kind === "sel") return "<select" + a + ">" + opts.map(o => '<option' + (o === v ? " selected" : "") + ">" + esc(o) + "</option>").join("") + "</select>";
+  if (kind === "chk") return '<input type="checkbox"' + a + (v ? " checked" : "") + ">";
+  return '<input type="' + (kind === "num" ? "number" : "text") + '"' + a + ' value="' + esc(v) + '"' + (kind === "num" ? ' step="any"' : "") + ">";
+}
+function bindPlan(root, redraw) {
+  root.querySelectorAll("[data-k]").forEach(el => el.addEventListener("change", () => {
+    const path = JSON.parse(el.dataset.k); let v = el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? null : +el.value) : el.value;
+    pset(path, v); if (redraw && el.closest("[data-re]")) redraw();
+  }));
+}
+const saveBar = '<span id="saveSt" style="color:var(--dim);font-size:12px">edits save automatically</span>';
+const H2 = t => '<h2 style="font:700 16px var(--display);margin:18px 0 6px">' + t + "</h2>";
+const kpi = (l, v, cls) => '<div class="kpi"><label>' + l + '</label><output class="' + (cls || "") + '">' + v + "</output></div>";
+
+/* ---- Prototype Planner ---- */
+let plTab = "targets";
+async function viewPlanner() {
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Prototype Planner</h1>' + saveBar + '</div><p class="lede">The numbers and decisions for our own box. Everything here is saved to the repo, so it is reviewed and versioned like code.</p><div id="plBox">Loading...</div>';
+  await loadAll(); drawPlanner();
+}
+const TARGET_DEFAULT = { w: 160, d: 110, h: 30, weight_g: 400, price_min: 150, price_max: 250, bom_max: 80, battery_h: 6, screen: "2.4 in colour IPS, 320x240", controls: "16 velocity pads, 4 encoders, transport keys", audio: "stereo in/out, headphones, TRS-A MIDI", storage: "microSD", notes: "" };
+const PART_STATUS = ["idea", "quoted", "ordered", "have"], Q_STATUS = ["open", "researching", "answered", "parked"], PRIO = ["must", "should", "nice"];
+function drawPlanner() {
+  const tabs = [["targets", "Target specs"], ["parts", "Parts list"], ["improve", "Improvements over FM-1"], ["questions", "Open questions"]];
+  let h = '<div class="sub">' + tabs.map(t => '<button data-pl="' + t[0] + '" class="' + (t[0] === plTab ? "on" : "") + '">' + t[1] + "</button>").join("") + "</div>";
+  if (plTab === "targets") {
+    const T = k => pget(["target", k], TARGET_DEFAULT[k]), vol = (T("w") * T("d") * T("h") / 1000).toFixed(0);
+    const f = (k, label, kind, unit) => "<label class=\"fld\"><span>" + label + (unit ? " <small>" + unit + "</small>" : "") + "</span>" + ctl(["target", k], TARGET_DEFAULT[k], kind || "text") + "</label>";
+    h += '<div class="kpis">' + kpi("Size", T("w") + " x " + T("d") + " x " + T("h") + " mm") + kpi("Volume", vol + " cm3") + kpi("Retail", "$" + T("price_min") + "–$" + T("price_max")) + kpi("BOM ceiling", "$" + T("bom_max")) + kpi("Battery", T("battery_h") + " h") + "</div>" +
+      '<div class="card ed"><div class="grid2">' + f("w", "Width", "num", "mm") + f("d", "Depth", "num", "mm") + f("h", "Height", "num", "mm") + f("weight_g", "Weight goal", "num", "g") + f("price_min", "Retail min", "num", "USD") + f("price_max", "Retail max", "num", "USD") + f("bom_max", "BOM ceiling", "num", "USD") + f("battery_h", "Battery life", "num", "hours") + f("screen", "Screen") + f("controls", "Controls") + f("audio", "Audio and MIDI") + f("storage", "Storage") + "</div>" + f("notes", "Notes", "area") + "</div>" +
+      (spec ? '<p style="color:var(--dim);font-size:12px">Research starting points for each line (screen, controls, power, enclosure) are under Research → Spec. Retail near 3x BOM is the working rule from the research.</p>' : "");
+  } else if (plTab === "parts") {
+    const rows = (spec ? spec.bom : []).map(r => ({ ref: r.ref, part: r.part, qty: r.qty, usd: r.unit_usd, conf: r.confidence, cat: r.category, base: true })).concat((P.extraParts || []).map((r, i) => Object.assign({ idx: i, conf: "estimate", cat: "custom" }, r)));
+    const eff = r => { const o = pget(["parts", r.ref], {}); return { qty: o.qty != null ? o.qty : r.qty, usd: o.usd != null ? o.usd : r.usd, st: o.status || "idea" }; };
+    const sumBy = f => rows.filter(f).reduce((t, r) => { const e = eff(r); return t + e.qty * e.usd; }, 0);
+    const tp = sumBy(r => r.cat !== "product-estimate"), tx = sumBy(r => r.cat === "product-estimate"), cap = pget(["target", "bom_max"], 80), have = rows.filter(r => eff(r).st !== "idea").length;
+    h += '<div class="kpis">' + kpi("Prototype parts", money(tp)) + kpi("Product BOM", money(tx), tx > cap ? "est" : "q") + kpi("BOM ceiling", money(cap)) + kpi("Sourced", have + " of " + rows.length) + '</div><div class="tw card ed" style="padding:0" data-re><table><tr><th>Ref</th><th style="text-align:left">Part</th><th>Qty</th><th>Each $</th><th>Line</th><th>Price basis</th><th>Status</th></tr>' +
+      rows.map(r => { const e = eff(r); const p = ["parts", r.ref]; return "<tr><td>" + esc(r.ref || "") + '</td><td style="text-align:left;white-space:normal;min-width:200px">' + esc(r.part) + (r.cat === "product-estimate" ? ' <small style="color:var(--dim)">(product)</small>' : "") + "</td><td>" + ctl(p.concat("qty"), r.qty, "num") + "</td><td>" + ctl(p.concat("usd"), r.usd, "num") + "</td><td>" + money(e.qty * e.usd) + '</td><td><span class="pill ' + (r.conf === "quote" ? "clean" : "watch") + '">' + r.conf + "</span></td><td>" + ctl(p.concat("status"), "idea", "sel", PART_STATUS) + "</td></tr>"; }).join("") + '</table></div><div class="row" style="margin-top:10px"><button id="addPart">Add a part</button><span style="color:var(--dim);font-size:12px">Change any price to a real quote when you have one and set its status; the totals follow.</span></div>';
+  } else if (plTab === "improve") {
+    h += '<div class="card tw ed" style="padding:0" data-re><table><tr><th style="text-align:left">FM-1 limit</th><th style="text-align:left">Prototype answer</th><th>Priority</th><th style="text-align:left">Our note</th></tr>' + (spec ? spec.improvements : []).map((i, n) => '<tr><td style="text-align:left;white-space:normal;min-width:200px">' + esc(i.fm1_limit) + '</td><td style="text-align:left;white-space:normal;min-width:220px">' + esc(i.prototype) + "</td><td>" + ctl(["improve", n, "prio"], "should", "sel", PRIO) + '</td><td style="min-width:180px">' + ctl(["improve", n, "note"], "", "text") + "</td></tr>").join("") + "</table></div>";
+  } else {
+    const qs = (spec ? spec.open_questions : []).map((q, i) => ({ q: q.q, why: q.why, how: q.how_to_answer, key: "s" + i })).concat((P.myQuestions || []).map((q, i) => ({ q: q.q, why: "", how: "", key: "m" + i, mine: i })));
+    const st = q => pget(["questions", q.key, "status"], "open"), done = qs.filter(q => st(q) === "answered").length;
+    h += '<div class="kpis">' + kpi("Open", qs.filter(q => st(q) === "open" || st(q) === "researching").length) + kpi("Answered", done + " of " + qs.length, "q") + '</div><div data-re>' + qs.map(q => '<div class="card ed" style="margin-bottom:10px"><div class="row"><b style="flex:1;min-width:200px">' + esc(q.q) + "</b>" + ctl(["questions", q.key, "status"], "open", "sel", Q_STATUS) + "</div>" + (q.why ? '<div style="color:var(--dim);margin-top:4px">' + esc(q.why) + "</div>" : "") + (q.how ? '<div style="margin-top:4px"><small class="mono" style="color:var(--dim)">HOW TO ANSWER</small> ' + esc(q.how) + "</div>" : "") + '<div style="margin-top:6px">' + ctl(["questions", q.key, "answer"], "", "area") + "</div></div>").join("") + '</div><div class="row"><input id="newQ" placeholder="Add a question" style="flex:1;min-width:220px"><button id="addQ">Add</button></div>';
+  }
+  const box = $("#plBox"); box.innerHTML = h; bindPlan(box, drawPlanner);
+  const ap = $("#addPart"); if (ap) ap.onclick = () => { const n = prompt("Part name"); if (!n) return; (P.extraParts = P.extraParts || []).push({ ref: "X" + (P.extraParts.length + 1), part: n, qty: 1, usd: 0 }); psave(); drawPlanner(); };
+  const aq = $("#addQ"); if (aq) aq.onclick = () => { const t = $("#newQ").value.trim(); if (!t) return; (P.myQuestions = P.myQuestions || []).push({ q: t }); psave(); drawPlanner(); };
+}
+/* ---- Engine and feature map ---- */
+const ENG_ROWS = [
+  ["SFA ONE (core/)", "core", "Our portable exciter + resonator + folder + ladder engine, the first thing the box runs."],
+  ["Otter", "ECB / AS", "4-voice polysynth, 64 presets in ECB, 48 in AS, arpeggiator."], ["Cat", "ECB", "Drum machine with kits and per-pad sample choice."], ["Fox", "ECB / AS", "808 and bass voices, 24 bass presets."], ["Hopper", "ECB", "Sample chopper and player."], ["Beaver", "ECB", "The fifth ECB engine."],
+  ["Mantis", "AS", "Alien Stack drums, 8 kits."], ["Reptiles", "AS", "Alien Stack 808 and bass."], ["Nordics", "AS", "Alien Stack poly synth."], ["Greys", "AS", "24-preset FM-style voice."], ["Ship", "AS", "Alien Stack sampler."]];
+const DECIDE = ["undecided", "yes", "maybe", "later", "no"], PORT = ["not started", "started", "running on box", "n/a"];
+const DEPTH = [
+  ["Sample time", "4.2 s total", "minutes on microSD"], ["Sample format", "22.05 kHz mono 16-bit", "48 kHz stereo"], ["Sample slots", "16", "hundreds, kits on card"], ["Synth voices", "4 (Otter)", "8–16"],
+  ["Sequencer length", "pattern + 4-slot song", "pattern, song, per-step parameter locks"], ["Tracks", "per engine", "12–16 tracks mixing engines and samples"], ["Clock", "internal, USB MIDI", "MIDI clock in/out, sync, swing"], ["Effects", "per-engine", "send reverb + delay + master comp"]];
+const TODO_SEED = ["Port core/ (SFA ONE) to the Daisy Seed and measure CPU", "Choose and test the screen on the dev kit", "Pad matrix: pick sensors and scan circuit", "microSD sample streaming proof (16 voices)", "Sequencer data model with parameter locks", "Decide the engine list on this page", "Get real quotes for the product BOM"];
+async function viewEngines() {
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Engine and Feature Map</h1>' + saveBar + '</div><p class="lede">Which of our engines go into the prototype, how deep the sampler and sequencer should be, and what is left to build.</p><div id="enBox">Loading...</div>';
+  await loadAll(); drawEngines();
+}
+function drawEngines() {
+  const dec = n => pget(["engines", n, "decision"], "undecided"), cnt = v => ENG_ROWS.filter(r => dec(r[0]) === v).length;
+  const todos = P.todos || TODO_SEED.map(t => ({ t, done: false })), doneN = todos.filter(t => t.done).length;
+  $("#enBox").innerHTML = '<div class="kpis">' + kpi("In the box", cnt("yes"), "q") + kpi("Maybe", cnt("maybe")) + kpi("Undecided", cnt("undecided"), cnt("undecided") ? "est" : "") + kpi("To-do done", doneN + " of " + todos.length) + "</div>" +
+    H2("Engines") + '<div class="card tw ed" style="padding:0"><table><tr><th style="text-align:left">Engine</th><th>From</th><th>In the prototype?</th><th>Port</th><th style="text-align:left">Role and notes</th></tr>' + ENG_ROWS.map(r => "<tr><td style=\"text-align:left\">" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td><td>" + ctl(["engines", r[0], "decision"], r[1] === "core" ? "yes" : "undecided", "sel", DECIDE) + "</td><td>" + ctl(["engines", r[0], "port"], "not started", "sel", PORT) + '</td><td style="text-align:left;min-width:260px"><div style="color:var(--dim);font-size:12px">' + esc(r[2]) + "</div>" + ctl(["engines", r[0], "note"], "", "text") + "</td></tr>").join("") + "</table></div>" +
+    H2("Sampler and sequencer depth") + '<div class="card tw ed" style="padding:0"><table><tr><th style="text-align:left">Feature</th><th style="text-align:left">FM-1 today</th><th style="text-align:left">Goal</th><th style="text-align:left">Decision</th></tr>' + DEPTH.map(r => '<tr><td style="text-align:left">' + esc(r[0]) + '</td><td style="text-align:left;color:var(--dim)">' + esc(r[1]) + "</td><td style=\"text-align:left\">" + ctl(["depth", r[0], "goal"], r[2], "text") + "</td><td>" + ctl(["depth", r[0], "ok"], "proposed", "sel", ["proposed", "agreed", "stretch", "dropped"]) + "</td></tr>").join("") + "</table></div>" +
+    H2("What we still need to build") + '<div class="card ed" id="todoBox">' + todos.map((t, i) => '<div class="row" style="margin:4px 0"><label style="display:flex;gap:8px;align-items:center;flex:1"><input type="checkbox" data-td="' + i + '"' + (t.done ? " checked" : "") + "> <span" + (t.done ? ' style="text-decoration:line-through;color:var(--dim)"' : "") + ">" + esc(t.t) + '</span></label><button data-tdx="' + i + '">remove</button></div>').join("") + '<div class="row" style="margin-top:8px"><input id="newTd" placeholder="Add something to build" style="flex:1;min-width:220px"><button id="addTd">Add</button></div></div>';
+  const box = $("#enBox"); bindPlan(box, drawEngines);
+  const sv = () => { P.todos = todos; psave(); drawEngines(); };
+  box.querySelectorAll("[data-td]").forEach(c => c.onchange = () => { todos[+c.dataset.td].done = c.checked; sv(); });
+  box.querySelectorAll("[data-tdx]").forEach(b => b.onclick = () => { todos.splice(+b.dataset.tdx, 1); sv(); });
+  $("#addTd").onclick = () => { const v = $("#newTd").value.trim(); if (v) { todos.push({ t: v, done: false }); sv(); } };
+}
+/* ---- Preset and kit manager ---- */
+let PR = null, prF = { unit: "all", engine: "all", tag: "all", q: "" };
+const PTAGS = ["keeper", "rework", "drop", "box-ready", "needs-sample"];
+async function viewPresets() {
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Presets and Kits</h1>' + saveBar + '</div><p class="lede">Every preset and kit name found in the ECB and Alien Stack engine sources. Tag them and note what is worth carrying to the new box. Tags are saved with the plan; the firmware is not touched.</p><div id="prBox">Loading...</div>';
+  await loadAll(); try { PR = PR || await (await api("/api/presets")).json(); } catch (e) { $("#prBox").textContent = "Could not read the engine sources: " + e.message; return; }
+  drawPresets();
+}
+function drawPresets() {
+  const all = []; Object.keys(PR).forEach(u => Object.keys(PR[u]).forEach(e => PR[u][e].forEach(n => all.push({ u, e, n, k: u + "|" + e + "|" + n }))));
+  const tg = x => pget(["presets", x.k, "tags"], []), sel = all.filter(x => (prF.unit === "all" || x.u === prF.unit) && (prF.engine === "all" || x.e === prF.engine) && (prF.tag === "all" || tg(x).includes(prF.tag) || (prF.tag === "untagged" && !tg(x).length)) && (!prF.q || x.n.toLowerCase().includes(prF.q.toLowerCase())));
+  const engines = [...new Set(all.map(x => x.e))], count = t => all.filter(x => tg(x).includes(t)).length;
+  const opt = (v, list) => ["all"].concat(list).map(o => "<option" + (o === v ? " selected" : "") + ">" + o + "</option>").join("");
+  $("#prBox").innerHTML = '<div class="kpis">' + kpi("Found", all.length) + PTAGS.slice(0, 3).map(t => kpi(t, count(t))).join("") + kpi("Untagged", all.filter(x => !tg(x).length).length) + "</div>" +
+    '<div class="row" style="margin-bottom:10px"><select id="fU">' + opt(prF.unit, Object.keys(PR)) + '</select><select id="fE">' + opt(prF.engine, engines) + '</select><select id="fT">' + opt(prF.tag, PTAGS.concat("untagged")) + '</select><input id="fQ" placeholder="search by name" value="' + esc(prF.q) + '" style="min-width:160px"><span style="color:var(--dim)">' + sel.length + " shown</span><span class=\"sp\"></span><button id=\"pxE\">Export tags</button><button id=\"pxI\">Import</button><input type=\"file\" id=\"pxF\" accept=\".json,application/json\" hidden></div>" +
+    '<div class="card tw ed" style="padding:0"><table><tr><th style="text-align:left">Name</th><th>Unit</th><th>Engine</th><th style="text-align:left">Tags</th><th style="text-align:left">Note for the new box</th></tr>' + sel.slice(0, 300).map(x => '<tr><td style="text-align:left">' + esc(x.n) + "</td><td>" + (x.u === "as" ? "AS" : "ECB") + "</td><td>" + esc(x.e) + '</td><td style="text-align:left;white-space:nowrap">' + PTAGS.map(t => '<button data-pt2="' + dk([x.k, t]) + '" class="' + (tg(x).includes(t) ? "on" : "") + '" style="padding:1px 6px;font-size:11px">' + t + "</button>").join(" ") + '</td><td style="min-width:200px">' + ctl(["presets", x.k, "note"], "", "text") + "</td></tr>").join("") + "</table></div>" + (sel.length > 300 ? '<p style="color:var(--dim)">Showing the first 300; narrow the filter.</p>' : "") +
+    H2("What works well for the future box") + '<div class="card ed">' + ctl(["presetNotes"], "", "area") + "</div>";
+  const box = $("#prBox"); bindPlan(box); $("#pxE").onclick = exportPresets; $("#pxI").onclick = () => $("#pxF").click(); $("#pxF").onchange = e => e.target.files[0] && importPresets(e.target.files[0]);
+  $("#fU").onchange = e => { prF.unit = e.target.value; drawPresets(); }; $("#fE").onchange = e => { prF.engine = e.target.value; drawPresets(); }; $("#fT").onchange = e => { prF.tag = e.target.value; drawPresets(); };
+  $("#fQ").onchange = e => { prF.q = e.target.value; drawPresets(); };
+  box.querySelectorAll("[data-pt2]").forEach(b => b.onclick = () => { const [k, t] = JSON.parse(b.dataset.pt2), cur = pget(["presets", k, "tags"], []).slice(), i = cur.indexOf(t); i < 0 ? cur.push(t) : cur.splice(i, 1); pset(["presets", k, "tags"], cur); drawPresets(); });
+}
+/* ---- Comparison board ---- */
+async function viewCompare() {
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Comparison Board</h1>' + saveBar + '</div><div id="cmBox">Loading...</div>';
+  await loadAll(); let C; try { C = await (await api("/api/compare")).json(); } catch (e) { $("#cmBox").textContent = "hardware/prototype/compare.json is missing."; return; }
+  const cls = { checked: "clean", ours: "clean", goal: "watch", estimate: "watch", "?": "none" };
+  $("#cmBox").innerHTML = '<p class="lede">' + esc(C.note) + '</p><div class="card tw" style="padding:0"><table><tr><th style="text-align:left"></th>' + C.columns.map(c => '<th style="text-align:left">' + esc(c) + "</th>").join("") + "</tr>" + C.rows.map(r => '<tr><td style="text-align:left"><b>' + esc(r.label) + "</b></td>" + r.cells.map(c => '<td style="text-align:left;white-space:normal;min-width:170px;vertical-align:top">' + esc(c[0]) + '<br><span class="pill ' + (cls[c[1]] || "none") + '">' + esc(c[1]) + "</span></td>").join("") + "</tr>").join("") + "</table></div>" +
+    H2("What we want to do better") + '<div class="card"><ul class="clean">' + C.wants.map(w => "<li>" + esc(w) + "</li>").join("") + '</ul></div>' + H2("Our notes") + '<div class="card ed">' + ctl(["compareNotes"], "", "area") + '</div><p style="color:var(--dim);font-size:12px;margin-top:10px">Sources: ' + C.sources.map(s => '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.name) + "</a>").join(", ") + ". Edit hardware/prototype/compare.json to add a box or fill a '?'.</p>";
+  bindPlan($("#cmBox"));
+}
+document.addEventListener("click", e => { const t = e.target.closest("[data-pl]"); if (t) { plTab = t.dataset.pl; drawPlanner(); } });
+/* ---- tiny markdown viewer (escapes everything first; links only to http(s) or other docs) ---- */
+function md(src) {
+  const inl = t => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, a, u) => /^https?:\/\//.test(u) ? '<a href="' + u + '" target="_blank" rel="noopener">' + a + "</a>" : /^[\w.\/-]+\.md(#.*)?$/.test(u) ? '<a href="#docs" data-doc="' + u.replace(/#.*/, "") + '">' + a + "</a>" : a);
+  const L = src.replace(/\r/g, "").split("\n"); let o = "", i = 0;
+  while (i < L.length) {
+    const l = L[i];
+    if (/^```/.test(l)) { let b = []; i++; while (i < L.length && !/^```/.test(L[i])) b.push(L[i++]); i++; o += "<pre>" + esc(b.join("\n")) + "</pre>"; continue; }
+    let m;
+    if ((m = /^(#{1,4})\s+(.*)/.exec(l))) { o += "<h" + m[1].length + ">" + inl(m[2]) + "</h" + m[1].length + ">"; i++; continue; }
+    if (/^\|.*\|\s*$/.test(l) && /^\|[\s:|-]+\|\s*$/.test(L[i + 1] || "")) { const row = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim()); let t = "<div class=\"tw\"><table><tr>" + row(l).map(c => "<th>" + inl(c) + "</th>").join("") + "</tr>"; i += 2; while (i < L.length && /^\|.*\|\s*$/.test(L[i])) t += "<tr>" + row(L[i++]).map(c => "<td>" + inl(c) + "</td>").join("") + "</tr>"; o += t + "</table></div>"; continue; }
+    if (/^\s*([-*]|\d+\.)\s+/.test(l)) { const ord = /^\s*\d+\./.test(l); let t = ord ? "<ol>" : "<ul>"; while (i < L.length && /^\s*([-*]|\d+\.)\s+/.test(L[i])) { let it = L[i].replace(/^\s*([-*]|\d+\.)\s+/, ""); i++; while (i < L.length && /^\s{2,}\S/.test(L[i]) && !/^\s*([-*]|\d+\.)\s+/.test(L[i])) it += " " + L[i++].trim(); t += "<li>" + inl(it) + "</li>"; } o += t + (ord ? "</ol>" : "</ul>"); continue; }
+    if (/^\s*$/.test(l)) { i++; continue; }
+    let p = []; while (i < L.length && !/^\s*$/.test(L[i]) && !/^(#{1,4}\s|```|\s*([-*]|\d+\.)\s+|\|)/.test(L[i])) p.push(L[i++]); o += "<p>" + inl(p.join(" ")) + "</p>";
+  }
+  return o;
+}
+let docId = null;
+async function viewDocs(first) {
+  $("#main").innerHTML = '<h1>Docs and changelog</h1><p class="lede">The repo\'s own documents, read straight from the files. Edit the markdown in the repo; this page follows.</p><div class="docs"><div class="doclist" id="docList"></div><article class="md" id="docBody">Loading...</article></div>';
+  let list; try { list = await (await api("/api/docs")).json(); } catch (e) { $("#docBody").textContent = "Docs need the console server."; return; }
+  docId = first || docId || (list.find(d => d.id === "CHANGELOG.md") || list[0]).id;
+  $("#docList").innerHTML = list.map(d => '<a href="#docs" data-doc="' + esc(d.id) + '" class="' + (d.id === docId ? "on" : "") + '">' + esc(d.id.replace(/^docs\//, "")) + "</a>").join("");
+  try { $("#docBody").innerHTML = md(await (await api("/api/docs?id=" + encodeURIComponent(docId))).text()); } catch (e) { $("#docBody").textContent = "Could not read " + docId; }
+}
+document.addEventListener("click", e => { const a = e.target.closest("[data-doc]"); if (!a) return; e.preventDefault(); let id = a.dataset.doc; if (!id.includes("/") && id !== "README.md" && id !== "CHANGELOG.md") id = "docs/" + id; docId = id; if (page() === "docs") viewDocs(id); else location.hash = "#docs"; });
+/* ---- architecture design page ---- */
+async function viewArch() {
+  const layer = (n, t, d, c) => '<div class="layer" style="--c:' + c + '"><b>' + n + "</b><div><strong>" + t + "</strong><span>" + d + "</span></div></div>";
+  $("#main").innerHTML = '<h1>Engine Architecture</h1><p class="lede">One engine, written once, runs in the simulator, on the FM-1 and on our own box. Presets, kits, samples and patterns travel as plain files.</p>' +
+    '<div class="stack">' + layer("DATA", "Packs (.sfapack)", "presets, kits, samples, patterns: files, no code", "var(--good)") + layer("ENGINES", "Otter, Fox, Cat, Hopper, Beaver, Mantis, ... SFA ONE", "portable C99, no allocation, no hardware", "var(--accent)") + layer("APP", "ECB, Alien Stack, the prototype", "keys, pages, mixer, sequencer, song", "var(--warn)") + layer("PORT", "Host sim \u00b7 FM-1 \u00b7 Daisy Seed \u00b7 our board", "audio, display, input, storage, MIDI, USB", "var(--dim)") + "</div>" +
+    '<div class="kpis" style="margin-top:14px">' + kpi("Same engine source", "3 targets") + kpi("Parameters", "4 x 5 pages, 0..127") + kpi("Pack contains", "no code", "q") + kpi("FM-1 data today", "samples only", "est") + "</div>" +
+    '<p><button data-doc="docs/ARCHITECTURE.md" class="primary">Read the full design</button> <button data-doc="docs/FORMATS.md">Pack format</button></p><article class="md" id="archBody"></article>';
+  try { const t = await (await api("/api/docs?id=docs%2FARCHITECTURE.md")).text(); $("#archBody").innerHTML = md(t.split(/\n## 1\. Three layers/)[0].replace(/^# .*\n/, "") + "\n## What this means for the prototype\n" + (t.split(/\n## 6\. [^\n]*\n/)[1] || "").split(/\n## 7\./)[0]); } catch (e) {}
+}
+/* ---- decision log ---- */
+const DEC_SEED = [
+  ["Build on fm1-base and simulate first", "locked", "Standing rule: nothing is flashed that has not been rendered and measured."],
+  ["Samples are our own, CC0", "locked", "Documented in docs/SAMPLES.md."],
+  ["Source licence GPL-3.0-only", "locked", "Source headers already say so; fm1-base stays MPL-2.0."],
+  ["Prototype dev platform: Daisy Seed", "proposed", "Research pick: a ready board with a codec, 480 MHz M7 and SDRAM. Licence and USB audio class unverified."],
+  ["Product MCU: STM32H750-class custom board", "proposed", "Same family as the Daisy, so code carries over. Needs external RAM priced in."],
+  ["Sample storage: microSD", "proposed", "The FM-1 holds about 4 s; the Chompi holds hours on microSD."],
+  ["Audio rate 48 kHz stereo", "proposed", "Needs SR as a build flag (see Architecture)."],
+  ["Screen type and size", "open", "Colour LCD or OLED; list browsing needs room."],
+  ["Pads: FSR velocity pads", "open", "Feel is the selling point; needs a scan circuit prototype."],
+  ["Battery or USB power only", "open", "Planner target says 6 h."],
+  ["Presets as data on the FM-1", "open", "Depends on the fm1-base region spike."]];
+const DEC_ST = ["locked", "proposed", "open", "dropped"];
+async function viewDecisions() {
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Decision Log</h1>' + saveBar + '</div><p class="lede">Locked choices we build on, proposals waiting for a yes, and what is still open. Change a status when you decide; the date is kept.</p><div id="dcBox">Loading...</div>'; await loadAll(); drawDecisions();
+}
+function drawDecisions() {
+  const D = P.decisions || DEC_SEED.map((d, i) => ({ id: "d" + i, title: d[0], status: d[1], why: d[2], date: d[1] === "locked" ? "2026-11-09" : "" })), n = s => D.filter(d => d.status === s).length;
+  P.decisions = D;
+  $("#dcBox").innerHTML = '<div class="kpis">' + kpi("Locked", n("locked"), "q") + kpi("Proposed", n("proposed")) + kpi("Open", n("open"), n("open") ? "est" : "") + kpi("Dropped", n("dropped")) + "</div>" + DEC_ST.map(st => D.some(d => d.status === st) ? H2(st[0].toUpperCase() + st.slice(1)) + D.map((d, i) => d.status !== st ? "" : '<div class="card dec"><div class="row" style="margin:0"><input data-di="' + i + '" data-f="title" value="' + esc(d.title) + '" style="flex:1;min-width:200px;font-weight:600"><select data-di="' + i + '" data-f="status">' + DEC_ST.map(o => "<option" + (o === d.status ? " selected" : "") + ">" + o + "</option>").join("") + '</select></div><textarea data-di="' + i + '" data-f="why" rows="2" placeholder="Why">' + esc(d.why) + '</textarea><div class="row" style="margin:0"><small style="color:var(--dim)">' + (d.date ? "decided " + esc(d.date) : "not decided yet") + '</small><button data-ddel="' + i + '">remove</button></div></div>').join("") : "").join("") + '<div class="row" style="margin-top:14px"><input id="newD" placeholder="Add a decision" style="flex:1;min-width:220px"><button id="addD">Add</button></div>';
+  document.querySelectorAll("[data-di]").forEach(el => el.onchange = () => { const d = D[+el.dataset.di]; d[el.dataset.f] = el.value; if (el.dataset.f === "status") d.date = el.value === "locked" ? new Date().toISOString().slice(0, 10) : d.date; psave(); drawDecisions(); });
+  document.querySelectorAll("[data-ddel]").forEach(b => b.onclick = () => { D.splice(+b.dataset.ddel, 1); psave(); drawDecisions(); });
+  $("#addD").onclick = () => { const t = $("#newD").value.trim(); if (t) { D.push({ id: "d" + Date.now(), title: t, status: "open", why: "", date: "" }); psave(); drawDecisions(); } };
+}
+/* ---- preset export / import (sfa-presets/1: tags and notes only, until the pack format exists) ---- */
+function exportPresets() {
+  const data = { schema: "sfa-presets/1", exported: new Date().toISOString(), presets: P.presets || {}, notes: P.presetNotes || "" };
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" })); a.download = "sfa-presets.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function importPresets(file) {
+  try {
+    const d = JSON.parse(await file.text()); if (d.schema !== "sfa-presets/1" || typeof d.presets !== "object") throw new Error("not an sfa-presets/1 file");
+    const keys = Object.keys(d.presets).filter(k => /^(ecb|as)\|[\w]+\|[^|]{1,40}$/.test(k)); if (!keys.length) throw new Error("no usable entries");
+    if (!confirm("Merge " + keys.length + " entries into your tags and notes? Existing tags are kept and combined.")) return;
+    P.presets = P.presets || {}; keys.forEach(k => { const s = d.presets[k] || {}, t = P.presets[k] = P.presets[k] || {}; t.tags = [...new Set([...(t.tags || []), ...(Array.isArray(s.tags) ? s.tags.filter(x => typeof x === "string").slice(0, 8) : [])])]; if (typeof s.note === "string" && s.note && !t.note) t.note = s.note.slice(0, 300); });
+    psave(); drawPresets();
+  } catch (e) { alert("Import failed: " + e.message); }
+}
+/* ---- theme: auto, light, dark ---- */
+function applyTheme(t) { const r = document.documentElement; t === "auto" ? r.removeAttribute("data-theme") : r.setAttribute("data-theme", t); const b = $("#themeBtn"); if (b) b.textContent = t === "auto" ? "Auto" : t === "dark" ? "Dark" : "Light"; }
+function initTheme() { let t = "auto"; try { t = localStorage.getItem("sfa-theme") || "auto"; } catch (e) {} applyTheme(t); $("#themeBtn").onclick = () => { t = { auto: "dark", dark: "light", light: "auto" }[t]; applyTheme(t); try { localStorage.setItem("sfa-theme", t); } catch (e) {} }; }
 /* ---- analyzer, inside the console ---- */
 let anUnits = "all";
 function viewAnalyzer() {
@@ -185,8 +491,8 @@ async function viewLog() {
   try { const t = await (await api("/api/log")).text(); const b = $("#logBox"); b.textContent = t.split("\n").slice(-120).join("\n"); b.scrollTop = b.scrollHeight; } catch (e) { $("#logBox").textContent = e.message; }
 }
 function viewRoadmap() {
-  const items = [["Done", "Units and recipes", "sfa/units.json holds every firmware. The console reads it, so the next one appears here with no code."], ["Done", "SFA Analyzer", "Spectrum, spectrogram, true peak, LUFS, stereo, click finder, A/B overlay. Drop in an MPC recording next to a render."], ["Done", "Console", "This page: sim, render, report, check and flash per unit, the analyzer, the doctor and the log."],
-    ["Next", "Preset browser", "Every Otter, Fox and Greys preset as a grid with its spectrum and level, so a harsh or quiet one is visible before it is chosen."], ["Next", "Engine template", "One folder to copy for a new engine: API stub, test script, render recipe, audit entry."], ["Next", "Sample lab", "Drop a WAV in, slice it, audition it against the engines, pack it for a unit."], ["Later", "Prototype target", "The portable SFA ONE engine in core/, built for a second platform behind this same console."]];
+  const items = [["Done", "Units and recipes", "sfa/units.json holds every firmware. The console reads it, so the next one appears here with no code."], ["Done", "SFA Analyzer", "Spectrum, spectrogram, true peak, LUFS, stereo, click finder, A/B overlay. Drop in an MPC recording next to a render."], ["Done", "Console", "This page: sim, render, report, check and flash per unit, with a USB check that allows one FM-1 at a time."], ["Done", "Sample Lab", "Drop samples, auto-chop by transients, equal parts, beat grid or silence, preview as the unit will play them, export a kit or send it to a unit\u0027s bank."], ["Done", "Prototype plan", "Specs, platforms, a costed parts list and the open questions for our own box."],
+    ["Next", "Preset browser", "Every Otter, Fox and Greys preset as a grid with its spectrum and level, so a harsh or quiet one is visible before it is chosen."], ["Next", "Engine template", "One folder to copy for a new engine: API stub, test script, render recipe, audit entry."], ["Later", "Prototype target", "The portable SFA ONE engine in core/, built for a second platform behind this same console."]];
   $("#main").innerHTML = '<h1>Roadmap</h1><p class="lede">What the console holds today and what goes in the rack next.</p><div class="plan">' + items.map(i => '<div class="card"><h2>' + i[1] + '<span class="pill ' + (i[0] === "Done" ? "clean" : i[0] === "Next" ? "watch" : "none") + '">' + i[0] + "</span></h2><p>" + i[2] + "</p></div>").join("") + "</div>";
 }
 (async () => { await refresh(); route(); setInterval(async () => { if (!busy) { await refresh(); if (page() === "units" && !document.querySelector(".confirm")) renderUnits(); } }, 15000); })();

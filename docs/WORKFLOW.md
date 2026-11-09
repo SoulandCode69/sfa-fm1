@@ -13,7 +13,8 @@ WSL  ~/sfa-fm1/
   visitors/       Alien Stack (AS)                   visitors/tests/*.txt
   base/           fm1-base: platform, build, simulator, installer
   core/           portable SFA engine (the hardware track)
-  sfa/            units.json (the registry) + analyzer/index.html (the SFA Analyzer)
+  sfa/            units.json (the registry), hub/ (console), analyzer/, samplelab/
+  hardware/       prototype research and plan     site/   the public page
   tools/          sfa (the console), go.sh (build + flash), audit.py, release.py, ...
   renders/        WAVs the simulator rendered, per unit and timestamp, with report.md   (git-ignored)
   docs/           notes.md (flash log), SAMPLES.md, this file
@@ -40,6 +41,8 @@ Run these in WSL from `~/sfa-fm1` (or use the `.bat` launchers).
 | Flash | `tools/sfa flash ecb` | toolchain, Windows Python | ~1 min |
 | All of it | `tools/sfa up ecb` (or `as`) | everything | stops if a render is flagged |
 | Everything in one page | `tools/sfa console` (or the `SFA Console.bat` launcher) | a browser | opens at localhost:8590 |
+| Who is on USB | `tools/sfa ports` | Windows Python with mido + python-rtmidi | 2 s |
+| Pack a sample kit | `tools/sfa pack <dir> <unit>` (or send from the Sample Lab) | python | seconds |
 | Copy to Windows | `tools/sfa publish` | WSL | 1 s |
 
 `ecb` and `as` can also be written `app` and `visitors`. `tools/sfa units` lists what is registered.
