@@ -2,3 +2,6 @@ app/build/
 app/web/words/
 core/build/
 renders/
+renders/
+**/render_tmp/
+visitors/build/host/

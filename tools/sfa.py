@@ -52,15 +52,18 @@ def cmd_doctor(a):
     rows = []
     def add(name, good, detail, need=""): rows.append((name, good, detail, need))
     add("python3", sys.version_info >= (3, 8), sys.version.split()[0])
-    for mod in ("numpy", "scipy", "mido", "rtmidi"):
+    for mod in ("numpy", "scipy"):
         try: m = __import__(mod); add(f"python: {mod}", True, getattr(m, "__version__", ""))
-        except Exception: add(f"python: {mod}", mod == "scipy", "missing" + (" (optional, makes reports faster)" if mod == "scipy" else ""), "pip install " + ("python-rtmidi" if mod == "rtmidi" else mod) + " --break-system-packages")
+        except Exception: add(f"python: {mod}", mod == "scipy", "missing" + (" (optional, makes reports faster)" if mod == "scipy" else ""), "pip install " + mod + " --break-system-packages")
     add("git", shutil.which("git") is not None, "")
     add("C compiler (simulator)", shutil.which("cc") is not None or shutil.which("gcc") is not None, "", "sudo apt install build-essential")
     tc = os.environ.get("JIELI_TOOLCHAIN") or str(Path.home() / ".jieli" / "toolchain"); sdk = os.environ.get("AC79_SDK") or str(Path.home() / "fw-AC79_AIoT_SDK")
     add("JieLi toolchain (builds .fwsc)", Path(tc).is_dir(), tc, "see README: the device package is built only where the toolchain is")
     add("AC79 SDK", Path(sdk).is_dir(), sdk, "see README")
     wpy = shutil.which("python.exe"); add("Windows python.exe (flashing over USB)", bool(wpy), wpy or "not found", "winget install Python.Python.3.12, then pip install mido python-rtmidi on Windows")
+    if wpy:                                                              # flashing runs on Windows Python, so mido and rtmidi are checked there
+        r = subprocess.run([wpy, "-c", "import mido, rtmidi; print(mido.__version__)"], capture_output=True, text=True)
+        add("Windows python: mido + python-rtmidi", r.returncode == 0, r.stdout.strip() if r.returncode == 0 else "missing", "on Windows: pip install mido python-rtmidi")
     wh = wsl_win_home(); add("Windows home (for SFA folder)", bool(wh), str(wh or "not under WSL"))
     for uid, u in UNITS.items():
         host = ROOT / u["dir"] / "build" / "host" / u["host"]; pk = sorted((ROOT / u["dir"] / "build").glob("*.fwsc"), key=lambda p: p.stat().st_mtime) if (ROOT / u["dir"] / "build").is_dir() else []
@@ -109,7 +112,7 @@ def cmd_render(a, quiet=False):
     files = []
     for rec in recipes:
         if rec not in CONF["recipes"]: sys.exit(f"unknown recipe '{rec}'. Choose from: {', '.join(CONF['recipes'])}")
-        R = CONF["recipes"][rec]; tmp = ROOT / u["dir"] / "build" / "host" / "render_tmp" / rec
+        R = CONF["recipes"][rec]; tmp = RENDERS / ".tmp" / uid / rec
         if tmp.exists(): shutil.rmtree(tmp)
         tmp.mkdir(parents=True); t0 = time.time()
         if R.get("gen"):
