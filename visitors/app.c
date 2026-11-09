@@ -118,6 +118,23 @@ static float cgl[NENG], cgr[NENG], cgs[NENG];                      /* the gains 
 static uint8_t dly_tick;
 static float mix[NENG][APP_BLOCK];
 static float mixout[APP_BLOCK];
+/* a soft panic: the engine's tail fades over ~9 ms and is then cut, instead of stopping on the spot (which is a step, a click).
+ * Preset, octave and mute changes use it; app_panic (stop, flash save) stays hard. */
+#define PFADE 384
+static volatile uint8_t pend_panic;
+static int32_t pfade[NENG];
+static void soft_panic(uint8_t e) { pend_panic |= (uint8_t)(1u << e); }
+static void panic_fades(uint32_t n)
+{
+    uint32_t e, i; uint8_t pp = pend_panic; pend_panic = 0;
+    for (e = 0; e < NENG; e++) {
+        if (pp >> e & 1u) { if (!pfade[e]) pfade[e] = PFADE; }
+        if (pfade[e]) {
+            for (i = 0; i < n; i++) { if (pfade[e]) { mix[e][i] *= (float)pfade[e] * (1.0f / (float)PFADE); pfade[e]--; } else mix[e][i] = 0.0f; }
+            if (!pfade[e]) ENG[e]->panic();
+        }
+    }
+}
 static int cpu2_rc = -9;
 static float gain_now;
 static uint32_t arp_phase;
@@ -171,6 +188,7 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
         if (!handed || plat_cpu2_wait() != 0) render_synths(n);
         plat_cpu2_sync();
     }
+    panic_fades(n);
     for (e = 0; e < NENG; e++) {
         float lvl = lane_audible(PAT, (uint8_t)e) ? p01(set.level[e]) : 0.0f, pan = p01(set.pan[e]), pk = 0.0f;
         gl[e] = lvl * fm_sinf((1.0f - pan) * 1.5707963f); gr[e] = lvl * fm_sinf(pan * 1.5707963f); gs[e] = lvl * p01(set.send[e]) * 0.8f;
@@ -420,7 +438,7 @@ static void focus(uint8_t e)
 static void mute_toggle(uint8_t e)
 {
     PAT->mute ^= (uint8_t)(1u << e);
-    if (PAT->mute >> e & 1u) ENG[e]->panic();
+    if (PAT->mute >> e & 1u) soft_panic(e);
     set_dirty = 1; ui.redraw = 1;
     app_say(ENG[e]->name, PAT->mute >> e & 1u ? "MUTED" : "ON");
 }
@@ -760,7 +778,7 @@ static void input(void)
         else if (k == B_OCTDN || k == B_OCTUP) {
             int32_t o = clamp(set.octave + (k == B_OCTUP ? 1 : -1), -2, 2);
             char t[4] = {o < 0 ? '-' : '+', (char)('0' + (o < 0 ? -o : o)), 0};
-            if (o != set.octave) { otter.panic(); fox.panic(); set.octave = (int8_t)o; set_dirty = 1; app_say("OCTAVE", t); }
+            if (o != set.octave) { soft_panic(E_OTTER); soft_panic(E_FOX); set.octave = (int8_t)o; set_dirty = 1; app_say("OCTAVE", t); }
         } else if (k == B_SAVE) {
             int rc;
             params_to_set();
@@ -810,11 +828,11 @@ static void input(void)
                 app_say("PATTERN", t);
             } else {
                 body = PG_ENGINE;
-                if (set.focus == E_OTTER) { otter.panic(); otter_preset(e); app_say("PRESET", otter_preset_name()); }
+                if (set.focus == E_OTTER) { soft_panic(E_OTTER); otter_preset(e); app_say("PRESET", otter_preset_name()); }
                 else if (set.focus == E_CAT) { cat_kit(e); app_say("KIT", cat_kit_name()); }
-                else if (set.focus == E_FOX) { fox.panic(); fox_preset(e); app_say(fox_mode() ? "SYNTH" : "REPTILE", fox_preset_name()); }
+                else if (set.focus == E_FOX) { soft_panic(E_FOX); fox_preset(e); app_say(fox_mode() ? "SYNTH" : "REPTILE", fox_preset_name()); }
                 else {                                                 /* Hopper: the source; a sample lands chopped by transients */
-                    char sb[14]; hopper.panic(); hop_source(e); set.hop_source = (uint8_t)hop_source_index();
+                    char sb[14]; soft_panic(E_HOP); hop_source(e); set.hop_source = (uint8_t)hop_source_index();
                     app_say("GREYS", hop_source_name(sb));
                 }
             }

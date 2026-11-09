@@ -70,7 +70,7 @@ loudness within 0.01 LU, true peak within 0.02 dB, same clicks found).
 
 A click is a step of at least about -30 dBFS that is ten times bigger than the signal around it, at least four and a half
 times bigger than any neighbouring step, in audio that was already sounding. A snare noise burst or a kick attack is busy
-all round and passes. A one-sample step or spike in smooth audio does not.
+all round and passes. A one-sample step or spike in smooth audio does not. A step that recurs at an even spacing (a saw wrap or a square edge: the same step one period later and two periods later) is the waveform, not a click, and is not reported; one event seen on both channels counts once.
 
 The renders are the simulator's output, so they test the DSP and the sequencer, not the USB or analogue path. For that, record
 the unit into the MPC, drop the WAV into the analyzer, and compare it with the render of the same pattern.

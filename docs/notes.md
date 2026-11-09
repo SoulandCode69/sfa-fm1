@@ -204,3 +204,7 @@ analyze / flash / up / publish), `sfa/units.json` (the registry), song render sc
 within 0.02 dB, same clicks). First finding: Alien Stack's trap kit started a Mantis noise burst as a one-sample step; every Mantis
 voice now has a 0.25 ms onset ramp (127 checks pass). Both units' renders measure clean (ECB song -2.5 dBTP / -16.3 LUFS-I, AS song
 -2.7 dBTP / -18.3 LUFS-I). The AS change needs a flash: `tools/sfa up as`.
+
+## 2026-11-09 evening: DSP pass (not flashed yet)
+
+See CHANGELOG.md. ECB and Alien Stack both change (Fox bass retrigger, bass filter envelope attack, soft panic on preset / octave / mute). Flash one at a time, ECB first; log the build here when done.

@@ -181,7 +181,7 @@ def lufs(L, R, sr):
     if nsb < 4: return None, None, None, None
     E = np.zeros(nsb)
     for x in (L, R): k = kweight(x, sr)[:nsb * sb]; E += (k * k).reshape(nsb, sb).mean(axis=1)
-    lu = lambda e: -0.691 + 10 * np.log10(e)
+    lu = lambda e: -0.691 + 10 * np.log10(np.maximum(e, 1e-12))
     mom = (E[3:] + E[2:-1] + E[1:-2] + E[:-3]) / 4
     cs = np.concatenate([[0], np.cumsum(E)]); st = (cs[30:] - cs[:-30]) / 30 if nsb >= 30 else np.array([])
     I = M = S = LRA = None
@@ -201,6 +201,24 @@ def true_peak(x):
         from scipy.signal import resample_poly; return float(np.abs(resample_poly(x, 4, 1)).max())
     except ImportError: return float(np.abs(x).max())
 
+def periodic(x, i, sr, frac=0.6):
+    """True if steps like the one at i (same sign, at least frac of its size) recur at an even spacing T of 0.5..40 ms:
+    i, i+T, i+2T (or i-T, i, i+T): the mark of an oscillator's edge, not of a click."""
+    import numpy as np
+    S = int(sr * 0.08); lo = max(1, i - S); hi = min(len(x), i + S)
+    dd = np.diff(x[lo - 1:hi]); sg = 1.0 if x[i] - x[i - 1] > 0 else -1.0; ref = abs(x[i] - x[i - 1]) * frac
+    pos = np.nonzero(dd * sg >= ref)[0] + lo                              # sample indices of similar steps (dd[k] = x[lo+k]-x[lo+k-1])
+    pos = pos[np.abs(pos - i) > 2]
+    if len(pos) < 2: return False
+    tmin, tmax = int(sr * 0.0005), int(sr * 0.04); have = set(pos.tolist())
+    def near(q, tol): return any((q + o) in have for o in range(-tol, tol + 1))
+    for p in pos:
+        t = int(p - i)
+        if abs(t) < tmin or abs(t) > tmax: continue
+        tol = max(2, int(abs(t) * 0.03))
+        if near(i + 2 * t, tol) or near(i - t, tol): return True        # a third edge one period on, or one period before
+    return False
+
 def clicks(x, sr, k=10.0, min_abs=0.03, isolate=4.5):
     import numpy as np
     d = np.abs(np.diff(x)); W = 64; S = np.concatenate([[0], np.cumsum(d)]); out = []
@@ -210,12 +228,13 @@ def clicks(x, sr, k=10.0, min_abs=0.03, isolate=4.5):
         ref = (S[j + W] - S[j - W] - d[j - 1:j + 2].sum()) / (2 * W - 3)  # the JS uses sums over [i-W, i+W) of |x[n]-x[n-1]|
         if d[j] < k * ref: continue
         sg = x[i] - x[i - 1]; nb = 0.0
-        for q in range(i - 40, i + 41):
+        for q in range(i - 130, i + 131):
             if q == i: continue
             dd = x[q] - x[q - 1]
             if q == i + 1 and dd * sg < 0 and abs(dd) > 0.5 * d[j]: continue
             nb = max(nb, abs(dd))
         if d[j] < isolate * nb: continue
+        if periodic(x, i, sr): continue                                  # a waveform edge (saw wrap, square edge) recurs every period; a click does not
         pw = round(sr * 0.002); pre = np.abs(x[max(0, i - 3 - pw):i - 3]).sum() / pw
         if pre < 0.0005: continue
         if out and i - out[-1][0] < sr * 0.005:
@@ -227,7 +246,9 @@ def measure(path):
     import numpy as np
     L, R, sr, mono = load_wav(path); chs = [L] if mono else [L, R]; db = lambda v: 20 * np.log10(max(v, 1e-9))
     pk = max(np.abs(x).max() for x in chs); tp = max(true_peak(x) for x in chs); rms = np.sqrt(sum((x * x).sum() for x in chs) / (len(L) * len(chs)))
-    I, M, S, LRA = lufs(L, R, sr); ck = sorted({round(i / sr, 4) for x in chs for i, _ in clicks(x, sr)})
+    I, M, S, LRA = lufs(L, R, sr); ck = []
+    for t in sorted(round(i / sr, 4) for x in chs for i, _ in clicks(x, sr)):
+        if not ck or t - ck[-1] >= 0.005: ck.append(t)                  # one event seen on both channels is one click
     clips = int(sum((np.abs(x) >= 0.9995).sum() for x in chs)); corr = float((L * R).sum() / np.sqrt((L * L).sum() * (R * R).sum() + 1e-30)) if not mono else 1.0
     m = {"file": path.name, "dur": len(L) / sr, "sr": sr, "peak": db(pk), "tp": db(tp), "rms": db(rms), "crest": db(pk) - db(rms), "lufs": I, "mom": M, "st": S, "lra": LRA, "corr": corr, "clicks": ck, "clips": clips}
     why = []; lvl = 0

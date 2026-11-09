@@ -166,7 +166,7 @@ static void e8_render(float *out, uint32_t n)
 
 /* ---- the bass synth */
 static struct {
-    float hz, hz_target, ph, phs, env, aenv, lfo_ph, sm_cut;
+    float hz, hz_target, ph, phs, env, aenv, lfo_ph, sm_cut; uint8_t env_up;
     int32_t held[8]; uint8_t nheld;
     int32_t note; uint8_t gate, accent;
     svf_t flt;
@@ -180,7 +180,7 @@ static void bass_note(int32_t note, uint32_t vel, int on)
         for (i = 0; i < bs.nheld; i++) if (bs.held[i] == note) break;
         if (i == bs.nheld && bs.nheld < 8u) bs.held[bs.nheld++] = note;
         bs.hz_target = note_hz(note);
-        if (!bs.gate || bs.nheld == 1u) { bs.hz = bs.hz_target; bs.env = 1.0f; bs.aenv = 0.0f; }
+        if (!bs.gate || bs.nheld == 1u) { bs.hz = bs.hz_target; bs.env_up = 1; }   /* aenv is not zeroed: a tail still sounding would step to silence (a click); the attack ramps up from where it is */
         bs.gate = 1; bs.note = note;
         bs.accent = vel > 100u;
     } else {
@@ -210,7 +210,8 @@ static void bass_render(float *out, uint32_t n)
     for (i = 0; i < n; i++) {
         float o, s;
         if (bs.gate) bs.aenv += (1.0f - bs.aenv) * 0.02f; else bs.aenv *= rel;
-        bs.env *= dec;
+        if (bs.env_up) { bs.env += (1.0f - bs.env) * 0.05f; if (bs.env > 0.995f) { bs.env = 1.0f; bs.env_up = 0; } }   /* the filter envelope rises over ~0.5 ms, not in one sample: an instant jump opens the filter and steps the output */
+        else bs.env *= dec;
         bs.ph += dt; if (bs.ph >= 1.0f) bs.ph -= 1.0f;
         bs.phs += dts; if (bs.phs >= 1.0f) bs.phs -= 1.0f;
         if (sqr) { float t2 = bs.ph + 0.5f; if (t2 >= 1.0f) t2 -= 1.0f; o = (bs.ph < 0.5f ? 1.0f : -1.0f) + polyblep(bs.ph, dt) - polyblep(t2, dt); }
@@ -219,7 +220,7 @@ static void bass_render(float *out, uint32_t n)
         o = o * 0.7f + (2.0f * bs.ph2 - 1.0f - polyblep(bs.ph2, dt * 1.004f)) * 0.25f;   /* a second, slightly detuned saw: width */
         if (fold > 0.0f) o = fm_sinf(o * (1.0f + fold * 5.0f) * 1.5707963f) * (1.0f - fold * 0.3f) + o * (1.0f - fold);
         o = o + fm_sinf(bs.phs * 6.2831853f) * sub;
-        if ((i & 15u) == 0u) svf_coef(&fc, fbase * (1.0f + envmod * envmod * 24.0f * bs.env * accg), res);
+        if ((i & (bs.env_up ? 3u : 15u)) == 0u) svf_coef(&fc, fbase * (1.0f + envmod * envmod * 24.0f * bs.env * accg), res);
         s = svf_lp(&bs.flt, &fc, o);
         s = fm_soft(s * (1.0f + res * 0.8f) * 0.7f * drive) * dnorm;
         out[i] += s * bs.aenv * (bs.accent ? 1.0f + acc * 0.4f : 1.0f) * 0.6f;

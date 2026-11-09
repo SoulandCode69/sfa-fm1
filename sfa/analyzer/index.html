@@ -331,6 +331,14 @@ function truePeak(x) {
   return pk;
 }
 /* a click: a step that is large against the signal around it, in a signal that was already sounding (not a note starting from silence) */
+function periodicEdge(x, i, sr) {
+  const S = Math.round(sr * 0.08), lo = Math.max(1, i - S), hi = Math.min(x.length - 1, i + S), sg = x[i] - x[i - 1] > 0 ? 1 : -1, ref = Math.abs(x[i] - x[i - 1]) * 0.6, pos = [];
+  for (let q = lo; q <= hi; q++) if (Math.abs(q - i) > 2 && (x[q] - x[q - 1]) * sg >= ref) pos.push(q);
+  if (pos.length < 2) return false;
+  const have = new Set(pos), tmin = Math.round(sr * 0.0005), tmax = Math.round(sr * 0.04), near = (q, tol) => { for (let o = -tol; o <= tol; o++) if (have.has(q + o)) return true; return false; };
+  for (const p of pos) { const t = p - i, a = Math.abs(t); if (a < tmin || a > tmax) continue; const tol = Math.max(2, Math.trunc(a * 0.03)); if (near(i + 2 * t, tol) || near(i - t, tol)) return true; }
+  return false;
+}
 function findClicks(x, sr, k, minAbs) {
   const n = x.length, S = new Float64Array(n + 1);
   for (let i = 1; i < n; i++) S[i + 1] = S[i] + Math.abs(x[i] - x[i - 1]);
@@ -341,8 +349,9 @@ function findClicks(x, sr, k, minAbs) {
     const ref = (S[i + W] - S[i - W] - (Math.abs(x[i] - x[i - 1]) + Math.abs(x[i + 1] - x[i]) + Math.abs(x[i - 1] - x[i - 2]))) / (2 * W - 3);
     if (d < k * ref) continue;
     const sg = x[i] - x[i - 1]; let nb = 0;
-    for (let j = i - 40; j <= i + 40; j++) { if (j === i) continue; const q = x[j] - x[j - 1]; if (j === i + 1 && q * sg < 0 && Math.abs(q) > 0.5 * d) continue; if (Math.abs(q) > nb) nb = Math.abs(q); }
+    for (let j = i - 130; j <= i + 130; j++) { if (j === i) continue; const q = x[j] - x[j - 1]; if (j === i + 1 && q * sg < 0 && Math.abs(q) > 0.5 * d) continue; if (Math.abs(q) > nb) nb = Math.abs(q); }
     if (d < RULES.isolate * nb) continue;                                           // a drum attack is busy all round it; a click stands alone (a one-sample spike's return step is part of it)
+    if (periodicEdge(x, i, sr)) continue;                                           // an oscillator's edge recurs every period; a click does not
     let pre = 0; const pw = Math.round(sr * 0.002); for (let j = Math.max(0, i - 3 - pw); j < i - 3; j++) pre += Math.abs(x[j]);
     pre /= pw; if (pre < 0.0005) continue;                                         // from silence: an attack, not a click
     if (ev.length && i - ev[ev.length - 1].i < sr * 0.005) { if (d > ev[ev.length - 1].d) ev[ev.length - 1] = { i, d }; } else ev.push({ i, d });
@@ -376,6 +385,7 @@ async function analyze(f, say) {
   m.st = stereoStats(f);
   say("clicks"); await tick();
   m.clickEv = []; chs.forEach(x => findClicks(x, f.sr, RULES.clickK, RULES.clickMin).forEach(e => m.clickEv.push({ t: e.i / f.sr, d: db(e.d) })));
+  m.clickEv.sort((a, b) => a.t - b.t); m.clickEv = m.clickEv.filter((e, i, A) => !i || e.t - A[i - 1].t >= 0.005);   // one event seen on both channels is one click
   m.clickEv.sort((a, b) => a.t - b.t); m.clickEv = m.clickEv.filter((e, i, a) => !i || e.t - a[i - 1].t > 0.005);
   say("tone"); await tick();
   const sp = welch(chs, 0, f.n, 4096, false), nyq = f.sr / 2; let tot = 0, hf = 0, cen = 0;
