@@ -39,6 +39,7 @@ Run these in WSL from `~/sfa-fm1` (or use the `.bat` launchers).
 | Look and listen | `tools/sfa analyze ecb` (add `--fresh` to render first) | a browser | opens at localhost:8590 |
 | Flash | `tools/sfa flash ecb` | toolchain, Windows Python | ~1 min |
 | All of it | `tools/sfa up ecb` (or `as`) | everything | stops if a render is flagged |
+| Everything in one page | `tools/sfa console` (or the `SFA Console.bat` launcher) | a browser | opens at localhost:8590 |
 | Copy to Windows | `tools/sfa publish` | WSL | 1 s |
 
 `ecb` and `as` can also be written `app` and `visitors`. `tools/sfa units` lists what is registered.

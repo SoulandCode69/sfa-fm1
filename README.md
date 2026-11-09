@@ -30,7 +30,7 @@ playing, REC arms the track for live record. The mixer shows the audio load (CPU
 both firmwares send that stream at full level whatever MASTER does; on the MPC, Preferences → Audio Device (MPC 2.10+
 takes class-compliant interfaces), or the headphone out into the line inputs.
 
-**The SFA console** (`tools/sfa`): `doctor`, `sim`, `render`, `report`, `analyze`, `flash`, `up`, `publish`, for ECB and Alien Stack alike;
+**The SFA console** (`tools/sfa console` opens it as a web page; `tools/sfa` is the command line): `doctor`, `sim`, `render`, `report`, `analyze`, `flash`, `up`, `publish`, for ECB and Alien Stack alike;
 the **SFA Analyzer** (`sfa/analyzer/index.html`, one file, drop WAVs on it) shows spectrum, spectrogram, peak / true peak / LUFS, stereo and
 clicks. See `docs/WORKFLOW.md`, `docs/CONSOLE.md`, `docs/AGENTS.md`.
 

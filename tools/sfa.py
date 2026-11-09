@@ -12,6 +12,7 @@
   tools/sfa flash ecb              build the package and flash the unit on USB (tools/go.sh)
   tools/sfa up ecb [--no-flash]    sim -> render -> report -> flash, stopping at the first failure
   tools/sfa publish                copy the analyzer, firmware and renders to Windows: %USERPROFILE%\\SFA\\ + launchers
+  tools/sfa console                the SFA Console: a local web page with every unit, the analyzer, the log and buttons for all of the above
   tools/sfa units                  the registered units (sfa/units.json)
 
 A unit is a line in sfa/units.json: ecb (Earth Creature Beats), as (Alien Stack). A new firmware or engine is one more line."""
@@ -48,7 +49,7 @@ def wsl_win_home():
         return None
 
 # ---------- doctor ----------
-def cmd_doctor(a):
+def doctor_rows():
     rows = []
     def add(name, good, detail, need=""): rows.append((name, good, detail, need))
     add("python3", sys.version_info >= (3, 8), sys.version.split()[0])
@@ -69,6 +70,10 @@ def cmd_doctor(a):
         host = ROOT / u["dir"] / "build" / "host" / u["host"]; pk = sorted((ROOT / u["dir"] / "build").glob("*.fwsc"), key=lambda p: p.stat().st_mtime) if (ROOT / u["dir"] / "build").is_dir() else []
         add(f"{uid}: simulator binary", host.exists(), time.strftime("built %b %d %H:%M", time.localtime(host.stat().st_mtime)) if host.exists() else "run: tools/sfa sim " + uid)
         add(f"{uid}: device package", bool(pk), (pk[-1].name + " " + time.strftime("%b %d %H:%M", time.localtime(pk[-1].stat().st_mtime))) if pk else "run: tools/sfa flash " + uid + " (needs the toolchain)")
+    return rows
+
+def cmd_doctor(a):
+    rows = doctor_rows()
     print(bold("SFA doctor"))
     for n, g, d, need in rows:
         print(f"  {ok('ok  ') if g else warn('miss')}  {n:<40} {dim(d)}" + ("" if g or not need else "\n        " + dim("-> " + need)))
@@ -295,6 +300,103 @@ def open_url(url):
         except Exception: continue
     print("open", url)
 
+
+# ---------- console: a local web page that houses the tools ----------
+HUB = ROOT / "sfa" / "hub" / "index.html"
+def notes_for(uid):
+    """The newest flash-log row for a unit, from docs/notes.md (rows are | date | unit | build | firmware | what |)."""
+    pat = {"ecb": r"^ECB Build (\d+)", "as": r"^(?:ALIEN|VIS) Build (\d+)"}.get(uid)
+    best = None
+    try:
+        for line in (ROOT / "docs" / "notes.md").read_text().splitlines():
+            cells = [x.strip() for x in line.strip().strip("|").split("|")]
+            if len(cells) < 5 or not pat: continue
+            m = re.match(pat, cells[2])
+            if m and (best is None or (cells[0], int(m.group(1))) > best[0]): best = ((cells[0], int(m.group(1))), cells)
+    except OSError: pass
+    return None if not best else {"date": best[1][0], "build": best[1][2], "what": best[1][4][:260]}
+
+def console_state():
+    out = []
+    for uid, u in UNITS.items():
+        b = ROOT / u["dir"] / "build"; host = b / "host" / u["host"]
+        pk = sorted(b.glob("*.fwsc"), key=lambda p: p.stat().st_mtime) if b.is_dir() else []
+        d = latest_dir(uid); rep = []
+        if d and (d / "report.json").exists():
+            try: rep = json.loads((d / "report.json").read_text())
+            except ValueError: pass
+        tm = lambda p: time.strftime("%b %d %H:%M", time.localtime(p.stat().st_mtime))
+        out.append({"id": uid, "name": u["name"], "short": u["short"], "hardware": u.get("hardware", ""), "engines": u.get("engines", []), "port": u.get("mirror_port"),
+                    "sim": tm(host) if host.exists() else None, "package": {"name": pk[-1].name, "at": tm(pk[-1])} if pk else None,
+                    "render": {"stamp": d.name, "files": [{k: m.get(k) for k in ("file", "dur", "peak", "tp", "rms", "lufs", "lra", "corr", "verdict", "why")} | {"clicks": len(m.get("clicks", []))} for m in rep]} if d else None,
+                    "notes": notes_for(uid)})
+    return {"units": out, "recipes": CONF["recipes"], "when": time.strftime("%H:%M:%S")}
+
+RUN_OK = {"sim": 1, "render": 1, "report": 1, "doctor": 0, "up": 1, "flash": 1, "publish": 0}
+def make_handler(port):
+    import http.server, threading, mimetypes
+    lock = threading.Lock(); hosts = {f"localhost:{port}", f"127.0.0.1:{port}"}
+    class H(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.0"
+        def log_message(s, *args): pass
+        def _send(s, code, body, ctype="application/json"):
+            body = body if isinstance(body, bytes) else body.encode(); s.send_response(code); s.send_header("Content-Type", ctype); s.send_header("Content-Length", str(len(body))); s.send_header("Cache-Control", "no-store"); s.end_headers(); s.wfile.write(body)
+        def _guard(s):                                             # only this page, on this machine: a Host check against DNS rebinding, a custom header against other sites
+            if s.headers.get("Host", "") not in hosts: s._send(403, "bad host", "text/plain"); return False
+            return True
+        def do_GET(s):
+            if not s._guard(): return
+            from urllib.parse import urlparse, parse_qs, unquote
+            u = urlparse(s.path); q = parse_qs(u.query)
+            if u.path == "/": return s._send(200, HUB.read_bytes(), "text/html; charset=utf-8")
+            if u.path == "/analyzer/": return s._send(200, ANALYZER.read_bytes(), "text/html; charset=utf-8")
+            if u.path == "/api/state": return s._send(200, json.dumps(console_state()))
+            if u.path == "/api/doctor": return s._send(200, json.dumps([{"name": n, "ok": g, "detail": d, "need": nd} for n, g, d, nd in doctor_rows()]))
+            if u.path == "/api/log":
+                t = (ROOT / "docs" / "notes.md").read_text() if (ROOT / "docs" / "notes.md").exists() else ""; return s._send(200, t, "text/plain; charset=utf-8")
+            if u.path == "/api/manifest":
+                files = []
+                for uid in (q.get("units", [",".join(UNITS)])[0].split(",")):
+                    d = latest_dir(uid) if uid in UNITS else None
+                    if d and (d / "manifest.json").exists():
+                        for f in json.loads((d / "manifest.json").read_text())["files"]: files.append(dict(f, path="/renders/" + f["path"]))
+                return s._send(200, json.dumps({"title": "SFA renders", "files": files}))
+            if u.path.startswith("/renders/"):
+                f = (RENDERS / unquote(u.path[len("/renders/"):])).resolve()
+                if RENDERS.resolve() in f.parents and f.is_file(): return s._send(200, f.read_bytes(), mimetypes.guess_type(f.name)[0] or "application/octet-stream")
+            s._send(404, "not found", "text/plain")
+        def do_POST(s):
+            if not s._guard(): return
+            if s.headers.get("X-SFA") != "1": return s._send(403, "missing header", "text/plain")
+            from urllib.parse import urlparse, parse_qs
+            u = urlparse(s.path); q = parse_qs(u.query)
+            if u.path != "/api/run": return s._send(404, "not found", "text/plain")
+            cmd = q.get("cmd", [""])[0]; uid = q.get("unit", [""])[0]; extra = q.get("args", [""])[0].split()
+            if cmd not in RUN_OK or (RUN_OK[cmd] and uid not in UNITS) or not all(x in ("--no-flash", "--force", "--fresh", "--build-only") or x in CONF["recipes"] for x in extra):
+                return s._send(400, "bad request", "text/plain")
+            if not lock.acquire(blocking=False): return s._send(409, "something is already running; wait for it to finish", "text/plain")
+            try:
+                s.send_response(200); s.send_header("Content-Type", "text/plain; charset=utf-8"); s.send_header("Cache-Control", "no-store"); s.end_headers()
+                argv = [sys.executable, "-u", str(ROOT / "tools" / "sfa.py"), cmd] + ([uid] if RUN_OK[cmd] else []) + extra
+                s.wfile.write(("$ tools/sfa " + " ".join(argv[3:]) + "\n").encode()); s.wfile.flush()
+                p = subprocess.Popen(argv, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=dict(os.environ, PYTHONUNBUFFERED="1"))
+                for line in iter(p.stdout.readline, b""): s.wfile.write(line); s.wfile.flush()
+                s.wfile.write(f"\n[exit {p.wait()}]\n".encode()); s.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError): pass
+            finally: lock.release()
+    return H
+
+def cmd_console(a):
+    import http.server, socketserver
+    sync_renders_site(list(UNITS))
+    socketserver.ThreadingTCPServer.allow_reuse_address = True
+    try: srv = socketserver.ThreadingTCPServer(("127.0.0.1", a.port), make_handler(a.port))
+    except OSError as e: sys.exit(bad(f"port {a.port} is busy ({e}). Is the console already open? Try http://localhost:{a.port}/ or --port {a.port + 1}"))
+    url = f"http://localhost:{a.port}/"; print(bold(f"SFA Console at {url}   (Ctrl-C to stop)"))
+    if not a.no_open: open_url(url)
+    try: srv.serve_forever()
+    except KeyboardInterrupt: pass
+
 # ---------- flash / up ----------
 def cmd_flash(a):
     uid, u = unit(a.unit); app = u["dir"]
@@ -317,6 +419,7 @@ def cmd_up(a):
 
 # ---------- publish to Windows ----------
 BAT = {
+    "SFA Console.bat": 'wsl -d Ubuntu -e bash -lc "cd ~/sfa-fm1 && tools/sfa console"',
     "SFA Analyzer.bat": 'wsl -d Ubuntu -e bash -lc "cd ~/sfa-fm1 && tools/sfa analyze"',
     "SFA Doctor.bat": 'wsl -d Ubuntu -e bash -lc "cd ~/sfa-fm1 && tools/sfa doctor" & pause',
     "SFA Sim ECB.bat": 'wsl -d Ubuntu -e bash -lc "cd ~/sfa-fm1 && tools/sfa sim ecb" & pause',
@@ -350,6 +453,7 @@ def main():
     p = sp.add_parser("flash"); p.add_argument("unit"); p.add_argument("--build-only", action="store_true"); p.set_defaults(f=cmd_flash)
     p = sp.add_parser("up"); p.add_argument("unit"); p.add_argument("recipes", nargs="*"); p.add_argument("--no-flash", action="store_true"); p.add_argument("--force", action="store_true"); p.set_defaults(f=cmd_up)
     sp.add_parser("publish").set_defaults(f=cmd_publish)
+    p = sp.add_parser("console"); p.add_argument("--port", type=int, default=8590); p.add_argument("--no-open", action="store_true"); p.set_defaults(f=cmd_console)
     a = ap.parse_args(); a.f(a)
 
 if __name__ == "__main__": main()

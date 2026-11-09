@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SFA Console</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap">
+<style>
+/* Layout: a rack. A rail of tools down the left, the selected tool on the right; units are modules with their status and controls. */
+:root {
+  --bg: #f1eef3; --panel: #ffffff; --panel2: #e8e4ec; --rule: #cfc8d8; --fg: #1a1620; --dim: #6a6277;
+  --accent: #d1174a; --accent-fg: #ffffff; --good: #1f8a52; --warn: #b9770e; --bad: #c4162f; --term: #14111a; --term-fg: #d9d2e3;
+  --display: "Syne", "Arial Black", system-ui, sans-serif; --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e; --term: #0a090e; --term-fg: #d9d2e3; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e; --term: #0a090e; --term-fg: #d9d2e3; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--body); min-height: 100vh; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 28px; }
+button { font: inherit; color: inherit; background: var(--panel2); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--dim); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button.danger { border-color: var(--bad); color: var(--bad); }
+button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select { font: inherit; color: inherit; background: var(--panel2); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 8px; }
+a { color: var(--accent); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.mark { display: flex; align-items: center; gap: 10px; }
+.mark b { font: 800 21px/1 var(--display); letter-spacing: .02em; }
+.mark span { font: 500 11px/1 var(--mono); letter-spacing: .14em; color: var(--dim); text-transform: uppercase; }
+.sp { flex: 1; }
+.live { font: 500 11px/1 var(--mono); color: var(--dim); display: flex; align-items: center; gap: 6px; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--good); display: inline-block; }
+.live.off i { background: var(--bad); }
+.shell { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; margin-top: 16px; align-items: start; }
+nav { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 12px; }
+nav a { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border: 1px solid transparent; border-radius: 5px; color: var(--fg); text-decoration: none; font-weight: 500; }
+nav a small { font: 500 10px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+nav a:hover { background: var(--panel); }
+nav a.on { background: var(--panel); border-color: var(--accent); }
+nav .grp { font: 500 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); padding: 14px 12px 4px; }
+main { min-width: 0; }
+h1 { margin: 0 0 4px; font: 800 24px/1.2 var(--display); text-wrap: balance; }
+.lede { color: var(--dim); margin: 0 0 16px; max-width: 70ch; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.card h2 { margin: 0; font: 700 18px/1.2 var(--display); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.card h2 small { font: 500 11px/1 var(--mono); color: var(--dim); letter-spacing: .08em; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font: 500 11px/1 var(--mono); padding: 4px 7px; border: 1px solid var(--rule); border-radius: 3px; color: var(--dim); }
+dl { margin: 0; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 10px; font-size: 13px; }
+dt { font: 500 10px/1.8 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.pill { font: 500 10px/1 var(--mono); letter-spacing: .08em; padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; text-transform: uppercase; display: inline-block; }
+.pill.clean { color: var(--good); } .pill.watch { color: var(--warn); } .pill.flag { color: var(--bad); } .pill.none { color: var(--dim); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--bad); border-radius: 5px; font-size: 13px; }
+details summary { cursor: pointer; font: 500 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); padding: 4px 0; }
+.tw { overflow-x: auto; margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font: 400 12px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+th, td { padding: 4px 7px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+th { font-weight: 500; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+th:first-child, td:first-child { text-align: left; }
+.term { margin-top: 14px; background: var(--term); color: var(--term-fg); border-radius: 6px; border: 1px solid var(--rule); }
+.term header { border: 0; padding: 8px 12px; font: 500 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.term pre { margin: 0; padding: 4px 12px 12px; font: 400 12px/1.5 var(--mono); max-height: 340px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 80px; }
+.frame { width: 100%; height: calc(100vh - 150px); min-height: 640px; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.chk { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 12px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.chk:last-child { border-bottom: 0; }
+.chk .n { font-weight: 500; } .chk .d { color: var(--dim); font: 400 12px/1.4 var(--mono); overflow-wrap: anywhere; } .chk .h { grid-column: 2; color: var(--dim); font-size: 12px; }
+.ok { color: var(--good); } .miss { color: var(--warn); }
+.plan { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.plan .card h2 { font-size: 16px; }
+.plan p { margin: 0; color: var(--dim); font-size: 13px; }
+pre.log { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; font: 400 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 70vh; overflow: auto; }
+@media (max-width: 800px) { .shell { grid-template-columns: minmax(0, 1fr); } nav { flex-direction: row; flex-wrap: wrap; position: static; } nav .grp { display: none; } nav a small { display: none; } .cards { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="32" height="32" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="5" fill="var(--accent)"/><g fill="var(--accent-fg)"><rect x="5" y="15" width="3" height="10"/><rect x="10" y="8" width="3" height="17"/><rect x="15" y="12" width="3" height="13"/><rect x="20" y="5" width="3" height="20"/></g></svg>
+    <div><b>SFA</b> <span>Console</span></div>
+  </div>
+  <span class="sp"></span>
+  <div class="live" id="live"><i></i><span id="liveTxt">connecting</span></div>
+</header>
+
+<div class="shell">
+  <nav aria-label="Tools">
+    <div class="grp">Rack</div>
+    <a href="#units" data-p="units">Units <small>flash</small></a>
+    <a href="#analyzer" data-p="analyzer">Analyzer <small>ears</small></a>
+    <div class="grp">System</div>
+    <a href="#doctor" data-p="doctor">Doctor</a>
+    <a href="#log" data-p="log">Flash log</a>
+    <a href="#roadmap" data-p="roadmap">Roadmap</a>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const f1 = (v, d = 1) => (v === null || v === undefined || !isFinite(v)) ? "-" : (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
+const NOTE = { sim: "Builds the simulator and runs every check. Needs no hardware.", render: "Plays a chained song and the full test suite through the simulator and keeps the WAVs.", report: "Measures the latest renders: peak, true peak, LUFS, clicks.", up: "Checks, renders, measures. Stops if anything is flagged.", flash: "Builds the package and installs it on the unit that is on USB." };
+let S = null, busy = false, outText = "", outTitle = "output";
+
+async function api(path, opt) { const r = await fetch(path, opt); if (!r.ok) throw new Error(await r.text()); return r; }
+async function refresh() {
+  try { S = await (await api("/api/state")).json(); $("#live").classList.remove("off"); $("#liveTxt").textContent = "connected · " + S.when; }
+  catch (e) { $("#live").classList.add("off"); $("#liveTxt").textContent = "console server not reachable"; }
+}
+async function run(cmd, unit, args) {
+  if (busy) return; busy = true; outText = ""; outTitle = cmd + (unit ? " " + unit : ""); setBusy(true); updOut();
+  try {
+    const r = await fetch("/api/run?cmd=" + cmd + "&unit=" + (unit || "") + "&args=" + encodeURIComponent((args || []).join(" ")), { method: "POST", headers: { "X-SFA": "1" } });
+    if (!r.ok) { outText = await r.text(); }
+    else { const rd = r.body.getReader(), dec = new TextDecoder(); for (;;) { const { done, value } = await rd.read(); if (done) break; outText += dec.decode(value, { stream: true }).replace(/\x1b\[[0-9;]*m/g, ""); updOut(); } }
+  } catch (e) { outText += "\n" + e.message; }
+  busy = false; updOut(); await refresh(); if (page() === "units") renderUnits(true); setBusy(false);
+}
+function setBusy(b) { document.querySelectorAll("[data-run]").forEach(x => x.disabled = b); }
+function updOut() { const p = $("#outPre"); if (!p) return; $("#outTitle").textContent = (busy ? "running: " : "last run: ") + outTitle; p.textContent = outText || "Nothing run yet. Pick a button on a unit."; p.scrollTop = p.scrollHeight; }
+
+const page = () => (location.hash || "#units").slice(1) || "units";
+function route() {
+  const p = page(); document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.p === p));
+  ({ units: viewUnits, analyzer: viewAnalyzer, doctor: viewDoctor, log: viewLog, roadmap: viewRoadmap }[p] || viewUnits)();
+}
+window.addEventListener("hashchange", route);
+
+/* ---- units ---- */
+function pills(files) { const c = { clean: 0, watch: 0, flag: 0 }; files.forEach(f => c[f.verdict] = (c[f.verdict] || 0) + 1); return ["clean", "watch", "flag"].filter(k => c[k]).map(k => '<span class="pill ' + k + '">' + c[k] + " " + k + "</span>").join(" ") || '<span class="pill none">no files</span>'; }
+function viewUnits() {
+  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Each unit is a firmware on its own FM-1. Run the checks here, look at the renders in the Analyzer, then flash. Only the unit you are flashing should be on USB, and any mirror tab should be closed.</p><div class="cards" id="cards"></div><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div>';
+  renderUnits(); updOut();
+}
+function renderUnits() {
+  const el = $("#cards"); if (!el) return;
+  if (!S) { el.innerHTML = '<div class="card">Waiting for the console server...</div>'; return; }
+  el.innerHTML = S.units.map(u => {
+    const r = u.render, files = r ? r.files : [], n = u.notes;
+    return '<section class="card" data-u="' + u.id + '"><h2>' + esc(u.name) + "<small>" + esc(u.hardware) + '</small></h2><div class="chips">' + u.engines.map(e => '<span class="chip">' + esc(e) + "</span>").join("") + "</div>" +
+      "<dl><dt>Simulator</dt><dd>" + (u.sim ? "built " + esc(u.sim) : "not built yet") + "</dd><dt>Package</dt><dd>" + (u.package ? esc(u.package.name) + " · " + esc(u.package.at) : "none built here") + "</dd>" +
+      "<dt>Renders</dt><dd>" + (r ? esc(r.stamp) + "<br>" + pills(files) : "none yet") + "</dd><dt>Latest build</dt><dd>" + (n ? esc(n.date) + " · " + esc(n.build) + '<br><span style="color:var(--dim);font-size:12px">' + esc(n.what) + "</span>" : "not in the flash log") + "</dd></dl>" +
+      '<div class="actions"><button data-run data-c="sim" title="' + NOTE.sim + '">Sim</button><button data-run data-c="render" title="' + NOTE.render + '">Render</button><button data-run data-c="report" title="' + NOTE.report + '">Report</button><button data-run data-c="up" data-a="--no-flash" title="' + NOTE.up + '">Check all</button><a href="#analyzer" data-an="' + u.id + '"><button>Analyzer</button></a><button class="primary" data-flash="' + u.id + '">Flash…</button></div><div data-confirm></div>' +
+      (files.length ? '<details><summary>Latest renders (' + files.length + ')</summary><div class="tw"><table><tr><th>file</th><th>TP</th><th>LUFS</th><th>clicks</th><th></th></tr>' + files.map(f => "<tr><td>" + esc(f.file) + "</td><td>" + f1(f.tp) + "</td><td>" + f1(f.lufs) + "</td><td>" + f.clicks + '</td><td><span class="pill ' + f.verdict + '">' + f.verdict + "</span></td></tr>").join("") + "</table></div></details>" : "") + "</section>";
+  }).join("");
+  setBusy(busy);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"), card = e.target.closest("[data-u]");
+  if (b && b.dataset.c && card) run(b.dataset.c, card.dataset.u, b.dataset.a ? [b.dataset.a] : []);
+  else if (b && b.dataset.flash) { const c = card.querySelector("[data-confirm]"); c.innerHTML = '<div class="confirm"><span>Flash <b>' + esc(S.units.find(u => u.id === b.dataset.flash).name) + '</b> now? Only this unit on USB, mirror tabs closed.</span><button class="danger" data-go="' + b.dataset.flash + '">Flash it</button><button data-no>Cancel</button></div>'; }
+  else if (b && b.dataset.go) { card.querySelector("[data-confirm]").innerHTML = ""; run("up", b.dataset.go, []); }
+  else if (b && "no" in b.dataset) card.querySelector("[data-confirm]").innerHTML = "";
+  else if (e.target.closest("[data-an]")) anUnits = e.target.closest("[data-an]").dataset.an;
+});
+/* ---- analyzer, inside the console ---- */
+let anUnits = "all";
+function viewAnalyzer() {
+  const ids = S ? S.units.map(u => u.id) : [];
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Analyzer</h1><label>Show <select id="anSel"><option value="all">all units</option>' + ids.map(i => '<option value="' + i + '">' + esc(S.units.find(u => u.id === i).short) + " only</option>").join("") + '</select></label><button id="anReload">Reload renders</button><a href="/analyzer/" target="_blank" rel="noopener"><button>Open on its own</button></a></div><iframe class="frame" id="anFrame" title="SFA Analyzer"></iframe>';
+  const sel = $("#anSel"); sel.value = anUnits; const load = () => { anUnits = sel.value; $("#anFrame").src = "/analyzer/?manifest=" + encodeURIComponent("/api/manifest?units=" + (anUnits === "all" ? ids.join(",") : anUnits)); };
+  sel.onchange = load; $("#anReload").onclick = load; load();
+}
+/* ---- doctor ---- */
+async function viewDoctor() {
+  $("#main").innerHTML = '<h1>Doctor</h1><p class="lede">What this machine has, and what each step needs.</p><div class="card" id="docBox" style="padding:0">Checking...</div>';
+  try { const rows = await (await api("/api/doctor")).json(); $("#docBox").innerHTML = rows.map(r => '<div class="chk"><span class="n ' + (r.ok ? "ok" : "miss") + '">' + (r.ok ? "ok" : "miss") + '</span><span class="n">' + esc(r.name) + "</span><span></span><span class=\"d\">" + esc(r.detail) + "</span>" + (!r.ok && r.need ? '<span class="h">' + esc(r.need) + "</span>" : "") + "</div>").join(""); }
+  catch (e) { $("#docBox").textContent = e.message; }
+}
+async function viewLog() {
+  $("#main").innerHTML = '<h1>Flash log</h1><p class="lede">docs/notes.md, newest at the bottom.</p><pre class="log" id="logBox">Loading...</pre>';
+  try { const t = await (await api("/api/log")).text(); const b = $("#logBox"); b.textContent = t.split("\n").slice(-120).join("\n"); b.scrollTop = b.scrollHeight; } catch (e) { $("#logBox").textContent = e.message; }
+}
+function viewRoadmap() {
+  const items = [["Done", "Units and recipes", "sfa/units.json holds every firmware. The console reads it, so the next one appears here with no code."], ["Done", "SFA Analyzer", "Spectrum, spectrogram, true peak, LUFS, stereo, click finder, A/B overlay. Drop in an MPC recording next to a render."], ["Done", "Console", "This page: sim, render, report, check and flash per unit, the analyzer, the doctor and the log."],
+    ["Next", "Preset browser", "Every Otter, Fox and Greys preset as a grid with its spectrum and level, so a harsh or quiet one is visible before it is chosen."], ["Next", "Engine template", "One folder to copy for a new engine: API stub, test script, render recipe, audit entry."], ["Next", "Sample lab", "Drop a WAV in, slice it, audition it against the engines, pack it for a unit."], ["Later", "Prototype target", "The portable SFA ONE engine in core/, built for a second platform behind this same console."]];
+  $("#main").innerHTML = '<h1>Roadmap</h1><p class="lede">What the console holds today and what goes in the rack next.</p><div class="plan">' + items.map(i => '<div class="card"><h2>' + i[1] + '<span class="pill ' + (i[0] === "Done" ? "clean" : i[0] === "Next" ? "watch" : "none") + '">' + i[0] + "</span></h2><p>" + i[2] + "</p></div>").join("") + "</div>";
+}
+(async () => { await refresh(); route(); setInterval(async () => { if (!busy) { await refresh(); if (page() === "units" && !document.querySelector(".confirm")) renderUnits(); } }, 15000); })();
+</script>
+</body>
+</html>
