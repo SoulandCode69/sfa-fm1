@@ -11,7 +11,7 @@ SHA="$(git submodule status base | awk '{print $1}' | tr -d '+-')"
 URL="$(git config -f .gitmodules submodule.base.url)"
 cd "$DST"
 [ -d .git ] || git init -q -b main
-if [ ! -e .gitmodules ]; then git submodule add -q "$URL" base; fi
+if [ ! -e .gitmodules ]; then git submodule add "$URL" base; fi
 git -C base fetch -q origin "$SHA" 2>/dev/null || true
 git -C base checkout -q "$SHA"
 echo "snapshot in $DST (base at $SHA). Next: git add -A && git commit && git push -u origin main"
