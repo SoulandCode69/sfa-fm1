@@ -1,0 +1,3 @@
+#!/bin/sh
+# the SFA console: tools/sfa doctor | sim | render | report | analyze | flash | up | publish   (see tools/sfa.py)
+exec python3 "$(dirname "$0")/sfa.py" "$@"

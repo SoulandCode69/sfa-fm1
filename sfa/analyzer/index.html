@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>SFA Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap">
+<style>
+/* Layout: a console. Files down the left, the picture (waveform, spectrogram, spectrum) in the middle, the numbers on the right.
+   Palette: ink with a violet cast, bone text, one hot "sin" red for the accent, teal / amber / violet / lime for overlays. */
+:root {
+  --bg: #f1eef3; --panel: #ffffff; --panel2: #e8e4ec; --rule: #cfc8d8; --fg: #1a1620; --dim: #6a6277;
+  --accent: #d1174a; --accent-fg: #ffffff; --good: #1f8a52; --warn: #b9770e; --bad: #c4162f;
+  --c1: #d1174a; --c2: #0f9c8c; --c3: #c27a00; --c4: #6d4fd6; --c5: #4c8f1c;
+  --plot: #fbf9fc; --grid: #ddd6e4; --wave: #3b3447;
+  --display: "Syne", "Arial Black", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
+  --c1: #ff3d6e; --c2: #38d6c4; --c3: #ffb347; --c4: #a78bfa; --c5: #8bd450;
+  --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
+  --c1: #ff3d6e; --c2: #38d6c4; --c3: #ffb347; --c4: #a78bfa; --c5: #8bd450;
+  --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 var(--body); min-height: 100vh;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 24px; }
+button, select, input { font: inherit; color: inherit; }
+button { background: var(--panel2); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button.on { border-color: var(--accent); color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible, .file:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select { background: var(--panel2); border: 1px solid var(--rule); border-radius: 4px; padding: 4px 6px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 0; border-bottom: 1px solid var(--rule); position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 5; }
+.mark { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+.mark svg { display: block; }
+.mark b { font: 800 19px/1 var(--display); letter-spacing: .02em; }
+.mark span { font: 500 11px/1 var(--mono); letter-spacing: .14em; color: var(--dim); text-transform: uppercase; }
+.sp { flex: 1 1 auto; }
+.ctl { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; }
+.readout { font: 500 12px/1.2 var(--mono); color: var(--dim); }
+.readout b { color: var(--fg); font-weight: 500; }
+
+.shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; margin-top: 14px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 64px; max-height: calc(100vh - 80px); }
+.drop { border: 1px dashed var(--dim); border-radius: 6px; padding: 14px 12px; text-align: center; color: var(--dim); cursor: pointer; background: var(--panel); }
+.drop.over { border-color: var(--accent); color: var(--accent); background: var(--panel2); }
+.drop b { display: block; color: var(--fg); font: 700 14px/1.2 var(--display); margin-bottom: 4px; }
+.files { overflow: auto; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
+.group { font: 500 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); padding: 8px 2px 2px; }
+.file { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 2px 8px; padding: 7px 8px; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; cursor: pointer; align-items: center; }
+.file.act { border-color: var(--accent); background: var(--panel2); }
+.file .chip { width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--c); background: transparent; cursor: pointer; padding: 0; }
+.file .chip.on { background: var(--c); }
+.file .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.file .sub { grid-column: 2 / 4; font: 400 11px/1.2 var(--mono); color: var(--dim); }
+.file .x { border: 0; background: none; padding: 0 2px; color: var(--dim); }
+.pill { font: 500 10px/1 var(--mono); letter-spacing: .08em; padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; text-transform: uppercase; }
+.pill.clean { color: var(--good); } .pill.watch { color: var(--warn); } .pill.flag { color: var(--bad); } .pill.busy { color: var(--dim); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; align-items: start; }
+.viz, .meters { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+.card h3 { margin: 0 0 8px; font: 500 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.card h3 .tools { display: flex; gap: 6px; align-items: center; letter-spacing: 0; text-transform: none; }
+.plot { position: relative; width: 100%; }
+.plot canvas { display: block; width: 100%; height: 100%; border-radius: 3px; touch-action: none; }
+#pWave { height: 120px; } #pSg { height: 250px; } #pSp { height: 300px; }
+#pGon { width: 100%; aspect-ratio: 1 / 1; max-width: 230px; margin: 0 auto; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 3px 7px; font: 500 11px/1.3 var(--mono); white-space: nowrap; z-index: 3; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.kv { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.kv label { font: 500 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.kv output { font: 500 17px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.kv small { font: 400 10px/1.2 var(--mono); color: var(--dim); }
+.ok { color: var(--good); } .wn { color: var(--warn); } .bd { color: var(--bad); }
+.reasons { margin: 8px 0 0; padding: 0; list-style: none; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.reasons li::before { content: "\25AA\00a0"; color: var(--dim); }
+.clicks { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; max-height: 84px; overflow: auto; }
+.clicks button { font: 500 11px/1 var(--mono); padding: 3px 6px; }
+.empty { color: var(--dim); text-align: center; padding: 38px 10px; font-size: 13px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font: 400 12px/1.3 var(--mono); font-variant-numeric: tabular-nums; }
+th, td { padding: 5px 8px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+th { font-weight: 500; color: var(--dim); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+th:first-child, td:first-child { text-align: left; }
+tr.act td { background: var(--panel2); }
+.status { color: var(--dim); font: 400 11px/1.3 var(--mono); }
+details > summary { cursor: pointer; font: 500 10px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.rules { color: var(--dim); font-size: 12px; margin: 8px 0 0; }
+
+@media (max-width: 1180px) { .stage { grid-template-columns: minmax(0, 1fr); } .meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } }
+@media (max-width: 760px) { .shell { grid-template-columns: minmax(0, 1fr); } .side { position: static; max-height: none; } .files { max-height: 240px; } header { position: static; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="mark">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="5" fill="var(--accent)"/><g fill="var(--accent-fg)"><rect x="5" y="15" width="3" height="10"/><rect x="10" y="8" width="3" height="17"/><rect x="15" y="12" width="3" height="13"/><rect x="20" y="5" width="3" height="20"/></g></svg>
+    <div><b>SFA</b> <span>Analyzer</span></div>
+  </div>
+  <button class="primary" id="bOpen">Open WAVs</button>
+  <input type="file" id="fIn" accept=".wav,audio/wav,audio/*" multiple hidden>
+  <button id="bPlay" title="Space">Play</button>
+  <button id="bLoop" title="Loop the selection">Loop</button>
+  <button id="bZoom" title="Z: zoom to the selection, F: fit">Zoom</button>
+  <button id="bFit">Fit</button>
+  <div class="readout" id="rdSel">no selection</div>
+  <span class="sp"></span>
+  <label class="ctl">Smooth <select id="sSmooth"><option value="0">off</option><option value="12">1/12 oct</option><option value="6" selected>1/6 oct</option><option value="3">1/3 oct</option></select></label>
+  <label class="ctl">Slope <select id="sTilt"><option value="0" selected>flat</option><option value="3">+3 dB/oct</option><option value="4.5">+4.5 dB/oct</option></select></label>
+  <label class="ctl">FFT <select id="sFft"><option>1024</option><option selected>2048</option><option>4096</option><option>8192</option></select></label>
+  <button id="bCsv" title="Download the comparison table">CSV</button>
+  <button id="bCopy" title="Copy a text report of the active file">Copy report</button>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Drop WAV files here or press Enter to browse"><b>Drop WAVs here</b>ECB, Alien Stack, or any 16 / 24 / 32-bit WAV</div>
+    <div class="files" id="files"></div>
+    <div class="status" id="status">Ready.</div>
+  </aside>
+
+  <main class="stage">
+    <section class="viz">
+      <div class="card"><h3><span id="tName">Waveform</span><span class="tools"><span class="readout" id="rdView"></span></span></h3><div class="plot" id="pWave"><canvas></canvas></div></div>
+      <div class="card"><h3><span>Spectrogram</span><span class="tools"><label class="ctl">Floor <select id="sFloor"><option value="-80">-80</option><option value="-100" selected>-100</option><option value="-120">-120</option></select> dB</label></span></h3><div class="plot" id="pSg"><canvas></canvas></div></div>
+      <div class="card"><h3><span>Spectrum <span id="spLegend" style="margin-left:10px"></span></span><span class="tools"><button id="bPeak" class="on">Peak hold</button></span></h3><div class="plot" id="pSp"><canvas></canvas></div></div>
+    </section>
+    <section class="meters">
+      <div class="card"><h3><span>Verdict</span><span class="pill busy" id="vPill">-</span></h3>
+        <ul class="reasons" id="vWhy"></ul><div class="clicks" id="vClicks"></div></div>
+      <div class="card"><h3><span>Levels</span></h3><div class="grid2" id="mLevels"></div></div>
+      <div class="card"><h3><span>Loudness</span><span class="tools" style="color:var(--dim)">BS.1770 / EBU R128</span></h3><div class="grid2" id="mLoud"></div></div>
+      <div class="card"><h3><span>Stereo</span></h3><canvas id="pGon" width="230" height="230"></canvas><div class="grid2" id="mStereo" style="margin-top:8px"></div></div>
+      <div class="card"><h3><span>Tone</span></h3><div class="grid2" id="mTone"></div></div>
+    </section>
+  </main>
+</div>
+
+<div class="card" style="margin-top:14px"><details open><summary>Compare table</summary>
+  <div class="tablewrap" style="margin-top:8px"><table id="tbl"></table></div>
+  <p class="rules" id="rulesTxt"></p></details></div>
+
+<script>
+"use strict";
+/* ---------- small helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const root = document.documentElement;
+const cssv = n => getComputedStyle(root).getPropertyValue(n).trim();
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const db = x => 20 * Math.log10(Math.max(x, 1e-9));
+const fmt = (v, d = 1) => (v === null || v === undefined || !isFinite(v)) ? (v === -Infinity ? "-inf" : "-") : (v < 0 ? "−" : "") + Math.abs(v).toFixed(d);
+const tick = () => new Promise(r => setTimeout(r, 0));
+const store = { get(k, d) { try { const v = localStorage.getItem("sfa." + k); return v === null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem("sfa." + k, v); } catch (e) {} } };
+const COLORS = ["--c1", "--c2", "--c3", "--c4", "--c5"];
+const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const noteOf = f => { const n = Math.round(69 + 12 * Math.log2(f / 440)); return NOTES[((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1); };
+const fmtT = s => { const m = Math.floor(s / 60); return (m ? m + ":" : "") + (s - m * 60).toFixed(m ? 2 : 3).padStart(m ? 5 : 1, "0"); };
+
+/* the rules a file is judged by (shown under the table) */
+const RULES = { clipRun: 0.9995, tpFlag: 0.0, tpWatch: -1.0, clicksFlag: 4, dcWatch: 0.005, clickK: 10, clickMin: 0.03, isolate: 4.5 };
+
+/* ---------- WAV decode: our own parser (16 / 24 / 32 PCM, float 32 / 64, extensible, 8-bit) ---------- */
+function parseWav(buf) {
+  const dv = new DataView(buf);
+  const tag = o => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+  if (buf.byteLength < 44 || (tag(0) !== "RIFF" && tag(0) !== "RF64") || tag(8) !== "WAVE") throw new Error("not a WAV file");
+  let o = 12, fmtc = null, data = null;
+  while (o + 8 <= buf.byteLength) {
+    const id = tag(o); let sz = dv.getUint32(o + 4, true); const b = o + 8;
+    if (id === "fmt ") {
+      let code = dv.getUint16(b, true); const ch = dv.getUint16(b + 2, true), sr = dv.getUint32(b + 4, true), bits = dv.getUint16(b + 14, true);
+      if (code === 0xFFFE && sz >= 26) code = dv.getUint16(b + 24, true);
+      fmtc = { code, ch, sr, bits };
+    } else if (id === "data") {
+      if (sz === 0 || sz === 0xFFFFFFFF || b + sz > buf.byteLength) sz = buf.byteLength - b;
+      data = { b, sz }; break;
+    }
+    o = b + sz + (sz & 1);
+  }
+  if (!fmtc || !data) throw new Error("missing fmt or data chunk");
+  const { code, ch, sr, bits } = fmtc, bps = bits >> 3, frames = Math.floor(data.sz / (bps * ch));
+  if (!(code === 1 || code === 3) || ch < 1 || ch > 8) throw new Error("unsupported WAV format (" + code + ", " + bits + " bit, " + ch + " ch)");
+  const chans = []; for (let c = 0; c < Math.min(ch, 2); c++) chans.push(new Float32Array(frames));
+  const take = Math.min(ch, 2);
+  for (let c = 0; c < take; c++) {
+    const out = chans[c]; let p = data.b + c * bps; const step = bps * ch;
+    if (code === 3 && bits === 32) for (let i = 0; i < frames; i++, p += step) out[i] = dv.getFloat32(p, true);
+    else if (code === 3 && bits === 64) for (let i = 0; i < frames; i++, p += step) out[i] = dv.getFloat64(p, true);
+    else if (bits === 16) for (let i = 0; i < frames; i++, p += step) out[i] = dv.getInt16(p, true) / 32768;
+    else if (bits === 24) for (let i = 0; i < frames; i++, p += step) { let v = dv.getUint8(p) | dv.getUint8(p + 1) << 8 | dv.getUint8(p + 2) << 16; if (v & 0x800000) v -= 0x1000000; out[i] = v / 8388608; }
+    else if (bits === 32) for (let i = 0; i < frames; i++, p += step) out[i] = dv.getInt32(p, true) / 2147483648;
+    else if (bits === 8) for (let i = 0; i < frames; i++, p += step) out[i] = (dv.getUint8(p) - 128) / 128;
+    else throw new Error("unsupported bit depth " + bits);
+  }
+  return { sr, ch: take, srcCh: ch, bits, n: frames, L: chans[0], R: chans[1] || chans[0], mono: take === 1 };
+}
+
+/* ---------- FFT ---------- */
+const fftCache = {};
+function getFFT(n) {
+  if (fftCache[n]) return fftCache[n];
+  const lv = Math.round(Math.log2(n)), rev = new Uint32Array(n), cs = new Float64Array(n / 2), sn = new Float64Array(n / 2), win = new Float64Array(n);
+  for (let i = 0; i < n; i++) { rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (lv - 1)); win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / n); }
+  for (let i = 0; i < n / 2; i++) { cs[i] = Math.cos(2 * Math.PI * i / n); sn[i] = Math.sin(2 * Math.PI * i / n); }
+  let ws = 0; for (let i = 0; i < n; i++) ws += win[i];
+  const run = (re, im) => {
+    for (let i = 0; i < n; i++) { const j = rev[i]; if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (let size = 2; size <= n; size <<= 1) {
+      const half = size >> 1, step = n / size;
+      for (let i = 0; i < n; i += size) for (let j = 0, k = 0; j < half; j++, k += step) {
+        const a = i + j, b = a + half, wr = cs[k], wi = -sn[k], xr = re[b] * wr - im[b] * wi, xi = re[b] * wi + im[b] * wr;
+        re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+      }
+    }
+  };
+  return fftCache[n] = { n, run, win, norm: 2 / ws, re: new Float64Array(n), im: new Float64Array(n) };
+}
+/* amplitude-normalised power per bin (a full-scale sine reads 0 dBFS), averaged and peak-held over a range */
+function welch(chs, i0, i1, N, wantPeak) {
+  const F = getFFT(N), bins = N / 2, avg = new Float64Array(bins), pk = new Float64Array(bins), hop = N / 2;
+  let count = 0;
+  const len = i1 - i0, starts = [];
+  if (len < N) starts.push(i0); else for (let s = i0; s + N <= i1; s += hop) starts.push(s);
+  const maxFrames = 1600, stride = Math.max(1, Math.ceil(starts.length / maxFrames));
+  for (let k = 0; k < starts.length; k += stride) {
+    const s = starts[k];
+    for (const x of chs) {
+      for (let i = 0; i < N; i++) { const idx = s + i; F.re[i] = idx < i1 ? x[idx] * F.win[i] : 0; F.im[i] = 0; }
+      F.run(F.re, F.im);
+      for (let b = 0; b < bins; b++) { const p = (F.re[b] * F.re[b] + F.im[b] * F.im[b]) * F.norm * F.norm; avg[b] += p; if (wantPeak && p > pk[b]) pk[b] = p; }
+      count++;
+    }
+  }
+  for (let b = 0; b < bins; b++) avg[b] /= Math.max(1, count);
+  return { avg, pk, N, bins };
+}
+
+/* ---------- metrics ---------- */
+function biquad(x, b0, b1, b2, a1, a2) {
+  const y = new Float32Array(x.length); let z1 = 0, z2 = 0;
+  for (let i = 0; i < x.length; i++) { const v = x[i], o = b0 * v + z1; z1 = b1 * v - a1 * o + z2; z2 = b2 * v - a2 * o; y[i] = o; }
+  return y;
+}
+function kWeight(x, sr) {
+  let f0 = 1681.974450955533, G = 3.999843853973347, Q = 0.7071752369554196, K = Math.tan(Math.PI * f0 / sr);
+  const Vh = Math.pow(10, G / 20), Vb = Math.pow(Vh, 0.4996667741545416), a0 = 1 + K / Q + K * K;
+  let y = biquad(x, (Vh + Vb * K / Q + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q + K * K) / a0, 2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0);
+  f0 = 38.13547087602444; Q = 0.5003270373238773; K = Math.tan(Math.PI * f0 / sr);
+  const d = 1 + K / Q + K * K;
+  return biquad(y, 1, -2, 1, 2 * (K * K - 1) / d, (1 - K / Q + K * K) / d);
+}
+function loudness(f) {
+  const sb = Math.max(1, Math.round(0.1 * f.sr)), nsb = Math.floor(f.n / sb);
+  const out = { I: -Infinity, M: -Infinity, S: -Infinity, LRA: null };
+  if (nsb < 4) return out;
+  const E = new Float64Array(nsb), chs = f.mono ? [f.L, f.L] : [f.L, f.R];
+  for (const x of chs) { const k = kWeight(x, f.sr); for (let j = 0; j < nsb; j++) { let s = 0; for (let i = j * sb, e = i + sb; i < e; i++) s += k[i] * k[i]; E[j] += s / sb; } }
+  const lu = e => -0.691 + 10 * Math.log10(e);
+  const mom = [], st = [];
+  for (let j = 3; j < nsb; j++) mom.push((E[j] + E[j - 1] + E[j - 2] + E[j - 3]) / 4);
+  for (let j = 29; j < nsb; j++) { let s = 0; for (let i = j - 29; i <= j; i++) s += E[i]; st.push(s / 30); }
+  out.M = mom.length ? lu(Math.max(...mom)) : -Infinity;
+  out.S = st.length ? lu(Math.max(...st)) : null;
+  const g1 = mom.filter(e => lu(e) > -70);
+  if (g1.length) { const rel = lu(g1.reduce((a, b) => a + b, 0) / g1.length) - 10, g2 = g1.filter(e => lu(e) > rel); if (g2.length) out.I = lu(g2.reduce((a, b) => a + b, 0) / g2.length); }
+  const s1 = st.filter(e => lu(e) > -70);
+  if (s1.length > 2) { const rel = lu(s1.reduce((a, b) => a + b, 0) / s1.length) - 20, v = s1.filter(e => lu(e) > rel).map(lu).sort((a, b) => a - b); if (v.length > 2) out.LRA = v[Math.floor(0.95 * (v.length - 1))] - v[Math.floor(0.10 * (v.length - 1))]; }
+  return out;
+}
+const TP_W = (() => { const W = []; for (let p = 1; p < 4; p++) { const w = new Float64Array(12); for (let k = -5; k <= 6; k++) { const t = k - p / 4, s = Math.abs(t) < 1e-9 ? 1 : Math.sin(Math.PI * t) / (Math.PI * t); w[k + 5] = s * 0.5 * (1 + Math.cos(Math.PI * t / 6)); } W.push(w); } return W; })();
+function truePeak(x) {
+  let pk = 0; const n = x.length;
+  for (let i = 5; i < n - 6; i++) {
+    if (Math.abs(x[i]) < pk * 0.5 && Math.abs(x[i + 1]) < pk * 0.5) continue;      // cheap skip: far below the running peak
+    for (let p = 0; p < 3; p++) { const w = TP_W[p]; let s = 0; for (let k = 0; k < 12; k++) s += x[i - 5 + k] * w[k]; if (Math.abs(s) > pk) pk = Math.abs(s); }
+    if (Math.abs(x[i]) > pk) pk = Math.abs(x[i]);
+  }
+  return pk;
+}
+/* a click: a step that is large against the signal around it, in a signal that was already sounding (not a note starting from silence) */
+function findClicks(x, sr, k, minAbs) {
+  const n = x.length, S = new Float64Array(n + 1);
+  for (let i = 1; i < n; i++) S[i + 1] = S[i] + Math.abs(x[i] - x[i - 1]);
+  const W = 64, ev = [];
+  for (let i = W + 2; i < n - W - 30; i++) {
+    const d = Math.abs(x[i] - x[i - 1]);
+    if (d < minAbs) continue;
+    const ref = (S[i + W] - S[i - W] - (Math.abs(x[i] - x[i - 1]) + Math.abs(x[i + 1] - x[i]) + Math.abs(x[i - 1] - x[i - 2]))) / (2 * W - 3);
+    if (d < k * ref) continue;
+    const sg = x[i] - x[i - 1]; let nb = 0;
+    for (let j = i - 40; j <= i + 40; j++) { if (j === i) continue; const q = x[j] - x[j - 1]; if (j === i + 1 && q * sg < 0 && Math.abs(q) > 0.5 * d) continue; if (Math.abs(q) > nb) nb = Math.abs(q); }
+    if (d < RULES.isolate * nb) continue;                                           // a drum attack is busy all round it; a click stands alone (a one-sample spike's return step is part of it)
+    let pre = 0; const pw = Math.round(sr * 0.002); for (let j = Math.max(0, i - 3 - pw); j < i - 3; j++) pre += Math.abs(x[j]);
+    pre /= pw; if (pre < 0.0005) continue;                                         // from silence: an attack, not a click
+    if (ev.length && i - ev[ev.length - 1].i < sr * 0.005) { if (d > ev[ev.length - 1].d) ev[ev.length - 1] = { i, d }; } else ev.push({ i, d });
+  }
+  return ev;
+}
+function stereoStats(f) {
+  if (f.mono) return { corr: 1, corrMin: 1, width: 0, bal: 0 };
+  const L = f.L, R = f.R, n = f.n; let sl = 0, sr_ = 0, slr = 0, m = 0, s = 0;
+  const win = Math.round(0.1 * f.sr); let wl = 0, wr = 0, wlr = 0, cm = 1, c = 0;
+  for (let i = 0; i < n; i++) {
+    const l = L[i], r = R[i]; sl += l * l; sr_ += r * r; slr += l * r; const mm = (l + r) / 2, ss = (l - r) / 2; m += mm * mm; s += ss * ss;
+    wl += l * l; wr += r * r; wlr += l * r;
+    if (++c === win) { if (wl > 1e-8 && wr > 1e-8) cm = Math.min(cm, wlr / Math.sqrt(wl * wr)); wl = wr = wlr = 0; c = 0; }
+  }
+  return { corr: sl > 0 && sr_ > 0 ? slr / Math.sqrt(sl * sr_) : 1, corrMin: cm, width: m + s > 0 ? s / (m + s) : 0, bal: 10 * Math.log10((sl + 1e-12) / (sr_ + 1e-12)) };
+}
+async function analyze(f, say) {
+  const m = {}; say("levels"); await tick();
+  const chs = f.mono ? [f.L] : [f.L, f.R];
+  m.peak = chs.map(x => { let p = 0; for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > p) p = a; } return p; });
+  m.peakDb = db(Math.max(...m.peak));
+  let ss = 0, cl = 0, dc = 0;
+  for (const x of chs) { let mean = 0; for (let i = 0; i < x.length; i++) { ss += x[i] * x[i]; mean += x[i]; if (Math.abs(x[i]) >= RULES.clipRun) cl++; } dc = Math.max(dc, Math.abs(mean / x.length)); }
+  m.rmsDb = db(Math.sqrt(ss / (f.n * chs.length))); m.crest = m.peakDb - m.rmsDb; m.clips = cl; m.dc = dc;
+  say("true peak"); await tick();
+  m.tpDb = db(Math.max(...chs.map(truePeak)));
+  say("loudness"); await tick();
+  m.loud = loudness(f);
+  say("stereo"); await tick();
+  m.st = stereoStats(f);
+  say("clicks"); await tick();
+  m.clickEv = []; chs.forEach(x => findClicks(x, f.sr, RULES.clickK, RULES.clickMin).forEach(e => m.clickEv.push({ t: e.i / f.sr, d: db(e.d) })));
+  m.clickEv.sort((a, b) => a.t - b.t); m.clickEv = m.clickEv.filter((e, i, a) => !i || e.t - a[i - 1].t > 0.005);
+  say("tone"); await tick();
+  const sp = welch(chs, 0, f.n, 4096, false), nyq = f.sr / 2; let tot = 0, hf = 0, cen = 0;
+  for (let b = 1; b < sp.bins; b++) { const fr = b * nyq / sp.bins, p = sp.avg[b]; tot += p; cen += fr * p; if (fr > 5000) hf += p; }
+  let acc = 0, roll = nyq; for (let b = 1; b < sp.bins; b++) { acc += sp.avg[b]; if (acc >= 0.95 * tot) { roll = b * nyq / sp.bins; break; } }
+  m.hf = tot > 0 ? hf / tot : 0; m.centroid = tot > 0 ? cen / tot : 0; m.rolloff = roll;
+  /* verdict */
+  const why = []; let lvl = 0; const bump = (l, t) => { lvl = Math.max(lvl, l); why.push([l, t]); };
+  if (m.clips > 0) bump(2, m.clips + " sample" + (m.clips > 1 ? "s" : "") + " at full scale");
+  if (m.tpDb > RULES.tpFlag) bump(2, "true peak " + fmt(m.tpDb) + " dBTP is over 0");
+  else if (m.tpDb > RULES.tpWatch) bump(1, "true peak " + fmt(m.tpDb) + " dBTP (under 1 dB of headroom)");
+  if (m.clickEv.length >= RULES.clicksFlag) bump(2, m.clickEv.length + " clicks found");
+  else if (m.clickEv.length) bump(1, m.clickEv.length + " possible click" + (m.clickEv.length > 1 ? "s" : ""));
+  if (m.dc > RULES.dcWatch) bump(1, "DC offset " + (m.dc * 100).toFixed(2) + " %");
+  if (m.st.corrMin < -0.3) bump(1, "stereo phase dips to " + m.st.corrMin.toFixed(2));
+  if (!why.length) why.push([0, "no clipping, no clicks, headroom ok"]);
+  m.verdict = ["clean", "watch", "flag"][lvl]; m.why = why;
+  return m;
+}
+
+/* ---------- state ---------- */
+const S = { files: [], act: -1, sel: null, view: null, smooth: +store.get("smooth", 6), tilt: +store.get("tilt", 0), fft: +store.get("fft", 2048), floor: +store.get("floor", -100), peak: store.get("peak", "1") === "1", loop: false, hover: null,
+  play: { ctx: null, src: null, t0: 0, off: 0, on: false, head: 0 }, sortBy: null, sortDir: 1 };
+let uid = 0;
+const act = () => S.files[S.act] || null;
+const say = t => { $("#status").textContent = t; };
+
+/* ---------- loading ---------- */
+async function addBuffer(name, buf, group) {
+  try {
+    const w = parseWav(buf);
+    const f = Object.assign(w, { id: ++uid, name, group: group || "", dur: w.n / w.sr, m: null, color: COLORS[S.files.length % COLORS.length], show: false, sg: {}, buf: null });
+    S.files.push(f); if (S.act < 0) S.act = 0;
+    render();
+    f.pending = true; renderFiles();
+    f.m = await analyze(f, s => say(name + ": " + s + "..."));
+    f.pending = false; say("Analysed " + name + "."); render();
+  } catch (e) { say(name + ": " + e.message); }
+}
+async function addFiles(list) {
+  const arr = Array.from(list).filter(f => /\.wav$/i.test(f.name) || /wav/.test(f.type));
+  if (!arr.length) { say("Those are not WAV files."); return; }
+  for (const f of arr) { const b = await f.arrayBuffer(); await addBuffer(f.name, b, f.webkitRelativePath ? f.webkitRelativePath.split("/")[0] : ""); if (S.files.length === 1 || S.act < 0) selectFile(S.files.length - 1); }
+}
+async function loadManifest(url) {
+  try {
+    const r = await fetch(url); if (!r.ok) return false; const mf = await r.json(), base = new URL(url, location.href);
+    say("Loading " + (mf.title || "renders") + "...");
+    for (const it of mf.files) { const rr = await fetch(new URL(it.path, base)); if (!rr.ok) continue; await addBuffer(it.name || it.path.split("/").pop(), await rr.arrayBuffer(), it.group || mf.unit || ""); }
+    selectFile(0); return true;
+  } catch (e) { return false; }
+}
+function selectFile(i) { S.act = clamp(i, 0, S.files.length - 1); S.sel = null; S.view = null; stopPlay(); render(); }
+
+/* ---------- drawing: shared plot rect ---------- */
+const ML = 44, MR = 10;
+function setup(host, h) {
+  const cv = $("canvas", host), dpr = window.devicePixelRatio || 1, w = host.clientWidth, hh = h || host.clientHeight;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(hh * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr); }
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); return { c, w, h: hh, cv };
+}
+const vRange = f => S.view || [0, f.dur];
+const tX = (t, f, w) => ML + (t - vRange(f)[0]) / (vRange(f)[1] - vRange(f)[0]) * (w - ML - MR);
+const xT = (x, f, w) => vRange(f)[0] + (x - ML) / (w - ML - MR) * (vRange(f)[1] - vRange(f)[0]);
+function timeAxis(c, f, w, h, grid) {
+  const [a, b] = vRange(f), span = b - a, steps = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300];
+  let st = steps.find(s => span / s <= (w - ML) / 80) || 300;
+  c.font = "11px " + cssv("--mono"); c.fillStyle = cssv("--dim"); c.textAlign = "center"; c.strokeStyle = cssv("--grid"); c.lineWidth = 1;
+  for (let t = Math.ceil(a / st) * st; t <= b + 1e-9; t += st) { const x = Math.round(tX(t, f, w)) + .5; if (grid) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h - 14); c.stroke(); } c.fillText(span < 2 ? t.toFixed(3) : span < 20 ? t.toFixed(1) : fmtT(t), x, h - 3); }
+}
+function overlays(c, f, w, h, bottom) {
+  if (S.sel) { const x0 = tX(S.sel[0], f, w), x1 = tX(S.sel[1], f, w); c.fillStyle = cssv("--accent"); c.globalAlpha = .16; c.fillRect(x0, 0, x1 - x0, bottom); c.globalAlpha = 1; c.fillStyle = cssv("--accent"); c.fillRect(x0, 0, 1, bottom); c.fillRect(x1, 0, 1, bottom); }
+  if (S.play.on || S.play.head > 0) { const x = tX(S.play.head, f, w); if (x >= ML && x <= w - MR) { c.fillStyle = cssv("--fg"); c.fillRect(Math.round(x), 0, 1, bottom); } }
+}
+function drawWave() {
+  const host = $("#pWave"), f = act(), { c, w, h } = setup(host); c.fillStyle = cssv("--plot"); c.fillRect(0, 0, w, h);
+  if (!f) { c.fillStyle = cssv("--dim"); c.font = "13px " + cssv("--body"); c.textAlign = "center"; c.fillText("Drop a WAV to begin", w / 2, h / 2); return; }
+  const lanes = f.mono ? 1 : 2, top = 4, bot = h - 16, lh = (bot - top) / lanes, [t0, t1] = vRange(f), s0 = Math.floor(t0 * f.sr), s1 = Math.min(f.n, Math.ceil(t1 * f.sr)), pw = w - ML - MR;
+  timeAxis(c, f, w, h, true);
+  for (let l = 0; l < lanes; l++) {
+    const x = l ? f.R : f.L, mid = top + lh * (l + .5);
+    c.strokeStyle = cssv("--grid"); c.beginPath(); c.moveTo(ML, Math.round(mid) + .5); c.lineTo(w - MR, Math.round(mid) + .5); c.stroke();
+    c.fillStyle = cssv("--wave");
+    for (let px = 0; px < pw; px++) {
+      const a = s0 + Math.floor(px / pw * (s1 - s0)), b = Math.max(a + 1, s0 + Math.floor((px + 1) / pw * (s1 - s0))); let mn = 1, mx = -1;
+      const st = Math.max(1, Math.floor((b - a) / 64));
+      for (let i = a; i < b; i += st) { const v = x[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+      if (mn > mx) continue; const y0 = mid - mx * lh * .5, y1 = mid - mn * lh * .5; c.fillRect(ML + px, y0, 1, Math.max(1, y1 - y0));
+    }
+    c.fillStyle = cssv("--dim"); c.font = "10px " + cssv("--mono"); c.textAlign = "right"; c.fillText(f.mono ? "M" : l ? "R" : "L", ML - 6, mid + 3);
+  }
+  if (f.m) {
+    c.fillStyle = cssv("--bad");
+    for (const e of f.m.clickEv) { if (e.t < t0 || e.t > t1) continue; const x = tX(e.t, f, w); c.beginPath(); c.moveTo(x - 4, 0); c.lineTo(x + 4, 0); c.lineTo(x, 8); c.fill(); c.fillRect(Math.round(x), 0, 1, bot); }
+  }
+  overlays(c, f, w, h, bot);
+}
+const PAL = (() => { const stops = [[0, 7, 6, 11], [.18, 29, 17, 70], [.38, 90, 26, 116], [.58, 194, 37, 122], [.78, 255, 106, 61], [.92, 255, 196, 107], [1, 255, 244, 220]], lut = new Uint8ClampedArray(256 * 3);
+  for (let i = 0; i < 256; i++) { const v = i / 255; let k = 0; while (k < stops.length - 2 && v > stops[k + 1][0]) k++; const a = stops[k], b = stops[k + 1], u = (v - a[0]) / (b[0] - a[0]); for (let j = 0; j < 3; j++) lut[i * 3 + j] = a[j + 1] + (b[j + 1] - a[j + 1]) * u; } return lut; })();
+function getSg(f, N) {
+  if (f.sg[N]) return f.sg[N];
+  const F = getFFT(N), bins = N / 2, hop = Math.max(N / 4, Math.ceil(f.n / 2200)), frames = Math.max(1, Math.floor((f.n - N) / hop) + 1), data = new Float32Array(frames * bins);
+  for (let k = 0; k < frames; k++) {
+    const s = k * hop;
+    for (let i = 0; i < N; i++) { const j = s + i; F.re[i] = j < f.n ? (f.mono ? f.L[j] : (f.L[j] + f.R[j]) * .5) * F.win[i] : 0; F.im[i] = 0; }
+    F.run(F.re, F.im);
+    for (let b = 0; b < bins; b++) data[k * bins + b] = 10 * Math.log10((F.re[b] * F.re[b] + F.im[b] * F.im[b]) * F.norm * F.norm + 1e-14);
+  }
+  return f.sg[N] = { data, bins, hop, frames, N };
+}
+const FMIN = 20, fX = (fr, w) => ML + Math.log(fr / FMIN) / Math.log(20000 / FMIN) * (w - ML - MR);
+function sgImage(f, g, pw, ph, floor) {
+  const [t0, t1] = vRange(f), key = [f.id, g.N, pw, ph, floor, t0, t1].join(":");
+  if (f.sgImg && f.sgImg.key === key) return f.sgImg.cv;
+  const nyq = f.sr / 2, cv = document.createElement("canvas"); cv.width = pw; cv.height = ph;
+  const cx = cv.getContext("2d"), img = cx.createImageData(pw, ph), ceil = -10, fmax = Math.min(20000, nyq), lo = new Float32Array(ph), hi = new Float32Array(ph);
+  for (let y = 0; y < ph; y++) { const f0 = FMIN * Math.pow(fmax / FMIN, 1 - (y + 1) / ph), f1 = FMIN * Math.pow(fmax / FMIN, 1 - y / ph); lo[y] = f0 / nyq * g.bins; hi[y] = f1 / nyq * g.bins; }
+  for (let x = 0; x < pw; x++) {
+    const t = t0 + (x + .5) / pw * (t1 - t0), k = clamp(Math.round((t * f.sr - g.N / 2) / g.hop), 0, g.frames - 1), base = k * g.bins;
+    for (let y = 0; y < ph; y++) {
+      let v; const a = lo[y], b = hi[y];
+      if (b - a < 1) { const p = (a + b) / 2 - .5, i = clamp(Math.floor(p), 0, g.bins - 2), u = clamp(p - i, 0, 1); v = g.data[base + i] * (1 - u) + g.data[base + i + 1] * u; }
+      else { v = -200; for (let i = Math.floor(a); i <= Math.min(g.bins - 1, Math.floor(b)); i++) if (g.data[base + i] > v) v = g.data[base + i]; }
+      const q = Math.round(clamp((v - floor) / (ceil - floor), 0, 1) * 255) * 3, o = (y * pw + x) * 4;
+      img.data[o] = PAL[q]; img.data[o + 1] = PAL[q + 1]; img.data[o + 2] = PAL[q + 2]; img.data[o + 3] = 255;
+    }
+  }
+  cx.putImageData(img, 0, 0); f.sgImg = { key, cv }; return cv;
+}
+function drawSg() {
+  const host = $("#pSg"), f = act(), { c, w, h } = setup(host); c.fillStyle = cssv("--plot"); c.fillRect(0, 0, w, h);
+  if (!f) return;
+  const g = getSg(f, S.fft), top = 4, bot = h - 16, ph = bot - top, pw = w - ML - MR, fmax = Math.min(20000, f.sr / 2);
+  c.imageSmoothingEnabled = true; c.drawImage(sgImage(f, g, Math.round(pw), Math.round(ph), S.floor), ML, top, pw, ph);
+  c.fillStyle = cssv("--dim"); c.font = "10px " + cssv("--mono"); c.textAlign = "right"; c.strokeStyle = "rgba(255,255,255,.18)";
+  for (const fr of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) { const y = top + ph * (1 - Math.log(fr / FMIN) / Math.log(fmax / FMIN)); c.beginPath(); c.moveTo(ML, Math.round(y) + .5); c.lineTo(ML + 6, Math.round(y) + .5); c.stroke(); c.fillText(fr >= 1000 ? fr / 1000 + "k" : fr, ML - 6, y + 3); }
+  timeAxis(c, f, w, h, false); overlays(c, f, w, h, bot);
+}
+
+/* spectrum */
+let spCache = null;
+function spectra() {
+  const out = []; const N = 8192;
+  for (const f of S.files) {
+    if (!f.show && f !== act()) continue;
+    const i0 = f === act() && S.sel ? Math.floor(S.sel[0] * f.sr) : 0, i1 = f === act() && S.sel ? Math.floor(S.sel[1] * f.sr) : f.n, key = f.id + ":" + i0 + ":" + i1 + ":" + N;
+    f.spc = f.spc || {};
+    if (!f.spc[key]) { f.spc = {}; f.spc[key] = welch(f.mono ? [f.L] : [f.L, f.R], i0, Math.max(i1, i0 + 16), N, true); }
+    out.push({ f, sp: f.spc[key] });
+  }
+  return out;
+}
+function curve(sp, f, pw, usePeak) {
+  const nyq = f.sr / 2, pwr = usePeak ? sp.pk : sp.avg, ppo = pw / Math.log2(20000 / FMIN), out = new Float64Array(pw);
+  for (let x = 0; x < pw; x++) {
+    const f0 = FMIN * Math.pow(20000 / FMIN, (x - .5) / pw), f1 = FMIN * Math.pow(20000 / FMIN, (x + .5) / pw), b0 = f0 / nyq * sp.bins, b1 = f1 / nyq * sp.bins;
+    let p;
+    if (b1 - b0 < 1) { const q = (b0 + b1) / 2, i = clamp(Math.floor(q), 0, sp.bins - 2), u = clamp(q - i, 0, 1); p = pwr[i] * (1 - u) + pwr[i + 1] * u; }
+    else if (usePeak) { p = 0; for (let i = Math.floor(b0); i <= Math.min(sp.bins - 1, Math.floor(b1)); i++) if (pwr[i] > p) p = pwr[i]; }
+    else { let s = 0, n = 0; for (let i = Math.floor(b0); i <= Math.min(sp.bins - 1, Math.floor(b1)); i++) { s += pwr[i]; n++; } p = s / Math.max(1, n); }
+    out[x] = p;
+  }
+  if (S.smooth) {                                                                  /* fractional-octave smoothing in the power domain */
+    const half = Math.max(0, Math.round(ppo / S.smooth / 2)), P = new Float64Array(pw + 1); for (let x = 0; x < pw; x++) P[x + 1] = P[x] + out[x];
+    for (let x = 0; x < pw; x++) { const a = Math.max(0, x - half), b = Math.min(pw, x + half + 1); out[x] = (P[b] - P[a]) / (b - a); }
+  }
+  for (let x = 0; x < pw; x++) { const fr = FMIN * Math.pow(20000 / FMIN, x / pw); out[x] = 10 * Math.log10(out[x] + 1e-14) + (S.tilt ? S.tilt * Math.log2(fr / 1000) : 0); }
+  return out;
+}
+const DBMAX = 0, DBMIN = -110;
+function drawSp() {
+  const host = $("#pSp"), { c, w, h } = setup(host); c.fillStyle = cssv("--plot"); c.fillRect(0, 0, w, h);
+  const top = 6, bot = h - 18, ph = bot - top, pw = w - ML - MR, yD = d => top + (DBMAX - d) / (DBMAX - DBMIN) * ph;
+  c.font = "10px " + cssv("--mono"); c.strokeStyle = cssv("--grid"); c.fillStyle = cssv("--dim"); c.lineWidth = 1; c.textAlign = "right";
+  for (let d = DBMAX; d >= DBMIN; d -= 10) { const y = Math.round(yD(d)) + .5; c.beginPath(); c.moveTo(ML, y); c.lineTo(w - MR, y); c.stroke(); c.fillText(d, ML - 6, y + 3); }
+  c.textAlign = "center";
+  for (const fr of [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]) { const x = Math.round(fX(fr, w)) + .5; c.beginPath(); c.moveTo(x, top); c.lineTo(x, bot); c.stroke(); c.fillText(fr >= 1000 ? fr / 1000 + "k" : fr, x, h - 4); }
+  const list = spectra(); const lg = [];
+  S.curves = [];
+  for (const { f, sp } of list) {
+    const col = cssv(f.color), mid = curve(sp, f, pw, false), peak = S.peak ? curve(sp, f, pw, true) : null;
+    S.curves.push({ f, mid });
+    if (peak) { c.strokeStyle = col; c.globalAlpha = .35; c.lineWidth = 1; c.beginPath(); for (let x = 0; x < pw; x++) { const y = clamp(yD(peak[x]), top, bot); x ? c.lineTo(ML + x, y) : c.moveTo(ML + x, y); } c.stroke(); c.globalAlpha = 1; }
+    c.beginPath(); c.moveTo(ML, bot); for (let x = 0; x < pw; x++) c.lineTo(ML + x, clamp(yD(mid[x]), top, bot)); c.lineTo(ML + pw, bot); c.closePath(); c.globalAlpha = f === act() ? .18 : .07; c.fillStyle = col; c.fill(); c.globalAlpha = 1;
+    c.strokeStyle = col; c.lineWidth = f === act() ? 2 : 1.4; c.beginPath(); for (let x = 0; x < pw; x++) { const y = clamp(yD(mid[x]), top, bot); x ? c.lineTo(ML + x, y) : c.moveTo(ML + x, y); } c.stroke();
+    lg.push('<span style="color:' + col.replace(/"/g, "") + '">■</span> ' + esc(f.name));
+  }
+  $("#spLegend").innerHTML = '<span class="readout">' + (lg.join("&nbsp;&nbsp; ") || "") + "</span>";
+  if (S.hover && S.hover.x >= ML && S.hover.x <= w - MR) {
+    const x = S.hover.x, fr = FMIN * Math.pow(20000 / FMIN, (x - ML) / pw); c.strokeStyle = cssv("--fg"); c.globalAlpha = .4; c.beginPath(); c.moveTo(Math.round(x) + .5, top); c.lineTo(Math.round(x) + .5, bot); c.stroke(); c.globalAlpha = 1;
+    const a = S.curves.find(q => q.f === act()); let txt = (fr >= 1000 ? (fr / 1000).toFixed(2) + " kHz" : fr.toFixed(0) + " Hz") + "  " + noteOf(fr);
+    if (a) txt += "  " + a.mid[clamp(Math.round(x - ML), 0, pw - 1)].toFixed(1) + " dB";
+    const t = $("#tipSp"); t.textContent = txt; t.hidden = false; t.style.left = clamp(x + 10, 0, w - 170) + "px"; t.style.top = "6px";
+  } else $("#tipSp").hidden = true;
+}
+function drawGon() {
+  const cv = $("#pGon"), dpr = window.devicePixelRatio || 1, W = Math.min(230, cv.parentElement.clientWidth - 24), size = Math.max(120, W);
+  cv.style.width = size + "px"; cv.style.height = size + "px"; cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = cssv("--plot"); c.fillRect(0, 0, size, size);
+  const cx = size / 2, r = size / 2 - 10; c.strokeStyle = cssv("--grid"); c.lineWidth = 1; c.beginPath(); c.arc(cx, cx, r, 0, 7); c.stroke(); c.beginPath(); c.moveTo(cx, cx - r); c.lineTo(cx, cx + r); c.moveTo(cx - r, cx); c.lineTo(cx + r, cx); c.stroke();
+  c.fillStyle = cssv("--dim"); c.font = "10px " + cssv("--mono"); c.textAlign = "center"; c.fillText("M", cx, 10); c.fillText("L", cx - r * .72 - 4, cx - r * .72 + 2); c.fillText("R", cx + r * .72 + 4, cx - r * .72 + 2);
+  const f = act(); if (!f) return;
+  const i0 = S.sel ? Math.floor(S.sel[0] * f.sr) : 0, i1 = S.sel ? Math.floor(S.sel[1] * f.sr) : f.n, st = Math.max(1, Math.floor((i1 - i0) / 9000));
+  c.fillStyle = cssv("--accent"); c.globalAlpha = .35;
+  for (let i = i0; i < i1; i += st) { const l = f.L[i], rr = f.R[i], x = (rr - l) * .7071, y = (l + rr) * .7071; c.fillRect(cx + clamp(x, -1, 1) * r - .5, cx - clamp(y, -1, 1) * r - .5, 1.6, 1.6); }
+  c.globalAlpha = 1;
+}
+
+/* ---------- panels ---------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function kv(label, val, cls, sub) { return '<div class="kv"><label>' + label + '</label><output class="' + (cls || "") + '">' + val + "</output>" + (sub ? "<small>" + sub + "</small>" : "") + "</div>"; }
+function renderMeters() {
+  const f = act(), m = f && f.m;
+  if (!f || !m) { for (const id of ["mLevels", "mLoud", "mStereo", "mTone"]) $("#" + id).innerHTML = '<div class="empty" style="grid-column:1/-1;padding:10px">' + (f ? "Analysing..." : "No file loaded") + "</div>"; $("#vPill").className = "pill busy"; $("#vPill").textContent = f ? "busy" : "-"; $("#vWhy").innerHTML = ""; $("#vClicks").innerHTML = ""; return; }
+  const l = m.loud;
+  $("#mLevels").innerHTML = kv("Peak", fmt(m.peakDb) + " dBFS", m.clips ? "bd" : "") + kv("True peak", fmt(m.tpDb) + " dBTP", m.tpDb > 0 ? "bd" : m.tpDb > -1 ? "wn" : "") + kv("RMS", fmt(m.rmsDb) + " dBFS") + kv("Crest", fmt(m.crest) + " dB", "", "peak minus RMS") + kv("DC offset", (m.dc * 100).toFixed(3) + " %", m.dc > RULES.dcWatch ? "wn" : "") + kv("Full scale", String(m.clips), m.clips ? "bd" : "ok", "samples at the limit");
+  $("#mLoud").innerHTML = kv("Integrated", fmt(l.I) + " LUFS") + kv("Momentary max", fmt(l.M) + " LUFS") + kv("Short-term max", l.S === null ? "-" : fmt(l.S) + " LUFS", "", l.S === null ? "needs 3 s of audio" : "") + kv("Range", l.LRA === null ? "-" : fmt(l.LRA) + " LU", "", l.LRA === null ? "needs a longer file" : "") + (f.mono ? '<div class="status" style="grid-column:1/-1">Mono file: measured as dual mono (L = R).</div>' : "");
+  const s = m.st;
+  $("#mStereo").innerHTML = f.mono ? '<div class="status" style="grid-column:1/-1">Mono file.</div>' : kv("Correlation", s.corr.toFixed(2), s.corr < 0 ? "bd" : "", "worst 0.1 s: " + s.corrMin.toFixed(2)) + kv("Side energy", (s.width * 100).toFixed(0) + " %", "", "of mid + side") + kv("Balance", (s.bal > 0 ? "L " : "R ") + Math.abs(s.bal).toFixed(1) + " dB", Math.abs(s.bal) > 3 ? "wn" : "") + kv("Channels", f.srcCh + (f.srcCh > 2 ? " (first 2 shown)" : ""));
+  $("#mTone").innerHTML = kv("Centroid", m.centroid >= 1000 ? (m.centroid / 1000).toFixed(2) + " kHz" : m.centroid.toFixed(0) + " Hz") + kv("Above 5 kHz", (m.hf * 100).toFixed(1) + " %", m.hf > .35 ? "wn" : "", "share of the energy") + kv("95 % rolloff", m.rolloff >= 1000 ? (m.rolloff / 1000).toFixed(1) + " kHz" : m.rolloff.toFixed(0) + " Hz") + kv("Format", f.sr / 1000 + " kHz / " + f.bits + " bit", "", fmtT(f.dur));
+  const p = $("#vPill"); p.className = "pill " + m.verdict; p.textContent = m.verdict;
+  $("#vWhy").innerHTML = m.why.map(([lv, t]) => '<li class="' + ["ok", "wn", "bd"][lv] + '">' + esc(t) + "</li>").join("");
+  $("#vClicks").innerHTML = m.clickEv.slice(0, 80).map(e => '<button data-t="' + e.t + '" title="' + fmt(e.d) + ' dB step">' + e.t.toFixed(3) + "s</button>").join("");
+}
+function renderFiles() {
+  const groups = {}; S.files.forEach((f, i) => (groups[f.group || ""] = groups[f.group || ""] || []).push(i));
+  let h = "";
+  for (const g in groups) {
+    if (g) h += '<div class="group">' + esc(g) + "</div>";
+    for (const i of groups[g]) {
+      const f = S.files[i], v = f.pending || !f.m ? "busy" : f.m.verdict;
+      h += '<div class="file ' + (i === S.act ? "act" : "") + '" data-i="' + i + '" tabindex="0" role="button" style="--c:' + cssv(f.color) + '"><button class="chip ' + (f.show ? "on" : "") + '" data-chip="' + i + '" title="Show in the spectrum overlay" aria-label="Overlay"></button><span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span><span><span class="pill ' + v + '">' + (v === "busy" ? "..." : v) + '</span> <button class="x" data-x="' + i + '" title="Remove" aria-label="Remove">×</button></span><span class="sub">' + fmtT(f.dur) + " · " + f.sr / 1000 + "k · " + (f.mono ? "mono" : "stereo") + (f.m ? " · " + fmt(f.m.tpDb) + " dBTP" : "") + "</span></div>";
+    }
+  }
+  $("#files").innerHTML = h;
+}
+const COLS = [["name", "File", f => f.name], ["dur", "Len", f => f.dur, v => fmtT(v)], ["tp", "True pk", f => f.m && f.m.tpDb, v => fmt(v)], ["rms", "RMS", f => f.m && f.m.rmsDb, v => fmt(v)], ["cr", "Crest", f => f.m && f.m.crest, v => fmt(v)], ["lufs", "LUFS-I", f => f.m && f.m.loud.I, v => fmt(v)], ["lra", "LRA", f => f.m && f.m.loud.LRA, v => fmt(v)], ["corr", "Corr", f => f.m && f.m.st.corr, v => v.toFixed(2)], ["side", "Side %", f => f.m && f.m.st.width * 100, v => v.toFixed(0)], ["cen", "Centroid", f => f.m && f.m.centroid, v => v >= 1000 ? (v / 1000).toFixed(2) + "k" : v.toFixed(0)], ["hf", ">5k %", f => f.m && f.m.hf * 100, v => v.toFixed(1)], ["clk", "Clicks", f => f.m && f.m.clickEv.length, v => v], ["clp", "Clips", f => f.m && f.m.clips, v => v], ["ver", "Verdict", f => f.m && f.m.verdict]];
+function renderTable() {
+  let idx = S.files.map((f, i) => i);
+  if (S.sortBy) { const c = COLS.find(k => k[0] === S.sortBy); idx.sort((a, b) => { const x = c[2](S.files[a]), y = c[2](S.files[b]); return (x > y ? 1 : x < y ? -1 : 0) * S.sortDir; }); }
+  $("#tbl").innerHTML = "<thead><tr>" + COLS.map(c => '<th data-s="' + c[0] + '">' + c[1] + "</th>").join("") + "</tr></thead><tbody>" + idx.map(i => { const f = S.files[i]; return '<tr data-i="' + i + '" class="' + (i === S.act ? "act" : "") + '">' + COLS.map(c => { const v = c[2](f); const s = v === null || v === undefined || v === false ? "-" : c[3] ? c[3](v) : esc(v); return "<td" + (c[0] === "ver" && f.m ? ' class="' + ({ clean: "ok", watch: "wn", flag: "bd" })[f.m.verdict] + '"' : "") + ">" + s + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
+  $("#rulesTxt").textContent = "Rules: flag on any full-scale sample, a true peak over 0 dBTP, or " + RULES.clicksFlag + " or more clicks; watch on a true peak above " + RULES.tpWatch + " dBTP, any click, DC offset over " + RULES.dcWatch * 100 + " %, or stereo correlation dipping below -0.3. A click is a step of at least " + RULES.clickMin + " (about -28 dBFS) that is " + RULES.clickK + "x bigger than the signal around it, in audio that was already sounding. Loudness follows ITU-R BS.1770-4 with the 70 LUFS absolute and 10 LU relative gates; true peak is 4x oversampled.";
+}
+function renderHeader() {
+  const f = act(); $("#tName").textContent = f ? f.name : "Waveform";
+  $("#rdSel").innerHTML = S.sel ? "selection <b>" + fmtT(S.sel[0]) + " - " + fmtT(S.sel[1]) + "</b> (" + ((S.sel[1] - S.sel[0]) * 1000).toFixed(0) + " ms)" : "no selection";
+  $("#rdView").textContent = f ? (S.view ? "zoom " + fmtT(S.view[0]) + " - " + fmtT(S.view[1]) : "whole file " + fmtT(f.dur)) : "";
+  $("#bPlay").textContent = S.play.on ? "Stop" : "Play"; $("#bLoop").classList.toggle("on", S.loop); $("#bPeak").classList.toggle("on", S.peak);
+}
+let raf = 0;
+function draw() { drawWave(); drawSg(); drawSp(); drawGon(); }
+function render() { renderFiles(); renderMeters(); renderTable(); renderHeader(); cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }
+
+/* ---------- playback ---------- */
+function ensureBuf(f) {
+  if (f.buf) return f.buf; const ctx = S.play.ctx, b = ctx.createBuffer(f.mono ? 1 : 2, f.n, f.sr); b.copyToChannel(f.L, 0); if (!f.mono) b.copyToChannel(f.R, 1); return f.buf = b;
+}
+function startPlay(from) {
+  const f = act(); if (!f) return; stopPlay(true);
+  const P = S.play; P.ctx = P.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (P.ctx.state === "suspended") P.ctx.resume();
+  const a = S.sel ? S.sel[0] : (from !== undefined ? from : 0), b = S.sel ? S.sel[1] : f.dur, src = P.ctx.createBufferSource(); src.buffer = ensureBuf(f); src.connect(P.ctx.destination);
+  const start = from !== undefined && !S.sel ? from : a; P.off = start; P.t0 = P.ctx.currentTime; P.end = b; P.begin = a;
+  if (S.loop && S.sel) { src.loop = true; src.loopStart = a; src.loopEnd = b; src.start(0, a); } else src.start(0, start, b - start);
+  src.onended = () => { if (P.src === src && !S.loop) { P.on = false; P.head = 0; renderHeader(); draw(); } };
+  P.src = src; P.on = true; renderHeader(); tickPlay();
+}
+function stopPlay(quiet) { const P = S.play; if (P.src) { try { P.src.onended = null; P.src.stop(); } catch (e) {} P.src = null; } P.on = false; if (!quiet) { P.head = 0; renderHeader(); draw(); } }
+function tickPlay() {
+  const P = S.play; if (!P.on) return; const el = P.ctx.currentTime - P.t0;
+  P.head = (S.loop && S.sel) ? P.begin + ((P.off - P.begin + el) % (P.end - P.begin)) : P.off + el;
+  drawWave(); drawSg(); requestAnimationFrame(tickPlay);
+}
+
+/* ---------- pointer: select on the waveform / spectrogram, hover on the spectrum ---------- */
+function bindSel(host) {
+  let drag = null;
+  host.addEventListener("pointerdown", e => { const f = act(); if (!f) return; host.setPointerCapture(e.pointerId); const r = host.getBoundingClientRect(), t = clamp(xT(e.clientX - r.left, f, r.width), 0, f.dur); drag = { t0: t, moved: false, x0: e.clientX }; });
+  host.addEventListener("pointermove", e => { const f = act(); if (!f || !drag) return; if (Math.abs(e.clientX - drag.x0) < 3 && !drag.moved) return; drag.moved = true; const r = host.getBoundingClientRect(), t = clamp(xT(e.clientX - r.left, f, r.width), 0, f.dur); S.sel = [Math.min(drag.t0, t), Math.max(drag.t0, t)]; renderHeader(); cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); });
+  host.addEventListener("pointerup", e => { const f = act(); if (!f || !drag) return; if (!drag.moved) { S.sel = null; S.play.head = drag.t0; if (S.play.on) startPlay(drag.t0); renderHeader(); draw(); } drag = null; });
+  host.addEventListener("dblclick", () => { S.sel = null; renderHeader(); draw(); });
+}
+bindSel($("#pWave")); bindSel($("#pSg"));
+const spHost = $("#pSp"); const tip = document.createElement("div"); tip.className = "tip"; tip.id = "tipSp"; tip.hidden = true; spHost.appendChild(tip);
+spHost.addEventListener("pointermove", e => { const r = spHost.getBoundingClientRect(); S.hover = { x: e.clientX - r.left }; drawSp(); });
+spHost.addEventListener("pointerleave", () => { S.hover = null; drawSp(); });
+$("#vClicks").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const f = act(), t = +b.dataset.t; S.view = [Math.max(0, t - 0.01), Math.min(f.dur, t + 0.01)]; S.sel = null; S.play.head = t; renderHeader(); draw(); });
+
+/* ---------- wiring ---------- */
+$("#bOpen").onclick = () => $("#fIn").click();
+$("#drop").onclick = () => $("#fIn").click();
+$("#drop").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#fIn").click(); } };
+$("#fIn").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
+["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); $("#drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if (ev === "drop" || e.target === document.documentElement) $("#drop").classList.remove("over"); }));
+document.addEventListener("drop", async e => {
+  const items = e.dataTransfer && e.dataTransfer.items ? Array.from(e.dataTransfer.items) : [];
+  const files = [];
+  const walk = async en => { if (!en) return; if (en.isFile) await new Promise(r => en.file(f => { files.push(f); r(); }, r)); else if (en.isDirectory) { const rd = en.createReader(); let batch; do { batch = await new Promise(r => rd.readEntries(r, () => r([]))); for (const c of batch) await walk(c); } while (batch.length); } };
+  if (items.length && items[0].webkitGetAsEntry) { for (const it of items) await walk(it.webkitGetAsEntry()); } else files.push(...Array.from(e.dataTransfer.files));
+  addFiles(files);
+});
+$("#files").addEventListener("click", e => {
+  const chip = e.target.closest("[data-chip]"), x = e.target.closest("[data-x]"), row = e.target.closest(".file");
+  if (chip) { const f = S.files[+chip.dataset.chip]; f.show = !f.show; e.stopPropagation(); render(); return; }
+  if (x) { const i = +x.dataset.x; S.files.splice(i, 1); S.act = Math.min(S.act, S.files.length - 1); stopPlay(true); render(); e.stopPropagation(); return; }
+  if (row) selectFile(+row.dataset.i);
+});
+$("#files").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList.contains("file")) selectFile(+e.target.dataset.i); });
+$("#tbl").addEventListener("click", e => { const th = e.target.closest("th"), tr = e.target.closest("tbody tr"); if (th) { const k = th.dataset.s; S.sortDir = S.sortBy === k ? -S.sortDir : 1; S.sortBy = k; renderTable(); } else if (tr) selectFile(+tr.dataset.i); });
+$("#bPlay").onclick = () => S.play.on ? stopPlay() : startPlay();
+$("#bLoop").onclick = () => { S.loop = !S.loop; if (S.play.on) startPlay(); renderHeader(); };
+$("#bZoom").onclick = () => { if (S.sel) { S.view = S.sel.slice(); render(); } };
+$("#bFit").onclick = () => { S.view = null; render(); };
+$("#bPeak").onclick = () => { S.peak = !S.peak; store.set("peak", S.peak ? "1" : "0"); renderHeader(); drawSp(); };
+for (const [id, key, prop] of [["#sSmooth", "smooth", "smooth"], ["#sTilt", "tilt", "tilt"], ["#sFft", "fft", "fft"], ["#sFloor", "floor", "floor"]]) { const el = $(id); el.value = String(S[prop]); el.onchange = () => { S[prop] = +el.value; store.set(key, el.value); draw(); }; }
+function csv() {
+  const rows = [COLS.map(c => c[1])]; S.files.forEach(f => rows.push(COLS.map(c => { const v = c[2](f); return v === null || v === undefined || v === false ? "" : typeof v === "number" ? (isFinite(v) ? +v.toFixed(3) : "") : v; })));
+  return rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",")).join("\n");
+}
+function report() {
+  const f = act(); if (!f || !f.m) return "No analysed file.";
+  const m = f.m, l = m.loud; return ["SFA Analyzer: " + f.name, f.sr + " Hz, " + f.bits + " bit, " + (f.mono ? "mono" : "stereo") + ", " + fmtT(f.dur), "Verdict: " + m.verdict.toUpperCase() + " (" + m.why.map(w => w[1]).join("; ") + ")",
+    "Peak " + fmt(m.peakDb) + " dBFS, true peak " + fmt(m.tpDb) + " dBTP, RMS " + fmt(m.rmsDb) + " dBFS, crest " + fmt(m.crest) + " dB", "Loudness: " + fmt(l.I) + " LUFS integrated, " + fmt(l.M) + " momentary max, " + (l.S === null ? "-" : fmt(l.S)) + " short-term max, LRA " + (l.LRA === null ? "-" : fmt(l.LRA)),
+    "Stereo: correlation " + m.st.corr.toFixed(2) + " (worst " + m.st.corrMin.toFixed(2) + "), side energy " + (m.st.width * 100).toFixed(0) + " %", "Tone: centroid " + m.centroid.toFixed(0) + " Hz, " + (m.hf * 100).toFixed(1) + " % above 5 kHz, 95 % rolloff " + m.rolloff.toFixed(0) + " Hz",
+    "Clicks: " + (m.clickEv.length ? m.clickEv.map(e => e.t.toFixed(3) + "s").join(", ") : "none")].join("\n");
+}
+function saveText(name, text, mime) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+$("#bCsv").onclick = () => { saveText("sfa-analysis.csv", csv(), "text/csv"); say("CSV saved to your downloads folder."); };
+$("#bCopy").onclick = async () => { const t = report(); try { await navigator.clipboard.writeText(t); say("Report copied."); } catch (e) { say(t.split("\n")[2] || "Could not copy."); } };
+document.addEventListener("keydown", e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.code === "Space") { e.preventDefault(); S.play.on ? stopPlay() : startPlay(); }
+  else if (e.key === "Escape") { S.sel = null; S.view = null; render(); }
+  else if (e.key === "z" || e.key === "Z") $("#bZoom").click();
+  else if (e.key === "f" || e.key === "F") $("#bFit").click();
+  else if (e.key === "ArrowDown") { e.preventDefault(); selectFile(S.act + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); selectFile(S.act - 1); }
+});
+new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }).observe(document.body);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
+window.SFA = { S, parseWav, welch, loudness, truePeak, findClicks, analyze, addBuffer, loadManifest, report, csv, RULES };   /* a handle for tests and for scripts */
+
+/* ---------- start: a manifest from ?manifest=..., or the default one beside this page when served over http ---------- */
+(async () => {
+  render();
+  const q = new URLSearchParams(location.search).get("manifest");
+  if (q) await loadManifest(q);
+  else if (location.protocol.startsWith("http")) { if (!(await loadManifest("manifest.json"))) say("Drop WAV files to analyse them."); }
+  else say("Drop WAV files to analyse them.");
+})();
+</script>
+</body>
+</html>

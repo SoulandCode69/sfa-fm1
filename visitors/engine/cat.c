@@ -91,7 +91,7 @@ void cat_sync(void)
 
 /* a voice: two oscillators (phase, freq, pitch envelope), a noise path through an SVF, envelopes */
 typedef struct {
-    float ph1, ph2, hz, hz_end, penv, pcoef, env, dcoef, nenv, ncoef, gain, drive, nmix, snap, snap_lp, tone;
+    float ph1, ph2, hz, hz_end, penv, pcoef, env, dcoef, nenv, ncoef, gain, drive, nmix, snap, snap_lp, tone, att;
     svf_t nf; svfc_t nfc; uint8_t on, kind, cyc, layer;
     adpcm_t a; float ainc, again;                                    /* the LAYER sample */
 } voice_t;
@@ -118,13 +118,13 @@ static void start(uint32_t p, float vel)
     float pitch = ((float)q[0] - 64.0f) * (24.0f / 127.0f) + ((float)par2[1] - 64.0f) * (12.0f / 127.0f);
     float dec = p01(q[1]) * p01(par2[2]) * 2.0f, tone = p01(q[2]), bend = p01(q[4]);
     float semi = fm_exp2f(pitch * (1.0f / 12.0f)), base_dec, base_hz, nhz;
-    if (w->on) { tail[tail_i] = *w; tail[tail_i].dcoef = 0.97f; tail[tail_i].ncoef = 0.97f; tail[tail_i].snap = 0.0f; tail[tail_i].layer = 0; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); }
+    if (w->on) { tail[tail_i] = *w; tail[tail_i].dcoef = 0.97f; tail[tail_i].ncoef = 0.97f; tail[tail_i].snap = 0.0f; tail[tail_i].layer = 0; tail[tail_i].att = 1.0f; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); }
     if (p == V_CHAT && v[V_OHAT].on) { tail[tail_i] = v[V_OHAT]; tail[tail_i].dcoef = 0.97f; tail[tail_i].ncoef = 0.97f; tail[tail_i].snap = 0.0f; tail[tail_i].layer = 0; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); v[V_OHAT].on = 0; }   /* the closed hat chokes the open one, softly */
     tone = tone * (0.75f + 0.25f * vel);                              /* velocity brightens */
     w->kind = (uint8_t)p; w->tone = tone;
     w->gain = (0.25f + 0.75f * vel * vel) * p01(q[3]) * 1.1f;
     w->drive = p01(q[6]); w->nmix = p01(q[7]); w->snap = p01(q[5]) * 0.9f; w->snap_lp = 0.0f;
-    w->ph1 = w->ph2 = 0.0f; w->env = 1.0f; w->nenv = 1.0f; w->cyc = 0;
+    w->ph1 = w->ph2 = 0.0f; w->env = 1.0f; w->nenv = 1.0f; w->cyc = 0; w->att = 0.0f;
     switch (p) {
     case V_KICK:  base_hz = 50.0f;  base_dec = 0.35f; w->penv = 2.0f + bend * 6.0f; w->pcoef = decay_coef(0.02f + tone * 0.03f); break;
     case V_KICK2: base_hz = 58.0f;  base_dec = 0.22f; w->penv = 3.0f + bend * 8.0f; w->pcoef = decay_coef(0.012f + tone * 0.02f); break;
@@ -224,6 +224,7 @@ static void m_render(float *out, uint32_t n)
             if (w->layer) { x += adpcm_read(&w->a, w->ainc) * w->again * w->env * 1.2f; if (adpcm_done(&w->a)) w->layer = 0; }
             if (w->drive > 0.0f && w->kind != V_METAL) x = fm_soft(x * (1.0f + w->drive * 3.0f)) * (1.0f / (1.0f + w->drive * 0.8f));
             x *= w->gain;
+            if (w->att < 1.0f) { w->att += 0.09f; if (w->att > 1.0f) w->att = 1.0f; x *= w->att; }   /* a 0.25 ms onset ramp: a noise or snap burst never starts as a one-sample step */
             if (w->env > 0.8f) x *= 1.0f + punch * (w->env - 0.8f) * 5.0f;                      /* the bus PUNCH on every attack */
             w->env *= w->dcoef; w->nenv *= w->ncoef;
             s += x;

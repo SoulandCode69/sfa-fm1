@@ -195,3 +195,12 @@ The resource bank fix: 64 bytes of room for the 32-byte commit record.
 
 2026-11-08 — SFA PROTO removed by decision: the FM-1 firmwares stay ECB and Alien Stack; our own engine work moves
 to the hardware/virtual track (core/ keeps sfa_one.c as the first portable engine, not wired into any firmware).
+
+## 2026-11-09: the SFA console and Analyzer
+
+Not a flash. Added `sfa/analyzer/index.html` (the SFA Analyzer), `tools/sfa` + `tools/sfa.py` (doctor / sim / render / report /
+analyze / flash / up / publish), `sfa/units.json` (the registry), song render scripts (`app|visitors/tests/render_song.txt`) and
+`docs/WORKFLOW.md`, `CONSOLE.md`, `AGENTS.md`. The analyzer and the Python report agree on 20 files (LUFS within 0.01, true peak
+within 0.02 dB, same clicks). First finding: Alien Stack's trap kit started a Mantis noise burst as a one-sample step; every Mantis
+voice now has a 0.25 ms onset ramp (127 checks pass). Both units' renders measure clean (ECB song -2.5 dBTP / -16.3 LUFS-I, AS song
+-2.7 dBTP / -18.3 LUFS-I). The AS change needs a flash: `tools/sfa up as`.

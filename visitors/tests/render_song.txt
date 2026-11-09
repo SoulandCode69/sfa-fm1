@@ -1,0 +1,51 @@
+# a rendered song for the analyzer: four slots on the song builder, chained, 2 bars each (sfa render <unit> song)
+wait 600
+master 4096
+tap HOME
+wait 50
+tapkey w4
+wait 50
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 30
+spin PRESET 1
+wait 30
+key b3 down
+wait 60
+tapkey b2
+wait 60
+key b3 up
+wait 50
+tapkey w0
+wait 50
+spin K3 1
+wait 30
+tapkey w1
+wait 50
+spin K3 1
+wait 30
+spin K2 1
+wait 30
+tapkey w2
+wait 50
+spin K3 1
+wait 30
+spin K2 -2
+wait 30
+tapkey w3
+wait 50
+spin K3 1
+wait 30
+spin K2 2
+wait 30
+tapkey b3
+wait 50
+wav song.wav
+tap PLAY
+wait 17000
+tap PLAY
+wait 300
+wavstop

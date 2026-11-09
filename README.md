@@ -30,6 +30,10 @@ playing, REC arms the track for live record. The mixer shows the audio load (CPU
 both firmwares send that stream at full level whatever MASTER does; on the MPC, Preferences → Audio Device (MPC 2.10+
 takes class-compliant interfaces), or the headphone out into the line inputs.
 
+**The SFA console** (`tools/sfa`): `doctor`, `sim`, `render`, `report`, `analyze`, `flash`, `up`, `publish`, for ECB and Alien Stack alike;
+the **SFA Analyzer** (`sfa/analyzer/index.html`, one file, drop WAVs on it) shows spectrum, spectrogram, peak / true peak / LUFS, stereo and
+clicks. See `docs/WORKFLOW.md`, `docs/CONSOLE.md`, `docs/AGENTS.md`.
+
 **Two FM-1s**: the installer flashes whichever FM-1 answers, so plug in Unit A alone when running tools/go.sh
 (or pass `--port` to base/tools/fm1_install.py). Unit B stays stock. MIDI in ch 1-4 = Otter, Cat, Fox, Hopper.
 **Your own samples**: `python3 tools/sfa_sample.py mydir/` (or WAV files) writes app/samples.bin, the user bank the

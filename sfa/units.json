@@ -1,0 +1,34 @@
+{
+  "_": "The SFA console reads this. A unit is one firmware (or, later, one engine or one piece of hardware). Add an entry and `tools/sfa` can sim, render, analyse and flash it.",
+  "units": {
+    "ecb": {
+      "name": "Earth Creature Beats",
+      "short": "ECB",
+      "dir": "app",
+      "host": "ecb_host",
+      "mirror_port": 8577,
+      "aliases": ["app", "earth"],
+      "hardware": "FM-1 (Unit A)",
+      "engines": ["Cat", "Fox", "Otter", "Hopper", "Beaver"]
+    },
+    "as": {
+      "name": "Alien Stack",
+      "short": "AS",
+      "dir": "visitors",
+      "host": "alien_host",
+      "mirror_port": 8578,
+      "aliases": ["visitors", "alien"],
+      "hardware": "FM-1 (the Alien unit)",
+      "engines": ["Mantis", "Reptiles", "Nordics", "Greys", "Ship"]
+    }
+  },
+  "recipes": {
+    "tests":  { "script": "tests/basic.txt",       "about": "the full simulator suite; every WAV it writes (drum kits, basses, synths, the beat)" },
+    "song":   { "script": "tests/render_song.txt", "about": "a chained 4-slot song, 17 s, the whole box playing together" },
+    "kits":   { "script": "tests/kits.txt",        "about": "every drum kit" },
+    "levels": { "script": "tests/levels.txt",      "about": "hot / cold / top-of-range level checks" },
+    "audit":  { "gen": true,                       "about": "every Otter / Fox / Greys preset, one second each (long files, slow)" }
+  },
+  "default_recipes": ["song", "tests"],
+  "windows_home_dir": "SFA"
+}
