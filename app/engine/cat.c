@@ -127,6 +127,8 @@ void cat_sync(void)                                     /* main loop, every fram
 
 typedef struct { adpcm_t a; float env, dcoef, gain, inc, punch, snap, snap_lp, crushq; svf_t flt; svfc_t fc; uint8_t on, filt; } voice_t;
 static voice_t v[NPADS];
+#define NTAIL 4
+static voice_t tail[NTAIL]; static uint8_t tail_i;          /* retriggered pads fade out here instead of cutting */
 static volatile uint8_t trig[NPADS], trig_vel[NPADS];
 static float comp_env, comp_g = 1.0f, hp_x, hp_y;
 static uint32_t rng = 7u;
@@ -150,7 +152,8 @@ static void start(uint32_t p, float vel)
     float semis = ((float)pp[0] - 64.0f) * (24.0f / 127.0f) + ((float)par2[1] - 64.0f) * (12.0f / 127.0f);
     float dec = p01(pp[1]) * p01(par2[2]) * 2.0f, filt = p01(pp[2]);
     if (!s) return;
-    if (p == 5u) v[6].on = 0;                                        /* the closed hat chokes the open one */
+    if (w->on) { tail[tail_i] = *w; tail[tail_i].dcoef = 0.97f; tail[tail_i].punch = 0.0f; tail[tail_i].snap = 0.0f; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); }
+    if (p == 5u && v[6].on) { tail[tail_i] = v[6]; tail[tail_i].dcoef = 0.97f; tail[tail_i].punch = 0.0f; tail[tail_i].snap = 0.0f; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); v[6].on = 0; }   /* the closed hat chokes the open one, softly */
     adpcm_start(&w->a, s);
     w->inc = fm_exp2f(semis * (1.0f / 12.0f)) * ((float)s->rate / SR);
     w->env = 1.0f;
@@ -177,8 +180,8 @@ static void c_render(float *out, uint32_t n)
         if (trig[p]) { trig[p] = 0; start(p, (float)trig_vel[p] * (1.0f / 127.0f)); }
     for (i = 0; i < n; i++) {
         float s = 0.0f, g;
-        for (p = 0; p < NPADS; p++) {
-            voice_t *w = &v[p];
+        for (p = 0; p < NPADS + NTAIL; p++) {
+            voice_t *w = p < NPADS ? &v[p] : &tail[p - NPADS];
             float x, pos;
             if (!w->on) continue;
             x = adpcm_read(&w->a, w->inc) * w->env * w->gain;

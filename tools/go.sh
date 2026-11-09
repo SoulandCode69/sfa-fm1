@@ -41,6 +41,13 @@ if [ -z "$NOFLASH" ]; then
     done
 fi
 
+echo "== a copy in your Windows Downloads"
+WINHOME=$(wslpath -u "$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r')" 2>/dev/null)
+if [ -n "$WINHOME" ] && [ -d "$WINHOME/Downloads" ]; then
+    STAMP=$(date +%Y%m%d-%H%M)
+    cp "$PKG" "$WINHOME/Downloads/$(basename "${PKG%.fwsc}")-$STAMP.fwsc" && echo "   Downloads\\$(basename "${PKG%.fwsc}")-$STAMP.fwsc"
+fi
+
 echo "== release package (dist/)"
 python3 tools/release.py --app "$APP" || echo "release: skipped"
 

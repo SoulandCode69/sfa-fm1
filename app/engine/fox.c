@@ -96,6 +96,7 @@ static struct {
     int32_t held[8]; uint8_t nheld; int32_t note; uint8_t gate, on;
     svf_t flt; uint32_t rng; float click_lp;
 } e8;
+static adpcm_t e8tail; static float e8tail_g, e8tail_inc; static uint8_t e8tail_on;
 
 static void e8_note(int32_t note, uint32_t vel, int on)
 {
@@ -108,6 +109,7 @@ static void e8_note(int32_t note, uint32_t vel, int on)
         if (i == e8.nheld && e8.nheld < 8u) e8.held[e8.nheld++] = note;
         target = fm_exp2f((float)(note - s->root) * (1.0f / 12.0f)) * ((float)s->rate / SR);
         if (!e8.gate || e8.nheld == 1u) {                               /* a new phrase: start the sample */
+            if (e8.on) { e8tail = e8.a; e8tail_g = e8.env * e8.aenv; e8tail_inc = e8.inc; e8tail_on = 1; }   /* the old note fades in 2 ms */
             adpcm_start(&e8.a, s); e8.inc = target; e8.env = 1.0f; e8.aenv = par2[0] ? 0.0f : 1.0f; e8.on = 1; e8.pitch_env = 1.0f;
         }
         e8.inc_target = target; e8.gate = 1; e8.note = note;
@@ -153,6 +155,7 @@ static void e8_render(float *out, uint32_t n)
         e8.env *= dcoef;
         x *= e8.env * e8.aenv;
         if (drive > 0.0f) x = fm_soft(x * 0.7f * dgain) * dnorm;
+        if (e8tail_on) { x += adpcm_read(&e8tail, e8tail_inc) * e8tail_g * 1.1f; e8tail_g *= 0.97f; if (e8tail_g < 0.002f || adpcm_done(&e8tail)) e8tail_on = 0; }
         out[i] += x * 1.1f;
         if ((adpcm_done(&e8.a) && sub <= 0.0f) || e8.aenv < 0.0005f || e8.env < 0.0005f) { e8.on = 0; break; }
     }

@@ -35,6 +35,8 @@ static uint8_t shown_slice = 0;
 typedef struct { float pos, inc, env, dcoef, att, aenv; svf_t flt; uint32_t start, end, roll, roll_n; int32_t note; uint8_t on, loop, gate; float vel; } voice_t;
 #define NV 4
 static voice_t v[NV];
+#define NTAIL 2
+static voice_t tail[NTAIL]; static uint8_t tail_i;
 static volatile int32_t pend_note = -1;
 static volatile uint32_t pend_vel;
 static uint32_t rng = 0xC0FFEEu;
@@ -375,8 +377,8 @@ static void start_voice(voice_t *w, int32_t note, float vel)
     w->env = 1.0f;
     if (sp) { dec = dec * p01(sp[2]); vel *= p01(sp[3]) * 1.27f; }
     w->dcoef = dec > 0.99f ? 1.0f : decay_coef(0.02f + dec * dec * 2.0f);
-    w->aenv = att > 0.0f ? 0.0f : 1.0f;
-    w->att = att > 0.0f ? 1.0f / (0.002f + att * att * 1.5f) / SR : 1.0f;
+    w->aenv = 0.0f;                                                 /* always a ramp in: 1 ms at least, no click at a slice edge */
+    w->att = 1.0f / (0.001f + att * att * 1.5f) / SR;
     w->flt.ic1 = w->flt.ic2 = 0;
     w->note = note;
     w->gate = par3[2] >= 64u;
@@ -404,7 +406,7 @@ static void run_voice(voice_t *w, float *out, uint32_t n, const svfc_t *fc)
         if (w->aenv < 1.0f) { w->aenv += w->att; if (w->aenv > 1.0f) w->aenv = 1.0f; }
         if (w->roll && --w->roll == 0u) {                                  /* ROLL: back to the start */
             w->roll = (uint32_t)(SR * 0.125f / (float)(1u << (w->roll_n - 1u)));
-            w->pos = w->inc > 0 ? (float)w->start : (float)w->end - 2.0f; w->env = 1.0f;
+            w->pos = w->inc > 0 ? (float)w->start : (float)w->end - 2.0f; w->env = 1.0f; w->aenv = 0.0f;
         }
         w->pos += w->inc;
         if (w->pos + 1.0f >= (float)w->end || w->pos < (float)w->start) {
@@ -431,9 +433,11 @@ static void f_render(float *out, uint32_t n)
         pend_note = -1;
         for (i = 0; i < NV; i++) if (!v[i].on) { pick = i; break; }
         if (i == NV) { for (i = 1; i < NV; i++) if (v[i].env < v[pick].env) pick = i; }
+        if (v[pick].on) { tail[tail_i] = v[pick]; tail[tail_i].dcoef = 0.97f; tail[tail_i].roll = 0; tail[tail_i].loop = 0; tail_i = (uint8_t)((tail_i + 1u) % NTAIL); }
         start_voice(&v[pick], note, (float)pend_vel * (1.0f / 127.0f));
     }
     for (i = 0; i < NV; i++) run_voice(&v[i], out, n, &fc);
+    for (i = 0; i < NTAIL; i++) run_voice(&tail[i], out, n, &fc);
 }
 
 static const char *f_text(uint8_t page, uint32_t p, char *buf)
