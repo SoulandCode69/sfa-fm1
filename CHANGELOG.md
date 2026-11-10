@@ -2,6 +2,11 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10 (evening): polish pass
+
+* One consolidated stylesheet (`sfa/hub/hub.css`): a single button height with four roles (action, tool, plain, ghost), consistent fields, card and table styles, state pills with a dot, a joined four-step strip, a full-height ink rail.
+* Units cards lead with an overall status (Not checked, Checked, Ready to flash, Flagged); secondary actions are quiet, Check all and Flash stand out.
+
 ## 2026-11-10 (later): designer, agents, colour
 
 * **Colour**: a new identity across the console and both tools: an ink top bar and rail, a paper work area, magenta for action, violet for tools, lime as the signal on ink, a three-colour stripe.

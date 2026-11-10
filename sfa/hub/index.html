@@ -83,7 +83,7 @@ window.addEventListener("hashchange", route);
 /* ---- units ---- */
 function pills(files) { const c = { clean: 0, watch: 0, flag: 0 }; files.forEach(f => c[f.verdict] = (c[f.verdict] || 0) + 1); return ["clean", "watch", "flag"].filter(k => c[k]).map(k => '<span class="pill ' + k + '">' + c[k] + " " + k + "</span>").join(" ") || '<span class="pill none">no files</span>'; }
 function viewUnits() {
-  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Each unit is a firmware on its own FM-1. Work left to right: simulate, measure, put one unit on USB, flash, log it. The flash button checks USB first and will not go ahead with zero or two units.</p><div class="usb" id="usb"><b>On USB now</b><span id="usbTxt" style="flex:1;min-width:200px">not checked</span><button id="usbBtn">Check</button></div><div class="cards" id="cards"></div><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div>';
+  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Each unit is a firmware on its own FM-1. Work left to right: simulate, measure, put one unit on USB, flash, log it. The flash button checks USB first and will not go ahead with zero or two units.</p><div class="usb" id="usb"><b>On USB</b><span id="usbTxt" style="flex:1;min-width:200px">not checked</span><button id="usbBtn" class="sm">Check again</button></div><div class="cards" id="cards"></div><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div>';
   renderUnits(); updOut(); $("#usbBtn").onclick = () => checkUsb().then(renderUnitSteps); checkUsb().then(renderUnitSteps);
 }
 let usb = null;
@@ -100,12 +100,12 @@ let lastRun = null, mirrorOk = false;
 function unitSteps(u) {
   const r = u.render, files = r ? r.files : [], flag = files.filter(f => f.verdict === "flag").length, watch = files.filter(f => f.verdict === "watch").length, n = u.notes;
   const onUsb = usb && usb.found ? usb.found.filter(f => f.unit === u.id).length : -1, tot = usb && usb.found ? usb.found.length : -1;
-  const st = (cls, label, txt) => '<div class="step ' + cls + '"><b>' + label + "</b><span title=\"" + esc(txt) + '">' + esc(txt) + "</span></div>";
+  const st = (cls, label, txt) => '<div class="step ' + cls + '"><b>' + label.replace(/^(\d) /, "$1 · ") + "</b><span title=\"" + esc(txt) + '">' + esc(txt) + "</span></div>";
   return '<div class="steps">' +
-    st(u.sim ? "done" : "", "1 Simulate", u.sim ? "built " + u.sim : "not built yet") +
+    st(u.sim ? "done" : "", "1 Simulate", u.sim ? "built " + String(u.sim).replace(/\s+\d\d:\d\d$/, "") : "not built yet") +
     st(!r ? "" : flag ? "bad" : watch ? "warn" : "done", "2 Measure", !r ? "no renders yet" : flag ? flag + " flagged" : watch ? watch + " to watch" : files.length + " clean") +
     st(tot < 0 ? "" : tot === 1 && onUsb === 1 ? "done" : tot === 1 ? "warn" : tot === 0 ? "" : "bad", "3 On USB", tot < 0 ? "not checked" : tot === 0 ? "not plugged in" : tot > 1 ? tot + " units: unplug" : onUsb === 1 ? "this unit, alone" : "another firmware") +
-    st(n ? "done" : "", "4 Flashed", n ? n.build + " · " + n.date : "not logged") + "</div>";
+    st(n ? "done" : "", "4 Flashed", n ? String(n.build).replace(/^[A-Za-z]+\s+/, "") + " · " + String(n.date).slice(5) : "not logged") + "</div>";
 }
 function renderUnits() {
   const el = $("#cards"); if (!el) return;
@@ -118,10 +118,12 @@ function renderUnits() {
       else if (lastRun.code !== 0 && lastRun.code != null) after = '<div class="note warn"><b>' + esc(lastRun.cmd) + "</b> ended with exit " + lastRun.code + ". The output below says why.</div>";
       else if (lastRun.cmd === "up") after = '<div class="note good"><b>Checked.</b> ' + (flag ? "Something is flagged: open the Analyzer before flashing." : "Renders measured clean. Ready to flash when the unit is on USB.") + "</div>";
     }
-    return '<section class="card" data-u="' + u.id + '"><h2>' + esc(u.name) + "<small>" + esc(u.hardware) + '</small></h2><div class="chips">' + u.engines.map(e => '<span class="chip">' + esc(e) + "</span>").join("") + "</div>" + unitSteps(u) +
+    const onU = usb && usb.found ? usb.found.filter(f => f.unit === u.id).length === 1 && usb.found.length === 1 : false;
+    const stt = flag ? ["flag", "Flagged"] : !u.sim || !files.length ? ["none", "Not checked"] : files.some(f => f.verdict === "watch") ? ["watch", "Checked, with notes"] : onU ? ["clean", "Ready to flash"] : ["info", "Checked"];
+    return '<section class="card" data-u="' + u.id + '"><div><span class="eyebrow" style="color:var(--dim)">' + esc(u.hardware) + '</span><h2>' + esc(u.name) + '<span class="pill ' + stt[0] + '">' + stt[1] + '</span></h2></div><div class="chips">' + u.engines.map(e => '<span class="chip">' + esc(e) + "</span>").join("") + "</div>" + unitSteps(u) +
       "<dl><dt>Package</dt><dd>" + (u.package ? esc(u.package.name) + " · " + esc(u.package.at) : "none built here") + "</dd>" +
       "<dt>Renders</dt><dd>" + (r ? esc(r.stamp) + " &nbsp; " + pills(files) : "none yet") + "</dd><dt>Latest build</dt><dd>" + (n ? esc(n.date) + " · " + esc(n.build) + '<br><span class="hint">' + esc(n.what) + "</span>" : "not in the flash log") + "</dd></dl>" +
-      '<div class="actions"><button class="tool" data-run data-c="up" data-a="--no-flash" title="' + NOTE.up + '">Check all</button><button data-run data-c="sim" title="' + NOTE.sim + '">Sim</button><button data-run data-c="render" title="' + NOTE.render + '">Render</button><button data-run data-c="report" title="' + NOTE.report + '">Report</button><a href="#analyzer" data-an="' + u.id + '"><button>Analyzer</button></a><span class="sp"></span><button class="primary" data-run data-flash="' + u.id + '">Flash…</button></div><div data-confirm></div>' + after +
+      '<div class="actions"><button class="tool" data-run data-c="up" data-a="--no-flash" title="' + NOTE.up + '">Check all</button><button class="ghost" data-run data-c="sim" title="' + NOTE.sim + '">Sim</button><button class="ghost" data-run data-c="render" title="' + NOTE.render + '">Render</button><button class="ghost" data-run data-c="report" title="' + NOTE.report + '">Report</button><a href="#analyzer" data-an="' + u.id + '"><button class="ghost">Analyzer</button></a><span class="sp"></span><button class="primary" data-run data-flash="' + u.id + '">Flash…</button></div><div data-confirm></div>' + after +
       (files.length ? '<details><summary>Latest renders (' + files.length + ')</summary><div class="tw"><table><tr><th>file</th><th>TP</th><th>LUFS</th><th>clicks</th><th></th></tr>' + files.map(f => "<tr><td>" + esc(f.file) + "</td><td>" + f1(f.tp) + "</td><td>" + f1(f.lufs) + "</td><td>" + f.clicks + '</td><td><span class="pill ' + f.verdict + '">' + f.verdict + "</span></td></tr>").join("") + "</table></div></details>" : "") + "</section>";
   }).join("");
   setBusy(busy);
