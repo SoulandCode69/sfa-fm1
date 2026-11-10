@@ -2,6 +2,12 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10 (late night): violet identity
+
+* **Colour**: the main accent is now electric violet (actions, selection, the active page), on the same dark base. Magenta is the pop, kept for Flash and the pattern steps; cyan for links, info and the current page in the header. Lime is gone.
+* **Logo**: a rounded white S (one cycle of a wave) on a violet tile with a magenta signal dot; used in the header and as the tab icon on the console, Analyzer, Sample Lab and site.
+* **Wordmark**: SFA in bold display type, Console as a spaced secondary label.
+
 ## 2026-11-10 (night): brand
 
 * **Dark base** by default (a Light switch remains): near-black indigo surfaces, hot magenta for the action, acid lime for selection and tools, cyan for links and info.

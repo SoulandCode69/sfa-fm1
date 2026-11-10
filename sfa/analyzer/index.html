@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>SFA Analyzer</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%23ff2e7e%22/%3E%3Cpath%20d%3D%22M24%209.5H9.5V16H22.5V22.5H8%22%20fill%3D%22none%22%20stroke%3D%22%230c0a1c%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22square%22%20stroke-linejoin%3D%22miter%22/%3E%3Crect%20x%3D%225%22%20y%3D%2219.5%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%221.5%22%20fill%3D%22%23c8ff2e%22/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22sfaG%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23a06bff%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%236226f5%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22url%28%23sfaG%29%22/%3E%3Cpath%20d%3D%22M22.5%209.75H14.25a3.25%203.25%200%200%200%200%206.5h3.5a3.25%203.25%200%200%201%200%206.5H13%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%223.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3Ccircle%20cx%3D%228.6%22%20cy%3D%2222.75%22%20r%3D%222.1%22%20fill%3D%22%23ff2e7e%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap">
 <style>
@@ -13,7 +13,7 @@
    Palette: ink with a violet cast, bone text, one hot "sin" red for the accent, teal / amber / violet / lime for overlays. */
 :root {
   --bg: #f3f1fb; --panel: #ffffff; --panel2: #ebe8f8; --rule: #dcd7ee; --fg: #0c0a1c; --dim: #5d5880;
-  --accent: #ff2e7e; --accent-fg: #ffffff; --good: #06a765; --warn: #c96f00; --bad: #e5283a;
+  --accent: #6d35f0; --accent-fg: #ffffff; --good: #06a765; --warn: #c96f00; --bad: #e5283a;
   --c1: #ff2e7e; --c2: #6a3dff; --c3: #c27a00; --c4: #6d4fd6; --c5: #4c8f1c;
   --plot: #ffffff; --grid: #e4e0f3; --wave: #1d1740;
   --display: "Syne", "Arial Black", system-ui, sans-serif;
@@ -22,12 +22,12 @@
 }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] {
   --bg: #0c0a17; --panel: #141124; --panel2: #1b1730; --rule: #272243; --fg: #f2f0ff; --dim: #a19bc4;
-  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
+  --accent: #8348ff; --accent-fg: #ffffff; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --c1: #ff3d6e; --c2: #38d6c4; --c3: #ffb347; --c4: #a78bfa; --c5: #8bd450;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #0c0a17; --panel: #141124; --panel2: #1b1730; --rule: #272243; --fg: #f2f0ff; --dim: #a19bc4;
-  --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
+  --accent: #8348ff; --accent-fg: #ffffff; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --c1: #ff3d6e; --c2: #38d6c4; --c3: #ffb347; --c4: #a78bfa; --c5: #8bd450;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; color-scheme: dark; }
 
@@ -128,7 +128,7 @@ td.up { color: var(--warn); } td.dn { color: var(--c2); } td.eq { color: var(--d
 body { -webkit-font-smoothing: antialiased; }
 button { background: var(--panel); border-radius: 8px; padding: 6px 12px; font-weight: 500; transition: background .12s, border-color .12s; }
 button:hover:not(:disabled) { border-color: var(--fg); background: var(--panel2); }
-button.primary { box-shadow: 0 1px 2px rgba(225,29,85,.35); } button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); border-color: var(--accent); }
+button.primary { box-shadow: 0 6px 18px rgba(131,72,255,.28); } button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); border-color: var(--accent); }
 button.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
 select, input[type=text], input[type=number] { background: var(--panel); border-radius: 8px; }
 .card { border-radius: 12px; box-shadow: var(--shadow); }
@@ -139,24 +139,28 @@ select, input[type=text], input[type=number] { background: var(--panel); border-
 /* SFA identity: ink header with the signal stripe */
 body > header { background: #0c0a1c; color: #e9e5ff; margin: 0 -16px 14px; padding-left: 16px; padding-right: 16px; border-bottom: 0; position: sticky; top: 0; z-index: 20; }
 body > header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: linear-gradient(90deg, #ff2e7e, #6a3dff 60%, #00b8d9); }
-body > header .mark span { color: #c8ff2e; } body > header .readout, body > header label { color: #b9b1e6; }
-body > header button:not(.primary) { background: #171430; border-color: transparent; color: #e9e5ff; } body > header button:not(.primary):hover:not(:disabled) { background: #171430; border-color: #c8ff2e; }
-body > header button.on { background: #c8ff2e; color: #0c0a1c; border-color: #c8ff2e; } body > header select { background: #171430; color: #e9e5ff; border-color: #2f2a52; }
-button.on { background: #0c0a1c; color: #c8ff2e; border-color: #0c0a1c; }
-:root[data-theme="dark"] button.on { background: #c8ff2e; color: #0c0a1c; border-color: #c8ff2e; }
+body > header .mark span { color: #c9b6ff; } body > header .readout, body > header label { color: #b9b1e6; }
+body > header button:not(.primary) { background: #171430; border-color: transparent; color: #e9e5ff; } body > header button:not(.primary):hover:not(:disabled) { background: #171430; border-color: #c9b6ff; }
+body > header button.on { background: #c9b6ff; color: #0c0a1c; border-color: #c9b6ff; } body > header select { background: #171430; color: #e9e5ff; border-color: #2f2a52; }
+button.on { background: #0c0a1c; color: #c9b6ff; border-color: #0c0a1c; }
+:root[data-theme="dark"] button.on { background: #c9b6ff; color: #0c0a1c; border-color: #c9b6ff; }
 /* brand: emblem, wordmark, dark base */
 body > header { background: #07060e; border-bottom: 1px solid #1d1a33; }
-body > header::after { background: linear-gradient(90deg, #ff2e7e, #ff2e7e 35%, #c8ff2e 70%, #2fd9f4); height: 2px; bottom: -1px; }
-body > header .mark svg { border-radius: 8px; box-shadow: 0 0 0 1px rgba(255,46,126,.35), 0 4px 16px rgba(255,46,126,.3); }
+body > header::after { background: linear-gradient(90deg, #8348ff, #8348ff 30%, #ff2e7e 65%, #2fd9f4); height: 2px; bottom: -1px; }
+body > header .mark svg { border-radius: 8px; box-shadow: 0 4px 18px rgba(131,72,255,.45); }
 body > header .mark b { letter-spacing: .04em; color: #fff; } body > header .mark span { color: #8a84ad; letter-spacing: .2em; }
-:root[data-theme="dark"] button.on { background: #c8ff2e; color: #0c0a17; border-color: #c8ff2e; }
+:root[data-theme="dark"] button.on { background: #8348ff; color: #fff; border-color: #8348ff; }
 :root[data-theme="dark"] .card { box-shadow: none; }
+/* violet identity */
+button.on, body > header button.on { background: #8348ff; color: #fff; border-color: #8348ff; }
+:root[data-theme="dark"] button.on { background: #8348ff; color: #fff; border-color: #8348ff; }
+body > header .mark span { font-family: var(--body); letter-spacing: .24em; }
 </style>
 </head>
 <body>
 <header>
   <div class="mark">
-    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff2e7e"/><path d="M24 9.5H9.5V16H22.5V22.5H8" fill="none" stroke="#0c0a1c" stroke-width="4" stroke-linecap="square" stroke-linejoin="miter"/><rect x="5" y="19.5" width="6" height="6" rx="1.5" fill="#c8ff2e"/></svg>
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="sfaG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a06bff"/><stop offset="1" stop-color="#6226f5"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#sfaG)"/><path d="M22.5 9.75H14.25a3.25 3.25 0 0 0 0 6.5h3.5a3.25 3.25 0 0 1 0 6.5H13" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.6" cy="22.75" r="2.1" fill="#ff2e7e"/></svg>
     <div><b>SFA</b> <span>Analyzer</span></div>
   </div>
   <button class="primary" id="bOpen">Open WAVs</button>
