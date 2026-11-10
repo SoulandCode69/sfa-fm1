@@ -4,17 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SFA Console</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%23ff2e7e%22/%3E%3Cpath%20d%3D%22M24%209.5H9.5V16H22.5V22.5H8%22%20fill%3D%22none%22%20stroke%3D%22%230c0a1c%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22square%22%20stroke-linejoin%3D%22miter%22/%3E%3Crect%20x%3D%225%22%20y%3D%2219.5%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%221.5%22%20fill%3D%22%23c8ff2e%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap">
 <link rel="stylesheet" href="/hub/hub.css">
 </head>
 <body>
 <header class="top">
-  <a class="mark" href="#units">
-    <svg width="32" height="32" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="var(--accent)"/><g fill="var(--accent-fg)"><rect x="5" y="15" width="3" height="10" rx="1"/><rect x="10" y="8" width="3" height="17" rx="1"/><rect x="15" y="12" width="3" height="13" rx="1"/><rect x="20" y="5" width="3" height="20" rx="1"/></g></svg>
-    <div><b>SFA</b> <span>Console</span></div>
+  <a class="mark" href="#units" aria-label="SFA Console, home">
+    <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff2e7e"/><path d="M24 9.5H9.5V16H22.5V22.5H8" fill="none" stroke="#0c0a1c" stroke-width="4" stroke-linecap="square" stroke-linejoin="miter"/><rect x="5" y="19.5" width="6" height="6" rx="1.5" fill="#c8ff2e"/></svg>
+    <div><b>SFA</b><span>Console</span></div>
   </a>
+  <div class="crumb" id="crumb"></div>
   <span class="sp"></span>
-  <button id="themeBtn" class="sm" title="Colour theme: light or dark">Light</button>
+  <button id="themeBtn" class="sm" title="Switch between the dark and light theme">Dark</button>
   <div class="live" id="live"><i></i><span id="liveTxt">connecting</span></div>
 </header>
 
@@ -75,7 +77,9 @@ function updOut() { const p = $("#outPre"); if (!p) return; $("#outTitle").textC
 
 const page = () => (location.hash || "#units").slice(1) || "units";
 function route() {
-  const p = page(); document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.p === p));
+  const p = page(); let grp = "", name = "";
+  document.querySelectorAll("nav.rail > *").forEach(a => { if (a.classList.contains("grp")) { if (!name) grp = a.textContent; } else if (a.dataset.p === p || (p === "layouts" && a.dataset.p === "designer")) { name = a.childNodes[0].textContent.trim(); a.classList.add("on"); } else a.classList.remove("on"); });
+  { const c = $("#crumb"); if (c) c.innerHTML = name ? esc(grp) + " <i>/</i> <b>" + esc(name) + "</b>" : ""; document.title = (name ? name + " \u00b7 " : "") + "SFA Console"; }
   ({ units: viewUnits, analyzer: viewAnalyzer, samplelab: viewLab, planner: viewPlanner, decisions: viewDecisions, arch: viewArch, docs: viewDocs, engines: viewEngines, presets: viewPresets, compare: viewCompare, prototype: viewProto, doctor: viewDoctor, log: viewLog, roadmap: viewRoadmap }[p] || (window.WS && WS[p]) || viewUnits)();
 }
 window.addEventListener("hashchange", route);
@@ -410,9 +414,9 @@ async function importPresets(file) {
   } catch (e) { alert("Import failed: " + e.message); }
 }
 /* ---- theme: light by default, dark by choice; embedded tools follow ---- */
-let THEME = "light";
-function applyTheme(t) { THEME = t; t === "dark" ? document.documentElement.setAttribute("data-theme", "dark") : document.documentElement.removeAttribute("data-theme"); const b = $("#themeBtn"); if (b) b.textContent = t === "dark" ? "Dark" : "Light"; document.querySelectorAll("iframe.frame").forEach(f => { try { f.contentWindow.postMessage({ sfaTheme: t }, location.origin); } catch (e) {} }); }
-function initTheme() { let t = "light"; try { t = localStorage.getItem("sfa-theme") === "dark" ? "dark" : "light"; } catch (e) {} applyTheme(t); $("#themeBtn").onclick = () => { applyTheme(THEME === "dark" ? "light" : "dark"); try { localStorage.setItem("sfa-theme", THEME); } catch (e) {} }; }
+let THEME = "dark";
+function applyTheme(t) { THEME = t; t === "light" ? document.documentElement.setAttribute("data-theme", "light") : document.documentElement.removeAttribute("data-theme"); const b = $("#themeBtn"); if (b) b.textContent = t === "light" ? "Light" : "Dark"; document.querySelectorAll("iframe.frame").forEach(f => { try { f.contentWindow.postMessage({ sfaTheme: t }, location.origin); } catch (e) {} }); }
+function initTheme() { let t = "dark"; try { t = localStorage.getItem("sfa-theme2") === "light" ? "light" : "dark"; } catch (e) {} applyTheme(t); $("#themeBtn").onclick = () => { applyTheme(THEME === "dark" ? "light" : "dark"); try { localStorage.setItem("sfa-theme2", THEME); } catch (e) {} }; }
 document.addEventListener("load", e => { if (e.target && e.target.classList && e.target.classList.contains("frame")) { try { e.target.contentWindow.postMessage({ sfaTheme: THEME }, location.origin); } catch (x) {} } }, true);
 /* ---- analyzer, inside the console ---- */
 let anUnits = "all";

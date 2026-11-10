@@ -2,6 +2,12 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10 (night): brand
+
+* **Dark base** by default (a Light switch remains): near-black indigo surfaces, hot magenta for the action, acid lime for selection and tools, cyan for links and info.
+* **Emblem**: a square-wave S in ink on a magenta tile with a lime signal dot (`sfa/hub/emblem.svg`, `site/emblem.svg`). It is the header mark and the browser-tab icon on the console, the Analyzer, the Sample Lab and the site.
+* **Header**: SFA wordmark with Console as the secondary label, a section / page crumb, and the page name in the tab title.
+
 ## 2026-11-10 (evening): polish pass
 
 * One consolidated stylesheet (`sfa/hub/hub.css`): a single button height with four roles (action, tool, plain, ghost), consistent fields, card and table styles, state pills with a dot, a joined four-step strip, a full-height ink rail.

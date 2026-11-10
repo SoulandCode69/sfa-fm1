@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>SFA Analyzer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%23ff2e7e%22/%3E%3Cpath%20d%3D%22M24%209.5H9.5V16H22.5V22.5H8%22%20fill%3D%22none%22%20stroke%3D%22%230c0a1c%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22square%22%20stroke-linejoin%3D%22miter%22/%3E%3Crect%20x%3D%225%22%20y%3D%2219.5%22%20width%3D%226%22%20height%3D%226%22%20rx%3D%221.5%22%20fill%3D%22%23c8ff2e%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap">
 <style>
@@ -20,12 +21,12 @@
   --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] {
-  --bg: #0e0c1d; --panel: #17142b; --panel2: #211d3d; --rule: #2f2a52; --fg: #f0edff; --dim: #a59fce;
+  --bg: #0c0a17; --panel: #141124; --panel2: #1b1730; --rule: #272243; --fg: #f2f0ff; --dim: #a19bc4;
   --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --c1: #ff3d6e; --c2: #38d6c4; --c3: #ffb347; --c4: #a78bfa; --c5: #8bd450;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --bg: #0e0c1d; --panel: #17142b; --panel2: #211d3d; --rule: #2f2a52; --fg: #f0edff; --dim: #a59fce;
+  --bg: #0c0a17; --panel: #141124; --panel2: #1b1730; --rule: #272243; --fg: #f2f0ff; --dim: #a19bc4;
   --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --c1: #ff3d6e; --c2: #38d6c4; --c3: #ffb347; --c4: #a78bfa; --c5: #8bd450;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; color-scheme: dark; }
@@ -123,7 +124,7 @@ td.up { color: var(--warn); } td.dn { color: var(--c2); } td.eq { color: var(--d
 
 /* 2026-11-10: the console's bright look. White work surfaces, rounder controls, filled state pills. */
 :root { --soft-good: #e0f5ea; --soft-warn: #fdf0d9; --soft-bad: #fde6e6; --blue: #6a3dff; --shadow: 0 1px 2px rgba(28,16,80,.07), 0 6px 18px rgba(28,16,80,.06); }
-:root[data-theme="dark"] { --soft-good: #10301f; --soft-warn: #35270d; --soft-bad: #3a1616; --blue: #9d82ff; --shadow: none; }
+:root[data-theme="dark"] { --soft-good: #10301f; --soft-warn: #35270d; --soft-bad: #3a1616; --blue: #2fd9f4; --shadow: none; }
 body { -webkit-font-smoothing: antialiased; }
 button { background: var(--panel); border-radius: 8px; padding: 6px 12px; font-weight: 500; transition: background .12s, border-color .12s; }
 button:hover:not(:disabled) { border-color: var(--fg); background: var(--panel2); }
@@ -143,12 +144,19 @@ body > header button:not(.primary) { background: #171430; border-color: transpar
 body > header button.on { background: #c8ff2e; color: #0c0a1c; border-color: #c8ff2e; } body > header select { background: #171430; color: #e9e5ff; border-color: #2f2a52; }
 button.on { background: #0c0a1c; color: #c8ff2e; border-color: #0c0a1c; }
 :root[data-theme="dark"] button.on { background: #c8ff2e; color: #0c0a1c; border-color: #c8ff2e; }
+/* brand: emblem, wordmark, dark base */
+body > header { background: #07060e; border-bottom: 1px solid #1d1a33; }
+body > header::after { background: linear-gradient(90deg, #ff2e7e, #ff2e7e 35%, #c8ff2e 70%, #2fd9f4); height: 2px; bottom: -1px; }
+body > header .mark svg { border-radius: 8px; box-shadow: 0 0 0 1px rgba(255,46,126,.35), 0 4px 16px rgba(255,46,126,.3); }
+body > header .mark b { letter-spacing: .04em; color: #fff; } body > header .mark span { color: #8a84ad; letter-spacing: .2em; }
+:root[data-theme="dark"] button.on { background: #c8ff2e; color: #0c0a17; border-color: #c8ff2e; }
+:root[data-theme="dark"] .card { box-shadow: none; }
 </style>
 </head>
 <body>
 <header>
   <div class="mark">
-    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="5" fill="var(--accent)"/><g fill="var(--accent-fg)"><rect x="5" y="15" width="3" height="10"/><rect x="10" y="8" width="3" height="17"/><rect x="15" y="12" width="3" height="13"/><rect x="20" y="5" width="3" height="20"/></g></svg>
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff2e7e"/><path d="M24 9.5H9.5V16H22.5V22.5H8" fill="none" stroke="#0c0a1c" stroke-width="4" stroke-linecap="square" stroke-linejoin="miter"/><rect x="5" y="19.5" width="6" height="6" rx="1.5" fill="#c8ff2e"/></svg>
     <div><b>SFA</b> <span>Analyzer</span></div>
   </div>
   <button class="primary" id="bOpen">Open WAVs</button>
@@ -212,7 +220,7 @@ button.on { background: #0c0a1c; color: #c8ff2e; border-color: #0c0a1c; }
 <script>
 "use strict";
 /* theme: light unless the console (or ?theme=dark) says dark */
-(function () { const set = t => t === "dark" ? document.documentElement.setAttribute("data-theme", "dark") : document.documentElement.removeAttribute("data-theme"); try { set(new URLSearchParams(location.search).get("theme") || localStorage.getItem("sfa-theme") || "light"); } catch (e) {} addEventListener("message", e => { if (e.origin === location.origin && e.data && e.data.sfaTheme) { set(e.data.sfaTheme); dispatchEvent(new Event("resize")); } }); })();
+(function () { const set = t => t === "dark" ? document.documentElement.setAttribute("data-theme", "dark") : document.documentElement.removeAttribute("data-theme"); try { set(new URLSearchParams(location.search).get("theme") || localStorage.getItem("sfa-theme2") || "dark"); } catch (e) {} addEventListener("message", e => { if (e.origin === location.origin && e.data && e.data.sfaTheme) { set(e.data.sfaTheme); dispatchEvent(new Event("resize")); } }); })();
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
 const root = document.documentElement;
