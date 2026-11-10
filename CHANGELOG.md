@@ -2,6 +2,14 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10: Earth Creature Beats Build 12 (not flashed yet)
+
+* **Otter** gets a sixth page, FILTER+: **TYPE** (LP 12, LP 24, BAND, HIGH), **LFOSHAPE** (SINE, TRI, SAW, SQUARE, S&H), **LFO>WAVE** (the LFO moves pulse width, FM depth or detune, by wave) and **WARM** (a gentle high cut, 16 kHz down to about 2.5 kHz). All four at zero is the sound as it was, so the 64 existing presets are unchanged.
+* **Twelve new presets** (76 in all), level-matched to the others within about 1.4 dB: MOOG BASS, PWM BASS, RUBBER SUB, SILK LEAD, HOLLOW LEAD, PWM LEAD, VELVET PAD, GLASS PAD, SWEEP PAD, MUTED PLUCK, BELL PLUCK, RANDOM KEYS.
+* **Saved state is kept across the flash**: settings from Build 11 (five pages a creature) are widened to six on first boot, so patterns, scenes, mix and sounds survive. The widening is unit-tested on the host; it has not run on a unit yet.
+* Simulator: 137 of 137 checks (ten new ones for the page), every render clean, song true peak -2.5 dBTP.
+* Nothing else in ECB changed: Fox, Cat, Hopper, Beaver, the mixer and the master chain already had what the brief asked for (see the status table in the flash notes).
+
 ## 2026-11-10 (simplify)
 
 * **Sidebar**: seven places (Units, Analyzer, Sample Lab, Presets, Designer, Planner, Agents) and one More page that holds the rest: Patterns, Toolbox, Direction, Decisions, Engine map, Architecture, Compare, Research, Docs, Doctor, Flash log, Roadmap. Nothing was deleted.

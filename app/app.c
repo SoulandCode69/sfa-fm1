@@ -48,7 +48,8 @@ static const uint16_t ENG_DARK[5] = {RGB(30, 84, 116), RGB(112, 82, 16), RGB(116
 
 #include "icons.c"
 
-#define SET_MAGIC 0x45434237u            /* "ECB7" */
+#define SET_MAGIC 0x45434238u            /* "ECB8": six pages a creature */
+#define SET_MAGIC_V7 0x45434237u         /* "ECB7" */
 #define SONG_PAT(b) ((b) & 7u)
 #define SONG_REP(b) (((b) >> 3 & 7u) + 1u)       /* a slot: bits 0-2 the pattern, 3-5 the repeats - 1 */
 #define USR_MAGIC 0x45434255u            /* "ECBU" */
@@ -74,6 +75,24 @@ typedef struct {
     struct { uint8_t used, pattern, otter, fox, kit, mute, level[4], pan[4], rsv[2]; } scene[NSCENE];   /* 16 B each */
     uint8_t pat[4][PATSZ];                /* patterns A-D (E-H: the user object) */
 } settings_t;
+typedef struct {
+    uint32_t magic;
+    int8_t octave;
+    uint8_t focus;
+    uint8_t page[NENG];
+    uint8_t level[NENG], pan[NENG];
+    uint8_t delay_mix, delay_time, verb, verb_size, drive, mixpage;
+    uint8_t otter_preset, fox_preset, cat_kit, pattern;
+    uint8_t chain, glue, lowend, air;     /* the master page */
+    uint8_t song[NSONG], song_len, hop_source, rsv2[2];
+    uint8_t send[NENG];                   /* each creature's FX send (reverb + delay) */
+    uint8_t song_scene[NSONG];            /* a scene to recall on entering the slot (0 = none, 1-8) */
+    int8_t transpose[NENG];               /* live transpose per creature, semitones (Cat and Hopper ignore it) */   /* the song chain: pattern slots in order (CHAIN + key appends) */
+    uint8_t param[NENG][5][NPARAM];
+    uint8_t slices[16 * 4];
+    struct { uint8_t used, pattern, otter, fox, kit, mute, level[4], pan[4], rsv[2]; } scene[NSCENE];   /* 16 B each */
+    uint8_t pat[4][PATSZ];                /* patterns A-D (E-H: the user object) */
+} settings_v7_t;                        /* Build 11 and earlier: five pages a creature. Only its size and offsets are used. */
 typedef struct {
     uint32_t magic;
     uint8_t pads[8 * 16 * 8];             /* the kits' pads: 8 kits x 16 pads x 8 params */
@@ -260,6 +279,27 @@ void app_render(int32_t *lr, uint32_t n, uint32_t master_q12)
 void app_panic(void) { uint32_t e; seq_stop(); for (e = 0; e < NENG; e++) ENG[e]->panic(); }
 
 /* --------------------------------------------------------------- settings --- */
+/* Loads the settings. A Build 11 object (five pages a creature) is widened in place to six, so a flash keeps the
+ * patterns, scenes, mix and sounds: the tail moves up, then each creature's pages, last first; the new page is zeros. */
+static void settings_widen_v7(uint8_t *b)
+{
+    uint32_t src = (uint32_t)__builtin_offsetof(settings_v7_t, slices), dst = (uint32_t)__builtin_offsetof(settings_t, slices);
+    uint32_t n = (uint32_t)sizeof(settings_v7_t) - src, off = (uint32_t)__builtin_offsetof(settings_t, param), e, i;
+    for (i = n; i-- > 0u;) b[dst + i] = b[src + i];
+    for (e = NENG; e-- > 0u;) {
+        for (i = 5u * NPARAM; i-- > 0u;) b[off + e * NPAGES * NPARAM + i] = b[off + e * 5u * NPARAM + i];
+        for (i = 0; i < NPARAM; i++) b[off + e * NPAGES * NPARAM + 5u * NPARAM + i] = 0;
+    }
+}
+static int settings_load(void)
+{
+    if (plat_store_size(OBJ_SETTINGS) == (int)sizeof(settings_v7_t)) {
+        if (plat_store_load(OBJ_SETTINGS, &set, sizeof(settings_v7_t)) != (int)sizeof(settings_v7_t) || set.magic != SET_MAGIC_V7) return 0;
+        settings_widen_v7((uint8_t *)&set); set.magic = SET_MAGIC; set_dirty = 1;
+        return 1;
+    }
+    return plat_store_load(OBJ_SETTINGS, &set, sizeof set) == (int)sizeof set && set.magic == SET_MAGIC;
+}
 static uint8_t *page_param(uint8_t e, uint8_t pg) { return pg < ENG[e]->npages ? ENG[e]->params[pg] : ENG[e]->params[0]; }
 static const char *const *page_names(uint8_t e, uint8_t pg) { return pg < ENG[e]->npages ? ENG[e]->names[pg] : ENG[e]->names[0]; }
 static void params_to_set(void)
@@ -290,7 +330,7 @@ void app_init(void)
     cpu2_rc = plat_cpu2_set(1);                                        /* the second core renders the synths */
     plat_usb_audio_full(1);                                            /* USB audio at full level whatever MASTER does: sampling into a computer or an MPC */
     seq.rng = 0x1234567u;
-    if (plat_store_load(OBJ_SETTINGS, &set, sizeof set) == (int)sizeof set && set.magic == SET_MAGIC
+    if (settings_load()
         && set.octave >= -2 && set.octave <= 2 && set.focus < NENG && set.pattern < NPAT
         && PAT->bpm >= 40u && PAT->steps >= 1u && PAT->steps <= NSTEP) {
         for (e = 0; e < NENG; e++) if (set.page[e] >= ENG[e]->npages) set.page[e] = 0;

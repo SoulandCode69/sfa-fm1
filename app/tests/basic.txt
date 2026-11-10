@@ -637,3 +637,76 @@ tapkey b3
 wait 50
 spin PRESET 1
 wait 50
+# Build 12: Otter's sixth page, FILTER+ (TYPE LFOSHAPE LFO>WAVE WARM). Each filter type played and recorded.
+tap HOME
+wait 30
+tap FX
+wait 30
+spin PRESET 1
+wait 20
+spin PRESET 1
+wait 20
+spin PRESET 1
+wait 20
+spin PRESET 1
+wait 20
+spin PRESET 1
+wait 20
+expect page 5
+expect focus 0
+expect param0 0
+expect param3 0
+wav otter_filters.wav
+key 7 down
+key 11 down
+wait 350
+key 7 up
+key 11 up
+wait 250
+spin K1 11
+wait 30
+expect param0 33
+key 7 down
+key 11 down
+wait 350
+key 7 up
+key 11 up
+wait 250
+spin K1 11
+wait 30
+expect param0 66
+key 7 down
+key 11 down
+wait 350
+key 7 up
+key 11 up
+wait 250
+spin K1 11
+spin K4 20
+wait 30
+expect param0 99
+expect param3 60
+key 7 down
+key 11 down
+wait 350
+key 7 up
+key 11 up
+wait 250
+wait 100
+wavstop
+shot otter_filterplus.png
+spin K1 -33
+spin K4 -20
+wait 20
+expect param0 0
+spin PRESET -1
+wait 20
+spin PRESET -1
+wait 20
+spin PRESET -1
+wait 20
+spin PRESET -1
+wait 20
+spin PRESET -1
+wait 20
+expect page 0

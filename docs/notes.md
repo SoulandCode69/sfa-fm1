@@ -208,3 +208,7 @@ voice now has a 0.25 ms onset ramp (127 checks pass). Both units' renders measur
 ## 2026-11-09 evening: DSP pass (not flashed yet)
 
 See CHANGELOG.md. ECB and Alien Stack both change (Fox bass retrigger, bass filter envelope attack, soft panic on preset / octave / mute). Flash one at a time, ECB first; log the build here when done.
+
+## 2026-11-10: ECB Build 12 (built in the simulator, not flashed yet)
+
+Otter FILTER+ page (filter types, LFO shapes, LFO>WAVE, WARM) and 12 new presets (76). Settings widen from five pages to six on first boot; saved patterns and scenes should survive, but back up first (hub, Backup) because that step has only been tested on the host. Also in this build since Build 11: the Fox bass retrigger and filter-envelope fixes, the 9 ms fade on preset / octave / mute changes, engine ids. Log the flash here when done.

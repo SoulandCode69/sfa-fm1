@@ -4,7 +4,7 @@ A groovebox of five creatures that play together. Built on [fm1-base](https://gi
 
 | Creature | Button | What |
 |---|---|---|
-| OTTER Synth | FX | 4-voice polysynth, 64 presets (ALGO), ADSR, filter env, LFO, arpeggiator |
+| OTTER Synth | FX | 4-voice polysynth, 76 presets (ALGO), ADSR, filter env, LFO, arpeggiator; page 6 FILTER+: TYPE (LP 12, LP 24, BAND, HIGH), LFOSHAPE (SINE TRI SAW SQUARE S&H), LFO>WAVE (pulse width, FM depth or detune), WARM (a gentle high cut) |
 | CAT Kit | SEL | sample drum machine: 8 kits (CLASSIC, HOUSE, LOFI, PUNCH, TECHNO + the built TRAP, DNB, HIPHOP) x 16 pads; every pad its own PITCH DECAY FILTER LEVEL and SAMPLE (any of the 64 sounds: build your own kit) PUNCH SNAP CRUSH (pages PAD / PAD+ follow the pad you hit); KIT page; BUS compressor |
 | FOX Bass & 808 | ENV | 16 factory 808 / sub / bass one-shots played chromatically (mono, glide, filter, decay, drive, CLICK, PUNCH) + 24 synth basses |
 | HOPPER Cut | LFO | slicer: ALGO picks the source (BUILT-IN sounds, OWN = what you sampled, then your USER bank: tools/sfa_sample.py your WAVs, up to 16), SAMPLE the output (ARP: stop = chopped by transients and on the slice page, ready to play), chop EQUAL / TRANSIENT / MANUAL (hold a slice key + K1 moves its start), per-slice pitch / reverse / decay / level |

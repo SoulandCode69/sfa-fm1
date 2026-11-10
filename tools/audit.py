@@ -11,7 +11,7 @@ import numpy as np
 
 APP = "app"
 if "--app" in sys.argv: APP = sys.argv[sys.argv.index("--app") + 1]; del sys.argv[sys.argv.index("--app"):sys.argv.index("--app") + 2]
-N_OTTER, N_FOX, N_GREYS = (64, 40, 0) if APP == "app" else (48, 40, 24)
+N_OTTER, N_FOX, N_GREYS = (76, 40, 0) if APP == "app" else (48, 40, 24)
 SEG = 1.0                                   # seconds per sound (500 ms held, 500 ms release)
 
 def gen():

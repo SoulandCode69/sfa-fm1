@@ -11,17 +11,24 @@
 #include "engine.h"
 #include "../../base/include/plat.h"
 
-static const char *const NAMES[5][NPARAM] = {
+static const char *const NAMES[6][NPARAM] = {
     {"TONE", "RES", "WAVE", "DETUNE"}, {"ATTACK", "DECAY", "SUSTAIN", "RELEASE"}, {"FENV", "FDECAY", "VEL>F", "SUB"},
-    {"LFO", "VIBRATO", "WOBBLE", "GLIDE"}, {"ARP", "ARPRATE", "ARPOCT", "MONO"}};
-static uint8_t par[5][NPARAM] = {{78, 30, 0, 40}, {3, 55, 70, 30}, {50, 50, 40, 30}, {40, 10, 0, 0}, {0, 64, 0, 0}};
+    {"LFO", "VIBRATO", "WOBBLE", "GLIDE"}, {"ARP", "ARPRATE", "ARPOCT", "MONO"}, {"TYPE", "LFOSHAPE", "LFO>WAVE", "WARM"}};
+static uint8_t par[6][NPARAM] = {{78, 30, 0, 40}, {3, 55, 70, 30}, {50, 50, 40, 30}, {40, 10, 0, 0}, {0, 64, 0, 0}, {0, 0, 0, 0}};
+/* page 6, FILTER+ (all four at 0 = the sound before this page existed):
+ *   TYPE      LP 12, LP 24 (two stages, the second without resonance), BAND, HIGH
+ *   LFOSHAPE  SINE TRI SAW SQUARE S&H: the one LFO that drives VIBRATO, WOBBLE and LFO>WAVE
+ *   LFO>WAVE  the LFO moves the wave itself: pulse width (PULSE, SQUARE), FM depth (FM), detune (SAW, TRI, SUPER)
+ *   WARM      a gentle high cut over the whole voice sum, 16 kHz down to about 2.5 kHz: takes the edge off */
+static const char *const FTYPES[4] = {"LP 12", "LP 24", "BAND", "HIGH"};
+static const char *const LSHAPES[5] = {"SINE", "TRI", "SAW", "SQUARE", "S&H"};
 static const char *const WAVES[6] = {"SAW", "PULSE", "SQUARE", "TRI", "FM", "SUPER"};
 static const char *const ARPS[5] = {"OFF", "UP", "DOWN", "UP-DN", "RANDOM"};
 static const char *const RATES[4] = {"1/8", "1/16", "1/8T", "1/32"};
 
 /* presets: name, then the 5 pages */
-typedef struct { const char *name; uint8_t p[5][NPARAM]; } preset_t;
-#define NPRESET 64
+typedef struct { const char *name; uint8_t p[6][NPARAM]; } preset_t;   /* a missing sixth page is zeros: LP 12, sine, no LFO>WAVE, no WARM */
+#define NPRESET 76
 /* WAVE: 0-20 SAW, 21-41 PULSE, 42-62 SQUARE, 63-83 TRI, 84-104 FM, 105-127 SUPER */
 static const preset_t PRESETS[NPRESET] = {
     /* name            TONE RES WAVE DET     A   D   S   R      FENV FDEC VEL SUB    LFO VIB WOB GLI    ARP RATE OCT MONO */
@@ -91,16 +98,29 @@ static const preset_t PRESETS[NPRESET] = {
     {"ARP HOUSE",    {{85, 20, 95, 30},   {0, 35, 0, 25},    {90, 30, 70, 0},   {40, 0, 0, 0},    {32, 64, 32, 0}}},
     {"ARP TECHNO",   {{75, 60, 0, 20},    {0, 25, 0, 10},    {110, 25, 90, 20}, {40, 0, 0, 0},    {32, 96, 0, 127}}},
     {"ARP DREAM",    {{90, 15, 115, 85},  {5, 60, 30, 70},   {60, 50, 50, 0},   {50, 10, 0, 0},   {96, 64, 64, 0}}},
+    /* Build 12: twelve more, using the FILTER+ page.                                                                   TYPE SHAPE >WAVE WARM */
+    {"MOOG BASS",    {{48, 45, 0, 10},    {0, 45, 60, 12},   {85, 35, 60, 60},  {0, 0, 0, 10},    {0, 64, 0, 127}, {32, 0, 0, 30}}},
+    {"PWM BASS",     {{55, 30, 30, 15},   {0, 50, 70, 15},   {60, 40, 50, 40},  {35, 0, 0, 0},    {0, 64, 0, 127}, {32, 26, 90, 20}}},
+    {"RUBBER SUB",   {{30, 55, 70, 0},    {2, 40, 50, 18},   {95, 25, 40, 90},  {0, 0, 0, 25},    {0, 64, 0, 127}, {32, 0, 0, 50}}},
+    {"SILK LEAD",    {{80, 30, 0, 35},    {4, 50, 80, 30},   {50, 50, 40, 0},   {45, 22, 0, 30},  {0, 64, 0, 127}, {32, 0, 0, 45}}},
+    {"HOLLOW LEAD",  {{85, 60, 50, 20},   {2, 45, 75, 25},   {60, 45, 50, 0},   {50, 18, 0, 20},  {0, 64, 0, 127}, {64, 0, 40, 20}}},
+    {"PWM LEAD",     {{90, 35, 30, 25},   {0, 40, 75, 20},   {70, 40, 60, 0},   {40, 15, 0, 15},  {0, 64, 0, 127}, {0, 26, 100, 30}}},
+    {"VELVET PAD",   {{50, 20, 115, 90},  {55, 80, 100, 90}, {25, 70, 10, 20},  {25, 5, 15, 0},   {0, 64, 0, 0},   {32, 26, 40, 60}}},
+    {"GLASS PAD",    {{26, 30, 95, 60},   {30, 75, 95, 95},  {10, 70, 20, 0},   {30, 8, 25, 0},   {0, 64, 0, 0},   {96, 0, 30, 25}}},
+    {"SWEEP PAD",    {{60, 55, 0, 85},    {50, 80, 100, 85}, {20, 80, 10, 30},  {12, 0, 90, 0},   {0, 64, 0, 0},   {64, 26, 0, 20}}},
+    {"MUTED PLUCK",  {{55, 25, 0, 20},    {0, 30, 0, 15},    {100, 22, 80, 10}, {0, 0, 0, 0},     {0, 64, 0, 0},   {32, 0, 0, 40}}},
+    {"BELL PLUCK",   {{100, 10, 95, 40},  {0, 45, 0, 35},    {70, 35, 70, 0},   {0, 0, 0, 0},     {0, 64, 0, 0},   {0, 0, 0, 35}}},
+    {"RANDOM KEYS",  {{70, 50, 50, 15},   {0, 35, 20, 20},   {60, 30, 60, 0},   {60, 0, 70, 0},   {0, 64, 0, 0},   {32, 104, 60, 25}}},
 };
 /* a trim per preset (dB), from tools/audit.py: every preset peaks about the same */
-static const int8_t GAIN_DB[NPRESET] = {4, 2, 4, 9, 5, 7, 7, 5, 4, 5, 7, 5, 5, 8, 3, 1, 1, 2, 5, 2, 3, 3, 7, 10, -2, 5, 5, 5, 10, 7, 7, -1, 2, 5, 10, 6, 6, 4, 5, 1, 4, 10, 6, 7, 1, 5, 9, 7, 5, 2, 3, 4, 4, 3, 2, 5, 7, 10, 10, 6, 1, 1, 5, 5};
+static const int8_t GAIN_DB[NPRESET] = {4, 2, 4, 9, 5, 7, 7, 5, 4, 5, 7, 5, 5, 8, 3, 1, 1, 2, 5, 2, 3, 3, 7, 10, -2, 5, 5, 5, 10, 7, 7, -1, 2, 5, 10, 6, 6, 4, 5, 1, 4, 10, 6, 7, 1, 5, 9, 7, 5, 2, 3, 4, 4, 3, 2, 5, 7, 10, 10, 6, 1, 1, 5, 5, 3, 6, 4, 6, 9, 6, 4, 6, 4, 5, 4, 6};
 static float pgain = 1.0f;
 static uint8_t preset_i;
 void otter_preset(int32_t step)
 {
     uint32_t g, p;
     preset_i = (uint8_t)(((int32_t)preset_i + step + NPRESET) % NPRESET);
-    for (g = 0; g < 5u; g++) for (p = 0; p < NPARAM; p++) par[g][p] = PRESETS[preset_i].p[g][p];
+    for (g = 0; g < 6u; g++) for (p = 0; p < NPARAM; p++) par[g][p] = PRESETS[preset_i].p[g][p];
 }
 const char *otter_preset_name(void) { return PRESETS[preset_i].name; }
 void otter_preset_set(int i) { preset_i = (uint8_t)(i % NPRESET); }
@@ -110,7 +130,7 @@ int otter_preset_index(void) { return preset_i; }
 typedef struct {
     int32_t note;
     float vel, hz, hz_target, drift, ph1, ph2, ph3, phs, env, fenv;
-    svf_t flt;
+    svf_t flt, flt2;                      /* flt2: the second stage of LP 24 */
     uint8_t stage;                        /* 0 off, 1 attack, 2 decay, 3 sustain, 4 release */
     uint32_t age;
 } voice_t;
@@ -120,6 +140,14 @@ static volatile uint8_t pend_vel[8], pend_on[8], pend_n;
 static uint32_t clock_, rng = 0x9E3779B9u;
 static float lfo_ph, last_hz = 220.0f;
 static float sm_cut, sm_res, sm_det;      /* smoothed knobs */
+static float lfo_sh, warm_lp;             /* the S&H LFO's held value; WARM's one pole */
+static inline float svf_hp(svf_t *f, const svfc_t *c, float in)
+{
+    float v3 = in - f->ic2, v1 = c->a1 * f->ic1 + c->a2 * v3, v2 = f->ic2 + c->a2 * f->ic1 + c->a3 * v3;
+    f->ic1 = 2.0f * v1 - f->ic1;
+    f->ic2 = 2.0f * v2 - f->ic2;
+    return in - c->k * v1 - v2;
+}
 #define ENS_LEN 2048u
 PLAT_POOL static int16_t ens[ENS_LEN];        /* the ensemble: three modulated taps over the voices' sum */
 static uint32_t ens_w; static float ens_ph;
@@ -131,7 +159,7 @@ static int32_t arp_note = -1; static uint8_t arp_i, arp_dir;
 static void voice_on(int32_t note, uint32_t vel);
 static void voice_off(int32_t note);
 
-static void o_init(void) { uint32_t i; for (i = 0; i < NV; i++) { v[i].note = -1; v[i].stage = 0; v[i].env = 0; v[i].flt.ic1 = v[i].flt.ic2 = 0; } pend_n = 0; nheld = 0; arp_note = -1; }
+static void o_init(void) { uint32_t i; for (i = 0; i < NV; i++) { v[i].note = -1; v[i].stage = 0; v[i].env = 0; v[i].flt.ic1 = v[i].flt.ic2 = 0; v[i].flt2.ic1 = v[i].flt2.ic2 = 0; } pend_n = 0; nheld = 0; arp_note = -1; }
 static void o_panic(void) { o_init(); }
 
 static void o_note(int32_t note, uint32_t vel, int on)     /* queued: the render owns the voices */
@@ -223,16 +251,23 @@ static void o_render(float *out, uint32_t n)
     float lfo_inc = (0.1f + p01(par[3][0]) * p01(par[3][0]) * 12.0f) / SR;
     float vib = p01(par[3][1]) * p01(par[3][1]) * 0.06f, wob = p01(par[3][2]);
     float glide = par[3][3] ? 0.02f * fm_exp2f(-p01(par[3][3]) * 7.0f) : 1.0f;
-    float lfo = fm_sinf(lfo_ph * 6.2831853f);
+    uint8_t ftype = (uint8_t)(par[5][0] >> 5), lshape = (uint8_t)(par[5][1] / 26u);
+    float lw = p01(par[5][2]), warm = p01(par[5][3]);
+    float lfo, pwm;
     float drive, spread, fmidx0;
-    svfc_t fc;
-    lfo_ph += lfo_inc * (float)n; if (lfo_ph >= 1.0f) lfo_ph -= 1.0f;
+    svfc_t fc, fc2;
+    if (lshape > 4u) lshape = 4;
+    lfo = lshape == 0u ? fm_sinf(lfo_ph * 6.2831853f) : lshape == 1u ? 4.0f * fm_fabsf(lfo_ph - 0.5f) - 1.0f : lshape == 2u ? 2.0f * lfo_ph - 1.0f
+        : lshape == 3u ? (lfo_ph < 0.5f ? 1.0f : -1.0f) : lfo_sh;
+    lfo_ph += lfo_inc * (float)n;
+    if (lfo_ph >= 1.0f) { lfo_ph -= 1.0f; lfo_sh = (float)(int32_t)(rng = rng * 1664525u + 1013904223u) * (1.0f / 2147483648.0f); }   /* S&H: a new value each cycle */
+    pwm = lfo * lw;
     sm_cut += (p01(par[0][0]) - sm_cut) * 0.3f;                      /* knobs smoothed over a few blocks */
     sm_res += (p01(par[0][1]) - sm_res) * 0.3f;
     sm_det += (p01(par[0][3]) - sm_det) * 0.3f;
     drive = 1.0f + sm_res * 1.2f;
-    spread = fm_exp2f(sm_det * sm_det * 0.3f / 12.0f);
-    fmidx0 = sm_det * 5.0f;
+    spread = fm_exp2f((sm_det * sm_det * 0.3f + (wave == 0u || wave == 3u || wave == 5u ? pwm * 0.12f : 0.0f)) / 12.0f);   /* LFO>WAVE on saw, tri, super: the detune breathes */
+    fmidx0 = sm_det * 5.0f * (wave == 4u ? 1.0f + pwm * 0.8f : 1.0f);                                                  /* on FM: the depth */
     while (pend_n) {
         pend_n--;
         if (otter_arp_on()) {
@@ -270,7 +305,7 @@ static void o_render(float *out, uint32_t n)
                 o1 = 2.0f * w->ph1 - 1.0f - polyblep(w->ph1, dt1);
                 o2 = 2.0f * w->ph2 - 1.0f - polyblep(w->ph2, dt2);
             } else if (wave < 3u) {
-                float pw = wave == 1u ? 0.25f : 0.5f, t1 = w->ph1 + pw, t2 = w->ph2 + pw;
+                float pw = (wave == 1u ? 0.25f : 0.5f) + pwm * (wave == 1u ? 0.17f : 0.38f), t1 = w->ph1 + pw, t2 = w->ph2 + pw;   /* LFO>WAVE on pulse, square: the width */
                 if (t1 >= 1.0f) t1 -= 1.0f;
                 if (t2 >= 1.0f) t2 -= 1.0f;
                 o1 = (w->ph1 < pw ? 1.0f : -1.0f) + polyblep(w->ph1, dt1) - polyblep(t1, dt1);
@@ -292,18 +327,26 @@ static void o_render(float *out, uint32_t n)
             if ((i & 15u) == 0u) {                                    /* the cutoff follows the envelopes, updated every 16 samples */
                 fhz = fbase * (0.2f + 0.8f * w->env) * (1.0f + fenv_amt * w->fenv);
                 svf_coef(&fc, fhz, sm_res * 0.98f);
+                if (ftype == 1u) svf_coef(&fc2, fhz, 0.0f);
             }
             s = fm_soft(s * drive);
-            f = svf_lp(&w->flt, &fc, s);
-            if (sm_cut > 0.7f) f += s * (sm_cut - 0.7f) * 0.6f;      /* presence: some of the raw wave at high TONE */
+            if (ftype == 0u) {
+                f = svf_lp(&w->flt, &fc, s);
+                if (sm_cut > 0.7f) f += s * (sm_cut - 0.7f) * 0.6f;  /* presence: some of the raw wave at high TONE */
+            } else if (ftype == 1u) f = svf_lp(&w->flt2, &fc2, svf_lp(&w->flt, &fc, s));
+            else if (ftype == 2u) f = svf_bp(&w->flt, &fc, s) * 1.6f;
+            else f = svf_hp(&w->flt, &fc, s);
             vsum[i] += f * (0.9f + sm_res * 0.3f) * w->env * vl * tilt * pgain * (wave == 4u ? 1.2f : 0.95f);
         }
     }
     {                                                                /* the ensemble: in with DETUNE past a third */
         float amt = sm_det > 0.35f ? (sm_det - 0.35f) / 0.65f : 0.0f;
+        float wc = 1.0f - fm_exp2f(-6.2831853f * 16000.0f * fm_exp2f(-warm * 2.7f) / SR);
+        if (wc > 1.0f) wc = 1.0f;
         for (i = 0; i < n; i++) {
             float s = vsum[i], wet = 0.0f; uint32_t t;
             vsum[i] = 0.0f;
+            if (warm > 0.0f) { warm_lp += (s - warm_lp) * wc; s = warm_lp; } else warm_lp = s;
             if (amt > 0.0f) {
                 { float cs = s > 1.0f ? 1.0f : s < -1.0f ? -1.0f : s; ens[ens_w] = (int16_t)(cs * 32767.0f); }
                 ens_ph += 0.35f / SR; if (ens_ph >= 1.0f) ens_ph -= 1.0f;
@@ -331,9 +374,11 @@ static const char *o_text(uint8_t page, uint32_t p, char *buf)
     if (page == 4u && p == 1u) return RATES[par[4][1] >> 5];
     if (page == 4u && p == 2u) { static const char *const O[4] = {"1 OCT", "2 OCT", "3 OCT", "4 OCT"}; return O[par[4][2] >> 5]; }
     if (page == 4u && p == 3u) return par[4][3] >= 64u ? "MONO" : "POLY";
+    if (page == 5u && p == 0u) return FTYPES[par[5][0] >> 5];
+    if (page == 5u && p == 1u) { uint8_t k = (uint8_t)(par[5][1] / 26u); return LSHAPES[k > 4u ? 4u : k]; }
     return 0;
 }
 
-static const char *const TITLES[5] = {"SOUND", "ENVELOPE", "FILTER ENV", "MODULATION", "ARPEGGIO"};
-const engine_t otter = {"OTTER", o_init, o_note, o_render, o_panic, 5, {NAMES[0], NAMES[1], NAMES[2], NAMES[3], NAMES[4]},
-                        {par[0], par[1], par[2], par[3], par[4]}, o_text, TITLES, "otter", 1};
+static const char *const TITLES[6] = {"SOUND", "ENVELOPE", "FILTER ENV", "MODULATION", "ARPEGGIO", "FILTER+"};
+const engine_t otter = {"OTTER", o_init, o_note, o_render, o_panic, 6, {NAMES[0], NAMES[1], NAMES[2], NAMES[3], NAMES[4], NAMES[5]},
+                        {par[0], par[1], par[2], par[3], par[4], par[5]}, o_text, TITLES, "otter", 2};

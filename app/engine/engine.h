@@ -9,7 +9,7 @@
 #endif
 #define NPARAM 4                          /* one page: K1..K4 */
 
-#define NPAGES 5
+#define NPAGES 6
 typedef struct engine engine_t;
 struct engine {
     const char *name;                     /* "OTTER" */
