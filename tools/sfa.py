@@ -641,7 +641,8 @@ def usb_scan():
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
         d = json.loads(r.stdout.strip().splitlines()[-1])
     except Exception as e: return {"error": f"could not look at USB: {e}"}
-    for f in d.get("found", []): f["unit"] = FW_UNIT.get((f.get("firmware") or "").lower())
+    for f in d.get("found", []):                                    # "ECB", "ECB DEV", "ALIEN 5": the first word names the firmware
+        w = ((f.get("firmware") or "").lower().split() or [""])[0]; f["unit"] = FW_UNIT.get(w) or next((u for k, u in FW_UNIT.items() if w.startswith(k)), None)
     return d
 
 def usb_gate(uid):
