@@ -23,7 +23,7 @@ function drawDir() {
   if (dirTab === "brief") {
     h += '<div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">' + D.brief.map((b, i) => '<div class="card"><span class="eyebrow">' + String(i + 1).padStart(2, "0") + " · " + esc(b.status) + '</span><h2 style="font-size:17px">' + esc(b.h) + '</h2><div style="color:var(--dim)">' + esc(b.p) + "</div></div>").join("") + "</div>" +
       H2("Improvements over the FM-1") + '<div class="card tw" style="padding:0"><table><tr><th style="text-align:left">FM-1 today</th><th style="text-align:left">Our box</th></tr>' + D.improvements.map(i => '<tr><td style="text-align:left;white-space:normal;color:var(--dim)">' + esc(i.fm1) + '</td><td style="text-align:left;white-space:normal"><b>' + esc(i.box) + "</b></td></tr>").join("") + "</table></div>" +
-      '<p class="hint" style="margin-top:14px">Next: pick a layout on the <a href="#layouts">Layouts</a> page, then lock it in <a href="#decisions">Decisions</a>.</p>';
+      '<p class="hint" style="margin-top:14px">Next: shape it in the <a href="#designer">Designer</a>, then lock it in <a href="#decisions">Decisions</a>.</p>';
   } else if (dirTab === "controls") {
     h += '<div class="card tw" style="padding:0"><table><tr><th style="text-align:left">Control</th><th style="text-align:left">Count</th><th style="text-align:left">Why</th><th style="text-align:left">Still open</th></tr>' + D.controls.map(c => '<tr><td style="text-align:left"><b>' + esc(c.what) + '</b></td><td style="text-align:left;white-space:normal">' + esc(c.count) + '</td><td style="text-align:left;white-space:normal;min-width:240px;color:var(--dim)">' + esc(c.why) + '</td><td style="text-align:left;white-space:normal;min-width:180px">' + esc(c.open) + "</td></tr>").join("") + "</table></div>" +
       '<div class="note" style="margin-top:14px">Scanning: 25 velocity keys are 50 contacts (an 8 x 7 matrix), 16 force-sensing pads go through one 16-channel analogue mux into one ADC pin, 4 encoders with push are 12 lines, about 12 buttons join the key matrix. That is why the pin count of the brain matters; see Open questions.</div>';
@@ -59,79 +59,6 @@ function screenMock() {
   return '<svg viewBox="0 0 480 320" role="img" aria-label="Mock of the engine page" style="width:100%;border-radius:8px;background:#0c1224"><rect width="480" height="26" fill="#141c36"/><text x="10" y="18" font-size="13" fill="#9fb0d8" font-family="monospace">120.0 ▶ PAT 03</text><text x="470" y="18" text-anchor="end" font-size="13" fill="#9fb0d8" font-family="monospace">SD ▪ 82%</text><text x="14" y="62" font-size="26" font-weight="700" fill="#fff" font-family="sans-serif">OTTER</text><text x="14" y="88" font-size="16" fill="#7da2ff" font-family="monospace">GLASS KEYS</text><text x="466" y="62" text-anchor="end" font-size="13" fill="#9fb0d8" font-family="monospace">PAGE 1/5</text>' + bar(20, "CUTOFF", 70, "89") + bar(130, "RESO", 35, "45") + bar(240, "ENV", 80, "102") + bar(350, "DRIVE", 12, "15") + '<g fill="#1b2440">' + Array.from({ length: 16 }, (_, i) => '<rect x="' + (14 + i * 28.5) + '" y="270" width="24" height="34" rx="4"' + ([0, 4, 8, 12, 14].includes(i) ? ' fill="#2456e6"' : "") + "/>").join("") + "</g></svg>";
 }
 document.addEventListener("click", e => { const t = e.target.closest("[data-dt]"); if (t) { dirTab = t.dataset.dt; drawDir(); } });
-
-/* =====================================================================================================
-   LAYOUTS: three ways to place keys, pads, screen and encoders; sizes follow the key pitch
-   ===================================================================================================== */
-const LAY_DEF = { concept: "steprow", keys: 25, kp: 18, pad: 26, screen: "3.5", h: 38, fm1w: "", fm1d: "", fm1kp: "" };
-const SCREENS = { "2.8": { w: 57.6, h: 43.2, px: "320 x 240" }, "3.5": { w: 73.4, h: 49.0, px: "480 x 320" }, "4.0": { w: 83.5, h: 55.7, px: "480 x 320" }, "4.3": { w: 95.0, h: 53.9, px: "480 x 272" } };
-const CONCEPTS = {
-  steprow: { name: "Step Row", say: "Sixteen pads in one row, right above the keys: step 1 to 16 reads left to right like the sequencer itself. Screen in the middle with two encoders on each side. The most compact of the three.", plus: "smallest body; pads double as an obvious step row; both hands reach pads from the keys", minus: "pads are narrow (finger drumming is tighter); one long row can feel far at the ends" },
-  butterfly: { name: "Butterfly", say: "The screen sits in the centre with eight pads on each side, like wings. Left hand drums on the left wing, right hand on the right, eyes stay in the middle. Encoders in a row under the screen.", plus: "full-size pads; symmetrical and unlike anything on the shelf; wide body allows near full-size keys", minus: "widest body; a step row split in two halves" },
-  terrace: { name: "Terrace", say: "A 2 x 8 pad block on the left, screen on the right with the encoders beneath it. Pads for the left hand, screen and editing for the right.", plus: "full-size pads in a familiar two-row strip; all editing in one place", minus: "asymmetric: left-handed drummers lose out; screen is off-centre" }
-};
-function layGeom(o) {
-  const m = 12, g = 4, sc = SCREENS[o.screen] || SCREENS["3.5"], sw = sc.w + 10, sh = sc.h + 8, nW = { 13: 8, 25: 15, 37: 22 }[o.keys] || 15, kd = Math.round(Math.min(110, o.kp * 4.4)), it = [], enc = 14, p = o.pad;
-  const keysW = nW * o.kp; let Wi, D, ky;
-  const R = (t, x, y, w, h, r) => it.push({ t, x, y, w, h, r: r || 0 });
-  if (o.concept === "butterfly") {
-    const wing = 4 * p + 3 * g, band = Math.max(sh, 2 * p + g); Wi = Math.max(keysW, 2 * wing + sw + 20);
-    const x0 = m + (Wi - (2 * wing + sw + 20)) / 2;
-    for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { R("pad", x0 + c * (p + g), m + (band - (2 * p + g)) / 2 + r * (p + g), p, p, 3); R("pad", x0 + wing + 10 + sw + 10 + c * (p + g), m + (band - (2 * p + g)) / 2 + r * (p + g), p, p, 3); }
-    R("screen", x0 + wing + 10, m + (band - sh) / 2, sw, sh, 3);
-    const sy = m + band + 6; for (let i = 0; i < 4; i++) R("enc", m + Wi / 2 - 54 + i * 36 - enc / 2 + 0, sy + 3, enc, enc, enc / 2);
-    for (let i = 0; i < 6; i++) { R("btn", m + i * 16, sy + 5, 12, 10, 2); R("btn", m + Wi - 12 - i * 16, sy + 5, 12, 10, 2); }
-    ky = sy + 20 + 6; D = ky + kd + m;
-  } else if (o.concept === "terrace") {
-    const block = 8 * p + 7 * g, band = Math.max(sh, 2 * p + g); Wi = Math.max(keysW, block + 12 + sw);
-    for (let r = 0; r < 2; r++) for (let c = 0; c < 8; c++) R("pad", m + c * (p + g), m + (band - (2 * p + g)) / 2 + r * (p + g), p, p, 3);
-    R("screen", m + Wi - sw, m + (band - sh) / 2, sw, sh, 3);
-    const sy = m + band + 6; for (let i = 0; i < 4; i++) R("enc", m + Wi - sw + (sw - 4 * enc) / 5 * (i + 1) + i * enc, sy + 3, enc, enc, enc / 2);
-    for (let i = 0; i < 12; i++) R("btn", m + i * 16, sy + 5, 12, 10, 2);
-    ky = sy + 20 + 6; D = ky + kd + m;
-  } else {
-    Wi = Math.max(keysW, sw + 4 * 26 + 4 * 16 + 24); const pw = (Wi - 15 * g) / 16, ph = Math.min(p, 24);
-    const sx = m + (Wi - sw) / 2; R("screen", sx, m, sw, sh, 3);
-    [-2, -1, 1, 2].forEach(k => R("enc", (k < 0 ? sx + k * 26 + 4 : sx + sw + (k - 1) * 26 + 8), m + sh / 2 - enc / 2, enc, enc, enc / 2));
-    for (let i = 0; i < 6; i++) { R("btn", m + (i % 2) * 16, m + 5 + Math.floor(i / 2) * 16, 12, 10, 2); R("btn", m + Wi - 12 - (i % 2) * 16, m + 5 + Math.floor(i / 2) * 16, 12, 10, 2); }
-    const py = m + sh + 8; for (let i = 0; i < 16; i++) R("pad", m + i * (pw + g), py, pw, ph, 2);
-    ky = py + ph + 8; D = ky + kd + m; o._pw = pw;
-  }
-  const kx = m + (Wi - keysW) / 2;
-  for (let i = 0; i < nW; i++) R("white", kx + i * o.kp, ky, o.kp, kd, 1.5);
-  for (let i = 0; i < nW - 1; i++) if ([0, 1, 3, 4, 5].includes(i % 7)) R("black", kx + (i + 1) * o.kp - o.kp * 0.3, ky, o.kp * 0.6, kd * 0.62, 1);
-  return { W: Wi + 2 * m, D, it, kd, nW, sc, buttons: 12, padW: o.concept === "steprow" ? o._pw : p };
-}
-function laySvg(o, big, inlineStyle) {
-  const G = layGeom(o), pad = big ? 16 : 4, cls = { screen: "dv-screen", pad: "dv-pad", white: "dv-white", black: "dv-black", enc: "dv-enc", btn: "dv-btn" };
-  const st = inlineStyle ? "<style>.dv-body{fill:#eef1f7;stroke:#0e1220;stroke-width:.4}.dv-screen{fill:#0e1220}.dv-pad{fill:#e11d55}.dv-white{fill:#fff;stroke:#0e1220;stroke-width:.3}.dv-black{fill:#0e1220}.dv-enc{fill:#fff;stroke:#0e1220;stroke-width:.5}.dv-btn{fill:#c5ccdb}.dv-dim{stroke:#586078;stroke-width:.3;fill:none}.dv-txt{font:5px monospace;fill:#586078}</style>" : "";
-  let s = '<svg viewBox="' + (-pad) + " " + (-pad) + " " + (G.W + 2 * pad) + " " + (G.D + 2 * pad) + '" ' + (inlineStyle ? 'width="' + (G.W + 2 * pad) + 'mm" height="' + (G.D + 2 * pad) + 'mm" xmlns="http://www.w3.org/2000/svg"' : 'role="img" aria-label="' + esc(CONCEPTS[o.concept].name) + ' layout, top view"') + ">" + st + '<rect class="dv-body" x="0" y="0" width="' + G.W + '" height="' + G.D + '" rx="8"/>';
-  G.it.forEach(i => { s += '<rect class="' + cls[i.t] + '" x="' + i.x.toFixed(1) + '" y="' + i.y.toFixed(1) + '" width="' + i.w.toFixed(1) + '" height="' + i.h.toFixed(1) + '" rx="' + i.r + '"/>'; if (i.t === "screen") s += '<rect class="dv-screen-in" fill="#2456e6" x="' + (i.x + 5).toFixed(1) + '" y="' + (i.y + 4).toFixed(1) + '" width="' + (i.w - 10).toFixed(1) + '" height="' + (i.h - 8).toFixed(1) + '" rx="1"/>'; });
-  if (big) s += '<path class="dv-dim" d="M0 ' + (G.D + 8) + " H" + G.W + " M0 " + (G.D + 5) + " V" + (G.D + 11) + " M" + G.W + " " + (G.D + 5) + " V" + (G.D + 11) + " M" + (G.W + 8) + " 0 V" + G.D + " M" + (G.W + 5) + " 0 H" + (G.W + 11) + " M" + (G.W + 5) + " " + G.D + " H" + (G.W + 11) + '"/><text class="dv-txt" x="' + G.W / 2 + '" y="' + (G.D + 14.5) + '" text-anchor="middle">' + G.W.toFixed(0) + ' mm</text><text class="dv-txt" x="' + (G.W + 13) + '" y="' + G.D / 2 + '" text-anchor="middle" transform="rotate(90 ' + (G.W + 13) + " " + G.D / 2 + ')">' + G.D.toFixed(0) + " mm</text>";
-  return s + "</svg>";
-}
-const layOpt = () => { const o = {}; Object.keys(LAY_DEF).forEach(k => o[k] = pget(["layout", k], LAY_DEF[k])); o.kp = +o.kp || 18; o.pad = +o.pad || 26; o.keys = +o.keys || 25; return o; };
-WS.layouts = async function () {
-  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Layout Concepts</h1>' + saveBar + '</div><p class="lede">Three ways to place the keys, pads, screen and encoders. None is a 4 x 4 pad block under a screen. The size follows the key pitch: change it and every drawing and number follows. Drawn to scale, top view.</p><div id="layBox">Loading...</div>';
-  await loadAll(); drawLay();
-};
-function drawLay() {
-  const o = layOpt(), G = layGeom(o), C = CONCEPTS[o.concept], fw = +o.fm1w, fd = +o.fm1d, fk = +o.fm1kp;
-  const f = (k, label, kind, unit, opts) => '<label class="fld"><span>' + label + (unit ? " <small>" + unit + "</small>" : "") + "</span>" + ctl(["layout", k], LAY_DEF[k], kind, opts) + "</label>";
-  const oct = o.kp * 7, rel = fk ? (o.kp / fk * 100 - 100) : null;
-  $("#layBox").innerHTML =
-    '<div class="concepts">' + Object.keys(CONCEPTS).map(k => { const oo = Object.assign({}, o, { concept: k }), g = layGeom(oo); return '<div class="card concept' + (k === o.concept ? " on" : "") + '" data-lc="' + k + '" tabindex="0" role="button" aria-pressed="' + (k === o.concept) + '"><h2 style="font-size:17px">' + CONCEPTS[k].name + "<small>" + g.W.toFixed(0) + " x " + g.D.toFixed(0) + " mm</small></h2>" + laySvg(oo, false) + "</div>"; }).join("") + "</div>" +
-    H2(C.name, "selected") + '<div class="card bigplan">' + laySvg(o, true) + '<div style="color:var(--dim)">' + C.say + '</div><div class="items"><b>For</b><div>' + C.plus + "</div><b>Against</b><div>" + C.minus + '</div></div><div class="actions"><button class="tool" id="layPrint">Print at 1:1</button><button id="layUse">Use this size in the Planner</button><button id="layDec">Record as the layout proposal</button><span class="hint" id="layMsg"></span></div></div>' +
-    '<div class="kpis" style="margin-top:20px">' + kpi("Body", G.W.toFixed(0) + " x " + G.D.toFixed(0) + " x " + (+o.h || 38) + " mm") + kpi("Footprint", (G.W * G.D / 100).toFixed(0) + " cm²" + (fw && fd ? " · " + (G.W * G.D / (fw * fd)).toFixed(1) + "x FM-1" : "")) + kpi("Key pitch", o.kp + " mm" + (rel != null ? " · " + (rel >= 0 ? "+" : "") + rel.toFixed(0) + "%" : ""), o.kp >= 17 ? "q" : "est") + kpi("Octave", oct.toFixed(0) + " mm") + kpi("Pad", G.padW.toFixed(0) + " mm wide", G.padW >= 22 ? "q" : "est") + kpi("Controls", o.keys + " keys · 16 pads · 4 enc · " + G.buttons + " btn") + "</div>" +
-    H2("Sizes") + '<div class="card ed" data-re><div class="grid2">' + f("keys", "Keys", "sel", "", ["13", "25", "37"]) + f("kp", "Key pitch (white key width)", "num", "mm") + f("pad", "Pad size", "num", "mm") + f("screen", "Screen diagonal", "sel", "inch", Object.keys(SCREENS)) + f("h", "Body height", "num", "mm") + "</div>" +
-    '<div class="hint">Reference: a full-size piano key is about 23.5 mm wide (an octave of about 164 mm). Slim and mini keys are smaller and vary by maker, so measure the ones you like. Screen: ' + G.sc.px + ", active area " + G.sc.w + " x " + G.sc.h + ' mm.</div></div>' +
-    H2("Your FM-1, for comparison", "measure with a ruler") + '<div class="card ed" data-re><div class="grid2">' + f("fm1w", "FM-1 width", "num", "mm") + f("fm1d", "FM-1 depth", "num", "mm") + f("fm1kp", "FM-1 key pitch", "num", "mm") + '</div><div class="hint">These are blank on purpose: we have no measured FM-1 dimensions on file. Fill them in and the numbers above show how much bigger the box and its keys are.</div></div>';
-  const box = $("#layBox"); bindPlan(box, drawLay);
-  box.querySelectorAll("[data-lc]").forEach(c => { const pick = () => { pset(["layout", "concept"], c.dataset.lc); drawLay(); }; c.onclick = pick; c.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }; });
-  $("#layPrint").onclick = () => { const w = window.open("", "_blank"); if (!w) { $("#layMsg").textContent = "Allow pop-ups to print."; return; } w.document.write("<!doctype html><title>SFA " + C.name + " 1:1</title><style>@page{margin:8mm}body{margin:0;font:10pt sans-serif}</style><p>SFA " + C.name + " · " + G.W.toFixed(0) + " x " + G.D.toFixed(0) + " mm · key pitch " + o.kp + " mm · print at 100% (no fit to page), landscape. Check with a ruler: the body should measure " + G.W.toFixed(0) + " mm.</p>" + laySvg(o, true, true)); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); };
-  $("#layUse").onclick = () => { pset(["target", "w"], Math.round(G.W)); pset(["target", "d"], Math.round(G.D)); pset(["target", "h"], +o.h || 38); pset(["target", "controls"], o.keys + " keys at " + o.kp + " mm, 16 pads, 4 encoders, about " + G.buttons + " buttons (" + C.name + ")"); pset(["target", "screen"], o.screen + " in colour IPS, " + G.sc.px.replace(/ /g, "")); $("#layMsg").textContent = "Planner target updated."; };
-  $("#layDec").onclick = () => { const D = P.decisions = P.decisions || []; let d = D.find(x => x.id === "f6"); if (!d) { d = { id: "f6", title: "", status: "proposed", why: "", date: "" }; D.push(d); } d.title = "Layout concept: " + C.name; d.status = "proposed"; d.why = G.W.toFixed(0) + " x " + G.D.toFixed(0) + " mm, " + o.keys + " keys at " + o.kp + " mm pitch, " + o.screen + " in screen. Proposed from the Layouts page; print it at 1:1 and try it before locking."; psave(); $("#layMsg").textContent = "Recorded in Decisions as a proposal."; };
-}
 
 /* =====================================================================================================
    PATTERNS: a sketchbook for beats and arrangements; exports sfa-pattern/1

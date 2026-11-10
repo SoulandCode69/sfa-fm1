@@ -1,7 +1,7 @@
 {
  "updated": "2026-11-10",
  "title": "SFA prototype: form factor direction",
- "note": "These are goals and working assumptions, set on 2026-11-10. Nothing here has been built or measured yet. Sizes come from the layout calculator; prices live in the parts pages.",
+ "note": "These are goals and working assumptions, set on 2026-11-10. Nothing here has been built or measured yet. Sizes come from the Designer; prices live in the parts pages.",
  "brief": [
   {"h": "A bit bigger than the FM-1", "p": "Size follows the keys, not the other way round. The body is as wide as a comfortable two-octave keybed plus a margin, and no wider.", "status": "locked"},
   {"h": "Comfortable keys", "p": "The FM-1 keys are too small to play. Target a key pitch a hand can land on without looking: clearly larger than the FM-1, at or near slim-key size. Velocity sensitive.", "status": "locked"},
@@ -11,7 +11,7 @@
   {"h": "Portable, but playability first", "p": "It goes in a bag and runs on a battery, but when size and playability pull against each other, playability wins.", "status": "locked"}
  ],
  "controls": [
-  {"what": "Keys", "count": "25 (two octaves, C to C)", "why": "Enough for bass lines and chords with octave shift; 37 makes the body too long for a bag.", "open": "Key pitch: see the layout calculator"},
+  {"what": "Keys", "count": "25 (two octaves, C to C)", "why": "Enough for bass lines and chords with octave shift; 37 makes the body too long for a bag.", "open": "Key pitch: see the Designer"},
   {"what": "Pads", "count": "16, velocity sensitive", "why": "Sixteen steps, sixteen slices, sixteen drum voices: the number every part of the firmware already uses.", "open": "FSR or switch-plus-velocity; RGB backlight or single colour"},
   {"what": "Encoders", "count": "4, endless, with push", "why": "The engines already have four parameters per page (NPARAM = 4).", "open": "Detented or smooth"},
   {"what": "Buttons", "count": "about 12", "why": "Play, stop, record, shift, pattern, song, engine select (5), page. Shift doubles each.", "open": "Exact list after the first paper prototype"},
@@ -67,7 +67,7 @@
   {"k": "Sync", "v": "MIDI clock first; analogue sync out is a maybe", "note": ""}
  ],
  "improvements": [
-  {"fm1": "Keys too small to play accurately", "box": "Comfortable, velocity-sensitive keys sized by the layout calculator"},
+  {"fm1": "Keys too small to play accurately", "box": "Comfortable, velocity-sensitive keys sized by the Designer"},
   {"fm1": "No pads: keys double as triggers", "box": "16 velocity pads next to the keys"},
   {"fm1": "Small screen, one thing at a time", "box": "3.5 inch class colour screen: lists, grids and waveforms"},
   {"fm1": "About 4.2 s of sample memory, 22.05 kHz mono", "box": "microSD, 48 kHz, stereo"},
@@ -94,8 +94,8 @@
   {"h": "Run it on the box", "p": "The same engine source is built for the prototype at 48 kHz. Packs are copied to the microSD card. The same test script renders on host and board, and the two renders are compared.", "where": "Prototype"}
  ],
  "open_questions": [
-  {"id": "f-keypitch", "q": "What key pitch is comfortable enough?", "why": "It sets the width of the whole instrument.", "how": "Measure the FM-1 and two keyboards you like playing; print key-width strips from the layout calculator and try them."},
-  {"id": "f-layout", "q": "Which layout: Step Row, Butterfly or Terrace?", "why": "It fixes the board outline and where every part goes.", "how": "Print the three at 1:1 from the Layouts page, tape them to card, play air-patterns on them for a day."},
+  {"id": "f-keypitch", "q": "What key pitch is comfortable enough?", "why": "It sets the width of the whole instrument.", "how": "Measure the FM-1 and two keyboards you like playing; print key-width strips from the Designer and try them."},
+  {"id": "f-layout", "q": "Which layout: Step Row, Butterfly, Terrace, Rails or your own?", "why": "It fixes the board outline and where every part goes.", "how": "Print each at 1:1 from the Designer, tape them to card, play air-patterns on them for a day."},
   {"id": "f-keybed", "q": "Buy a keybed, reuse one, or make keys from switches?", "why": "The keybed is likely the hardest part to source in small numbers.", "how": "Parts research; open up one cheap 25-key controller."},
   {"id": "f-pads", "q": "FSR pads or simple switches with velocity from timing?", "why": "Feel and cost.", "how": "Build a 4-pad FSR test strip on the dev kit."},
   {"id": "f-screenbus", "q": "Does a 480 x 320 panel reach 30 fps on the pins the Daisy Seed has free?", "why": "Decides SPI versus parallel and whether the Seed is enough for the prototype.", "how": "Wire one panel to the dev kit and time a full-frame update."},

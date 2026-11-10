@@ -27,9 +27,10 @@
     <a href="#presets" data-p="presets">Presets <small>tags</small></a>
     <a href="#patterns" data-p="patterns">Patterns <small>sketch</small></a>
     <a href="#toolbox" data-p="toolbox">Toolbox <small>calc</small></a>
+    <a href="#agents" data-p="agents">Agents <small>help</small></a>
     <div class="grp">Prototype</div>
     <a href="#direction" data-p="direction">Direction <small>brief</small></a>
-    <a href="#layouts" data-p="layouts">Layouts <small>form</small></a>
+    <a href="#designer" data-p="designer">Designer <small>shape</small></a>
     <a href="#planner" data-p="planner">Planner <small>specs</small></a>
     <a href="#decisions" data-p="decisions">Decisions <small>log</small></a>
     <a href="#engines" data-p="engines">Engine map <small>scope</small></a>
@@ -109,7 +110,7 @@ function unitSteps(u) {
 function renderUnits() {
   const el = $("#cards"); if (!el) return;
   if (!S) { el.innerHTML = '<div class="card">Waiting for the console server...</div>'; return; }
-  el.innerHTML = S.units.map(u => {
+  el.innerHTML = (S.online ? '<div class="note warn" style="grid-column:1/-1">This is the online console. Simulating, rendering, flashing and USB are off here; do those on your own machine with <span class="mono">tools/sfa console</span>.</div>' : "") + S.units.map(u => {
     const r = u.render, files = r ? r.files : [], n = u.notes, flag = files.some(f => f.verdict === "flag");
     let after = "";
     if (lastRun && lastRun.unit === u.id && !busy) {
@@ -376,7 +377,7 @@ const DEC_NEW = [
   ["f3", "A colour screen", "locked", "Lists, a step grid and a waveform must fit."],
   ["f4", "Its own layout, not MPC-style", "locked", "No 4x4 pad block under a screen."],
   ["f5", "Screen: 3.5 in IPS, 480 x 320", "proposed", "The smallest that shows a 16-step grid and four parameters. A 3.5 in ILI9488 IPS panel was seen at $8.34 per 100."],
-  ["f6", "Layout concept: Step Row, Butterfly or Terrace", "open", "Print all three at 1:1 from the Layouts page and try them."],
+  ["f6", "Layout concept: Step Row, Butterfly or Terrace", "open", "Shape it in the Designer, print at 1:1 and try it."],
   ["f7", "Keybed source", "open", "No standalone 25-key mini keybed was found for sale as a part. The first prototype reuses one from a cheap controller."],
   ["f8", "BOM ceiling of $80", "open", "With keys, pads, screen and battery the research estimate is $100 to $130. Either the ceiling or the price range has to move."]];
 const DEC_ST = ["locked", "proposed", "open", "dropped"];
@@ -437,9 +438,12 @@ function viewRoadmap() {
     ["Done", "Presets", "Every ECB and Alien Stack preset: tag, note, bulk-tag, export and import."],
     ["Done", "Patterns", "A step sketchbook with a click preview, an arrangement lane and pack-format export."],
     ["Done", "Toolbox", "Tempo, notes, the FM-1 bank, level matching, card space, battery."],
-    ["Done", "Prototype direction", "Brief, controls, screen, I/O, parts search, layouts to scale with a 1:1 print, decisions."],
+    ["Done", "Prototype direction", "Brief, controls, screen, I/O, parts search, pipeline, open questions, decisions."],
+    ["Done", "Prototype Designer", "Drag-and-drop layout to scale, front and side views, styles and materials, saved designs, compare, 1:1 print."],
+    ["Done", "Agents", "Prototype, Sound, Hardware, Workflow: a built-in review each, and chat with an API key."],
+    ["Done", "Online mode", "The planning pages behind a password on a host; run, flash and USB stay local. Not deployed yet."],
     ["Next", "Engine v2 and packs", "Engine id and version, sample rate as a build flag, tools/sfa pack, the simulator loads a pack."],
-    ["Next", "Paper prototype", "Print the three layouts at 1:1, measure the FM-1, choose a key pitch and a layout, lock them in Decisions."],
+    ["Next", "Paper prototype", "Print the designs at 1:1, measure the FM-1, choose a key pitch and a layout, lock them in Decisions."],
     ["Next", "Dev kit bring-up", "One engine on a Daisy Seed with the screen and four pads; the same test script on host and board."],
     ["Next", "Preset audition", "Render each preset from the Presets page and hear it there, with its level and spectrum."],
     ["Later", "FM-1 data region", "Presets and patterns as data on the FM-1, if fm1-base can write a region on its own."],
@@ -449,5 +453,7 @@ function viewRoadmap() {
 (async () => { await refresh(); route(); setInterval(async () => { if (!busy) { await refresh(); if (page() === "units" && !document.querySelector(".confirm") && !document.querySelector("[data-flog]")) renderUnits(); } }, 15000); })();
 </script>
 <script src="/hub/workshop.js"></script>
+<script src="/hub/designer.js"></script>
+<script src="/hub/agents.js"></script>
 </body>
 </html>

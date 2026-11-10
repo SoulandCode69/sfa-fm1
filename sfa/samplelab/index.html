@@ -9,17 +9,17 @@
 <style>
 /* Layout: source list left, the waveform with its cut markers in the middle, the slice table and the bank budget below it. */
 :root {
-  --bg: #f4f6fb; --panel: #ffffff; --panel2: #eef1f7; --rule: #dce1ec; --fg: #0e1220; --dim: #586078;
-  --accent: #e11d55; --accent-fg: #ffffff; --good: #0a8a58; --warn: #b26700; --bad: #d02626;
-  --plot: #ffffff; --grid: #e3e7f0; --wave: #2a3147; --c1: #e11d55; --c2: #2456e6;
+  --bg: #f3f1fb; --panel: #ffffff; --panel2: #ebe8f8; --rule: #dcd7ee; --fg: #0c0a1c; --dim: #5d5880;
+  --accent: #ff2e7e; --accent-fg: #ffffff; --good: #06a765; --warn: #c96f00; --bad: #e5283a;
+  --plot: #ffffff; --grid: #e4e0f3; --wave: #1d1740; --c1: #ff2e7e; --c2: #6a3dff;
   --display: "Syne", "Arial Black", system-ui, sans-serif; --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) { :root[data-theme="auto"] {
-  --bg: #0e1016; --panel: #171a23; --panel2: #1f2330; --rule: #2a3040; --fg: #eceff7; --dim: #9aa2b6;
+  --bg: #0e0c1d; --panel: #17142b; --panel2: #211d3d; --rule: #2f2a52; --fg: #f0edff; --dim: #a59fce;
   --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; --c1: #ff3d6e; --c2: #38d6c4; color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --bg: #0e1016; --panel: #171a23; --panel2: #1f2330; --rule: #2a3040; --fg: #eceff7; --dim: #9aa2b6;
+  --bg: #0e0c1d; --panel: #17142b; --panel2: #211d3d; --rule: #2f2a52; --fg: #f0edff; --dim: #a59fce;
   --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; --c1: #ff3d6e; --c2: #38d6c4; color-scheme: dark; }
 * { box-sizing: border-box; }
@@ -81,8 +81,8 @@ td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 /* 2026-11-10: the console's bright look. White work surfaces, rounder controls, filled state pills. */
-:root { --soft-good: #e0f5ea; --soft-warn: #fdf0d9; --soft-bad: #fde6e6; --blue: #2456e6; --shadow: 0 1px 2px rgba(16,24,48,.06), 0 4px 14px rgba(16,24,48,.05); }
-:root[data-theme="dark"] { --soft-good: #10301f; --soft-warn: #35270d; --soft-bad: #3a1616; --blue: #7da2ff; --shadow: none; }
+:root { --soft-good: #e0f5ea; --soft-warn: #fdf0d9; --soft-bad: #fde6e6; --blue: #6a3dff; --shadow: 0 1px 2px rgba(28,16,80,.07), 0 6px 18px rgba(28,16,80,.06); }
+:root[data-theme="dark"] { --soft-good: #10301f; --soft-warn: #35270d; --soft-bad: #3a1616; --blue: #9d82ff; --shadow: none; }
 body { -webkit-font-smoothing: antialiased; }
 button { background: var(--panel); border-radius: 8px; padding: 6px 12px; font-weight: 500; transition: background .12s, border-color .12s; }
 button:hover:not(:disabled) { border-color: var(--fg); background: var(--panel2); }
@@ -94,6 +94,14 @@ select, input[type=text], input[type=number] { background: var(--panel); border-
 .pill.clean { background: var(--soft-good); } .pill.watch { background: var(--soft-warn); } .pill.flag { background: var(--soft-bad); } .pill.busy { background: var(--panel2); }
 .drop { border-radius: 12px; background: var(--panel); }
 :is(button, select, input, [tabindex]):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+/* SFA identity: ink header with the signal stripe */
+body > header { background: #0c0a1c; color: #e9e5ff; margin: 0 -16px 14px; padding-left: 16px; padding-right: 16px; border-bottom: 0; position: sticky; top: 0; z-index: 20; }
+body > header::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: linear-gradient(90deg, #ff2e7e, #6a3dff 60%, #00b8d9); }
+body > header .mark span { color: #c8ff2e; } body > header .readout, body > header label { color: #b9b1e6; }
+body > header button:not(.primary) { background: #171430; border-color: transparent; color: #e9e5ff; } body > header button:not(.primary):hover:not(:disabled) { background: #171430; border-color: #c8ff2e; }
+body > header button.on { background: #c8ff2e; color: #0c0a1c; border-color: #c8ff2e; } body > header select { background: #171430; color: #e9e5ff; border-color: #2f2a52; }
+button.on { background: #0c0a1c; color: #c8ff2e; border-color: #0c0a1c; }
+:root[data-theme="dark"] button.on { background: #c8ff2e; color: #0c0a1c; border-color: #c8ff2e; }
 </style>
 </head>
 <body>

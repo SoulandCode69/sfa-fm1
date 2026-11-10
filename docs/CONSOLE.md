@@ -33,14 +33,15 @@ The console (`tools/sfa console`, localhost:8590) has three groups.
 * **Presets**: every preset and kit name from both firmwares, with tags, notes, bulk tagging, export and import.
 * **Patterns**: a step sketchbook and arrangement lane; exports `sfa-pattern/1`.
 * **Toolbox**: tempo, notes, the FM-1 bank, level matching, card space, battery.
+* **Agents**: Prototype, Sound, Hardware, Workflow. A built-in review each (no network), and chat when `ANTHROPIC_API_KEY` is set.
 
-**Prototype**: Direction, Layouts, Planner, Decisions, Engine map, Architecture, Compare, Research. Edits save to
+**Prototype**: Direction, Designer (drag-and-drop layout, views, materials, saved designs, compare), Planner, Decisions, Engine map, Architecture, Compare, Research. Edits save to
 `hardware/prototype/plan.json`.
 
 **System**: Docs and changelog, Doctor, Flash log, Roadmap.
 
 The server listens on 127.0.0.1 only, checks the Host header, and accepts actions only with a custom header, from a fixed
-list of commands. Page code is in `sfa/hub/` (`index.html`, `workshop.js`, `hub.css`).
+list of commands. Page code is in `sfa/hub/` (`index.html`, `workshop.js`, `designer.js`, `agents.js`, `hub.css`). To run it on a host, see [ONLINE.md](ONLINE.md).
 
 ## Next, in order
 

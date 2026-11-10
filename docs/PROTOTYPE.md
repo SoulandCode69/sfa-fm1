@@ -1,6 +1,6 @@
 # The SFA prototype: direction
 
-Set on 2026-11-10. The live version of this page is the console's **Direction** and **Layouts** pages; the data is in
+Set on 2026-11-10. The live version of this page is the console's **Direction** and **Designer** pages; the data is in
 `hardware/prototype/direction.json`, and our choices are in `hardware/prototype/plan.json`. Nothing here is built or measured yet.
 
 ## The brief
@@ -14,7 +14,7 @@ Set on 2026-11-10. The live version of this page is the console's **Direction** 
 
 ## Layout concepts
 
-Three, drawn to scale in the console and printable at 1:1. Sizes below are for 25 keys at an 18 mm key pitch with a 3.5 inch screen.
+Starting points in the console's Designer, where every part can be dragged, resized, styled and saved as a design (a fourth concept, Rails, puts the pads in two columns at the edges). Printable at 1:1. Sizes below are for 25 keys at an 18 mm key pitch with a 3.5 inch screen.
 
 | Concept | Idea | Size | For | Against |
 |---|---|---|---|---|
@@ -23,7 +23,7 @@ Three, drawn to scale in the console and printable at 1:1. Sizes below are for 2
 | **Terrace** | 2 x 8 pads on the left, screen and encoders on the right | about 355 x 192 mm | full-size pads, editing in one place | asymmetric |
 
 Key pitch is the number that sets everything. A full-size piano key is about 23.5 mm; slim and mini keys are smaller and vary by
-maker. We have no measured FM-1 dimensions on file: measure the unit and type them into the Layouts page.
+maker. We have no measured FM-1 dimensions on file: measure the unit and enter them in the console.
 
 ## Controls
 

@@ -1,0 +1,2 @@
+# The console itself needs only the Python standard library. numpy is for tools/sfa report.
+numpy

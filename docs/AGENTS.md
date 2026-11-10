@@ -32,3 +32,16 @@ SFA work, because every change can be simulated, rendered and measured without h
 > Read `visitors/engine/greys.c` and `app/engine/engine.h` first. Success: `tools/sfa sim as` passes, a new test in
 > `visitors/tests/basic.txt` plays each preset, and `tools/sfa render as audit` then `tools/sfa report as` shows every new
 > preset between -9 and -3 dBFS peak with no clicks. Do not touch the sequencer or the mixer. Report the numbers.
+
+## Agents inside the console
+
+The console's Agents page has four: **Prototype** (form, feel, identity), **Sound** (engines, renders, presets), **Hardware**
+(parts, power, cost) and **Workflow** (the daily loop).
+
+* **Review**: fixed rules in `sfa/hub/agents.js` over your own data (designs, plan, render verdicts, parts findings, git
+  status). No network, always available, and it says what it is.
+* **Chat**: `POST /api/agent` in `tools/sfa.py` sends the question plus a text summary of the same data (`agent_context`) to
+  the Anthropic API. It is on only when the console was started with `ANTHROPIC_API_KEY`; the key never reaches the page.
+  The model is `SFA_AGENT_MODEL` (default in `tools/sfa.py`).
+* The agents cannot run commands or flash, and are told so. Agents never flash.
+* To add a rule, add a line to `agReview` for that agent; to change an agent's brief, edit `AGENTS` in `tools/sfa.py`.

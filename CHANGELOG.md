@@ -2,6 +2,13 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10 (later): designer, agents, colour
+
+* **Colour**: a new identity across the console and both tools: an ink top bar and rail, a paper work area, magenta for action, violet for tools, lime as the signal on ink, a three-colour stripe.
+* **Prototype Designer** (replaces Layouts): drag keys, pads, screen, encoders, buttons, knob, touch strip and speaker on a to-scale top view; front and side views; four starting concepts (Step Row, Butterfly, Terrace, Rails); four styles (clean, assembled / industrial, recycled junk, wood ends) with colours, materials and vibe notes; live size, pitch, counts and warnings; undo; saved designs and a side-by-side compare; 1:1 print, SVG and JSON export.
+* **Agents** (new): Prototype, Sound, Hardware and Workflow. Each has a built-in review of your own data that needs no network, and a chat that works when the console is started with `ANTHROPIC_API_KEY`. Without a key, Copy a brief for Claude gives the same context as text.
+* **Online mode**: `tools/sfa console --online` behind `SFA_PASSWORD`, with run, flash and USB turned off; `railway.json`, `Procfile`, `docs/ONLINE.md`. Not deployed yet.
+
 ## 2026-11-10: the workshop build
 
 * **Look**: a bright, high-contrast theme on every page (light by default, dark by switch), new navigation in three groups: Workshop, Prototype, System.

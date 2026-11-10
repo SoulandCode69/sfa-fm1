@@ -1,21 +1,24 @@
 /* SFA Console. A bright workshop: white work surfaces on a cool paper ground, crimson for the one action that matters,
    blue for navigation and tools, green / amber / red only for state. Dark is a manual switch, never automatic. */
 :root {
-  --bg: #f4f6fb; --panel: #ffffff; --panel2: #eef1f7; --rule: #dce1ec; --rule2: #c5ccdb; --fg: #0e1220; --dim: #586078;
-  --accent: #e11d55; --accent-fg: #ffffff; --accent-soft: #fde7ee;
-  --blue: #2456e6; --blue-soft: #e7edfe;
-  --good: #0a8a58; --good-soft: #e0f5ea; --warn: #b26700; --warn-soft: #fdf0d9; --bad: #d02626; --bad-soft: #fde6e6;
-  --term: #0f1320; --term-fg: #dde3f1;
-  --shadow: 0 1px 2px rgba(16, 24, 48, .06), 0 4px 14px rgba(16, 24, 48, .05);
+  --ink: #0c0a1c; --ink2: #171430; --ink-fg: #e9e5ff; --ink-dim: #9d95c9; --lime: #c8ff2e;
+  --bg: #f3f1fb; --panel: #ffffff; --panel2: #ebe8f8; --rule: #dcd7ee; --rule2: #beb6dd; --fg: #0c0a1c; --dim: #5d5880;
+  --accent: #ff2e7e; --accent-fg: #ffffff; --accent-soft: #ffe3ee;
+  --blue: #6a3dff; --blue-soft: #ebe5ff; --cyan: #00b8d9;
+  --good: #06a765; --good-soft: #dcf7ea; --warn: #c96f00; --warn-soft: #ffefd6; --bad: #e5283a; --bad-soft: #ffe4e6;
+  --term: #0c0a1c; --term-fg: #e2dcff;
+  --grad: linear-gradient(90deg, #ff2e7e, #6a3dff 60%, #00b8d9);
+  --shadow: 0 1px 2px rgba(28, 16, 80, .07), 0 6px 18px rgba(28, 16, 80, .06);
   --display: "Syne", "Arial Black", system-ui, sans-serif; --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --bg: #0e1016; --panel: #171a23; --panel2: #1f2330; --rule: #2a3040; --rule2: #3a4256; --fg: #eceff7; --dim: #9aa2b6;
-  --accent: #ff4d7d; --accent-fg: #1a060c; --accent-soft: #3a1522;
-  --blue: #7da2ff; --blue-soft: #1a2545;
-  --good: #46d090; --good-soft: #10301f; --warn: #ffb347; --warn-soft: #35270d; --bad: #ff6b6b; --bad-soft: #3a1616;
-  --term: #090b11; --term-fg: #dde3f1; --shadow: none; color-scheme: dark;
+  --ink: #07060f; --ink2: #12102a; --ink-fg: #e9e5ff; --ink-dim: #8f88bb;
+  --bg: #0e0c1d; --panel: #17142b; --panel2: #211d3d; --rule: #2f2a52; --rule2: #453e75; --fg: #f0edff; --dim: #a59fce;
+  --accent: #ff4d92; --accent-fg: #1a0410; --accent-soft: #3d1230;
+  --blue: #9d82ff; --blue-soft: #251c52; --cyan: #3ad6f0;
+  --good: #3fe0a0; --good-soft: #0f3326; --warn: #ffb347; --warn-soft: #3a2a0c; --bad: #ff6b7a; --bad-soft: #3d151b;
+  --term: #07060f; --term-fg: #e2dcff; --shadow: none; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -180,3 +183,48 @@ pre.log { background: var(--panel); border: 1px solid var(--rule); border-radius
   header.top { position: static; } h1 { font-size: 24px; } .md { padding: 18px; } .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .items { grid-template-columns: minmax(0, 1fr); gap: 2px 0; } .items > div { margin-bottom: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ---- SFA identity (2026-11-10): an ink top bar and rail, a paper work area, magenta for action, violet for tools, lime as the signal on ink ---- */
+header.top { background: var(--ink); border-bottom: 0; backdrop-filter: none; color: var(--ink-fg); }
+header.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: var(--grad); }
+.mark { color: var(--ink-fg); } .mark span { color: var(--lime); }
+header.top .live { background: var(--ink2); color: var(--ink-dim); } header.top button { background: var(--ink2); border-color: transparent; color: var(--ink-fg); } header.top button:hover:not(:disabled) { background: var(--ink2); border-color: var(--lime); }
+.shell { grid-template-columns: 228px minmax(0, 1fr); gap: 30px; padding-left: 0; }
+nav.rail { background: var(--ink); border-radius: 0 18px 18px 0; padding: 16px 12px 18px 14px; top: 76px; max-height: calc(100vh - 92px); box-shadow: var(--shadow); }
+nav.rail .grp { color: var(--ink-dim); } nav.rail a { color: var(--ink-fg); } nav.rail a small { color: var(--ink-dim); }
+nav.rail a:hover { background: var(--ink2); }
+nav.rail a.on { background: var(--ink2); color: var(--lime); box-shadow: inset 3px 0 0 var(--lime); } nav.rail a.on small { color: var(--lime); }
+h1 { position: relative; padding-bottom: 10px; margin-bottom: 12px; } h1::after { content: ""; position: absolute; left: 0; bottom: 0; width: 64px; height: 5px; border-radius: 3px; background: var(--grad); }
+.row > h1 { padding-bottom: 10px; }
+.eyebrow { color: var(--blue); }
+.kpi { border-top: 3px solid var(--blue); } .kpi:nth-child(3n+2) { border-top-color: var(--accent); } .kpi:nth-child(3n) { border-top-color: var(--cyan); }
+button.primary { background: var(--accent); box-shadow: 0 2px 0 #b3134f, 0 6px 14px rgba(255, 46, 126, .28); } button.primary:active:not(:disabled) { box-shadow: 0 0 0 #b3134f; transform: translateY(2px); }
+button.tool { background: var(--blue); color: #fff; border-color: var(--blue); } button.tool:hover:not(:disabled) { background: var(--blue); filter: brightness(1.12); border-color: var(--blue); }
+:root[data-theme="dark"] button.tool { color: #0c0a1c; }
+button.on, .sub button.on { background: var(--ink); color: var(--lime); border-color: var(--ink); } .sub button.on { box-shadow: none; }
+:root[data-theme="dark"] button.on, :root[data-theme="dark"] .sub button.on { background: var(--lime); color: #0c0a1c; border-color: var(--lime); }
+th { background: var(--ink); color: var(--ink-fg); } :root[data-theme="dark"] th { background: var(--ink2); }
+.chip { background: var(--blue-soft); color: var(--blue); }
+.card h2 small { color: var(--blue); }
+.term header { color: var(--lime); border-bottom-color: #231f45; }
+.step.done { box-shadow: inset 0 -3px 0 var(--good); } .step.warn { box-shadow: inset 0 -3px 0 var(--warn); } .step.bad { box-shadow: inset 0 -3px 0 var(--bad); }
+.note { border-left-color: var(--blue); }
+.flow > div { border-top-color: var(--accent); } .flow > div::before { background: var(--ink); color: var(--lime); }
+.doclist a.on { background: var(--ink); color: var(--lime); }
+.md h2 { border-top: 0; padding-top: 0; } .md h2::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--grad); margin-bottom: 10px; }
+.dv-screen-in { fill: var(--blue); } .dv-pad { fill: var(--accent); }
+@media (max-width: 860px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); } nav.rail { max-height: none; top: 0; } nav.rail { border-radius: 14px; padding: 8px; } nav.rail a.on { box-shadow: inset 0 -3px 0 var(--lime); } header.top::after { bottom: 0; } }
+
+/* designer */
+.dz { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; align-items: start; }
+.dzstage { padding: 14px; background: repeating-linear-gradient(0deg, transparent 0 19px, color-mix(in srgb, var(--rule) 45%, transparent) 19px 20px), repeating-linear-gradient(90deg, transparent 0 19px, color-mix(in srgb, var(--rule) 45%, transparent) 19px 20px), var(--panel); }
+.dzstage svg { max-height: 62vh; }
+.stylepick { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 10px; cursor: pointer; } .stylepick.on { border-color: var(--blue); background: var(--blue-soft); } .stylepick small { display: block; color: var(--dim); font-size: 12px; } .stylepick input { margin-top: 3px; }
+/* agents */
+.agpick { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.agcard { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--rule); box-shadow: var(--shadow); } .agcard b { font: 700 17px var(--display); } .agcard small { color: var(--dim); } .agcard span { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; } .agcard i { font-style: normal; }
+.agcard.on, .agcard.on:hover { background: var(--ink); border-color: var(--ink); color: var(--ink-fg); } .agcard.on b { color: var(--lime); } .agcard.on small { color: var(--ink-dim); }
+.findings { display: flex; flex-direction: column; gap: 8px; } .finding { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--panel2); font-size: 13.5px; } .finding i { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--good); } .finding.l1 { background: var(--warn-soft); } .finding.l1 i { background: var(--warn); } .finding.l2 { background: var(--bad-soft); } .finding.l2 i { background: var(--bad); }
+.thread { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; } .msg { padding: 10px 12px; border-radius: 12px; font-size: 13.5px; max-width: 92%; overflow-wrap: anywhere; } .msg.user { align-self: flex-end; background: var(--ink); color: var(--ink-fg); } .msg.assistant { align-self: flex-start; background: var(--blue-soft); }
+@media (max-width: 1100px) { .dz { grid-template-columns: minmax(0, 1fr); } }
+.dz .kpis { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .dz .kpi output { font-size: 17px; }
