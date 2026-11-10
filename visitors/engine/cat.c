@@ -256,4 +256,4 @@ static const char *m_text(uint8_t page, uint32_t p, char *buf)
 }
 
 static const char *const TITLES[5] = {"VOICE", "VOICE+", "LAYER", "KIT", "BUS"};
-const engine_t cat = {"MANTIS", m_init, m_note, m_render, m_panic, 5, {NAMES1, NAMES1B, NAMES1C, NAMES2, NAMES3}, {par1, par1b, par1c, par2, par3}, m_text, TITLES};
+const engine_t cat = {"MANTIS", m_init, m_note, m_render, m_panic, 5, {NAMES1, NAMES1B, NAMES1C, NAMES2, NAMES3}, {par1, par1b, par1c, par2, par3}, m_text, TITLES, "mantis", 1};

@@ -338,3 +338,12 @@ button.agcard.on, button.agcard.on:hover { background: linear-gradient(160deg, r
 @media (prefers-reduced-motion: reduce) { .live i, .pill.go::before { animation: none; } }
 .dz.ag { grid-template-columns: minmax(0, 1fr) minmax(360px, 470px); } @media (max-width: 1100px) { .dz.ag { grid-template-columns: minmax(0, 1fr); } }
 .thread { max-height: 460px; }
+
+/* simplified frame: seven places and one door to the rest */
+nav.rail { padding-top: 22px; } nav.rail a { height: 38px; font-size: 14px; } nav.rail .grp { padding-top: 22px; }
+nav.rail .sp { flex: 1; min-height: 20px; } nav.rail a.quiet { color: var(--ink-dim); } nav.rail a.quiet.on { color: #fff; }
+.shell { grid-template-columns: 200px minmax(0, 1fr); }
+a.morecard { text-decoration: none; color: var(--fg); transition: transform .15s, border-color .15s, box-shadow .15s; } a.morecard:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--edge), var(--glow); } a.morecard svg { color: #b79cff; }
+details.termwrap { margin-top: 22px; } details.termwrap .term { margin-top: 8px; }
+.lede { margin-bottom: 22px; }
+@media (max-width: 860px) { .shell { grid-template-columns: minmax(0, 1fr); } nav.rail .sp { display: none; } }

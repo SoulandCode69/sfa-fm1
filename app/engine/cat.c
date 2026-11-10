@@ -229,4 +229,4 @@ static const char *c_text(uint8_t page, uint32_t p, char *buf)
 }
 
 static const char *const TITLES[4] = {"PAD", "PAD+", "KIT", "BUS"};
-const engine_t cat = {"CAT", c_init, c_note, c_render, c_panic, 4, {NAMES1, NAMES1B, NAMES2, NAMES3, 0}, {par1, par1b, par2, par3, 0}, c_text, TITLES};
+const engine_t cat = {"CAT", c_init, c_note, c_render, c_panic, 4, {NAMES1, NAMES1B, NAMES2, NAMES3, 0}, {par1, par1b, par2, par3, 0}, c_text, TITLES, "cat", 1};

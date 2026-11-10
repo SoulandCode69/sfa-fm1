@@ -197,7 +197,7 @@ static const int8_t GAIN_DB[NPRE] = {5, 6, 1, 6, -1, -1, 5, 6, 4, 5, 4, 10, -1, 
 static void g_render_t(float *out, uint32_t n) { pgain = fm_db2lin((float)GAIN_DB[preset_i]); g_render(out, n); }
 
 const engine_t hopper = {"GREYS", g_init, g_note, g_render_t, g_panic, 5, {NAMES[0], NAMES[1], NAMES[2], NAMES[3], NAMES[4]},
-                         {par[0], par[1], par[2], par[3], par[4]}, g_text, TITLES};
+                         {par[0], par[1], par[2], par[3], par[4]}, g_text, TITLES, "greys", 1};
 
 /* ---- the Hopper's API, answered by the Greys: no slicer here */
 #include <stdint.h>

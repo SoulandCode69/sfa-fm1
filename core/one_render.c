@@ -21,7 +21,9 @@ int main(int argc, char **argv)
 {
     static one_t o; one_host_t h = {h_sin, h_exp2, 44100.0f};
     const char *dir = argc > 1 ? argv[1] : ".";
-    uint32_t sr = 44100, secs = 4, n = sr * secs, p, i;
+    uint32_t sr = argc > 2 ? (uint32_t)atoi(argv[2]) : 44100, secs = 4, n, p, i;   /* one_render out_dir [sample_rate]: 48000 for the prototype */
+    if (sr < 8000 || sr > 192000) { fprintf(stderr, "sample rate %u is out of range\n", sr); return 1; }
+    h.sr = (float)sr; n = sr * secs;
     float *buf = calloc(n, sizeof *buf);
     printf("%-14s %6s %6s %6s\n", "preset", "peak", "rms", "crest");
     for (p = 0; p < ONE_NPRESETS; p++) {

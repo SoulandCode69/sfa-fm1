@@ -2,6 +2,13 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10 (simplify)
+
+* **Sidebar**: seven places (Units, Analyzer, Sample Lab, Presets, Designer, Planner, Agents) and one More page that holds the rest: Patterns, Toolbox, Direction, Decisions, Engine map, Architecture, Compare, Research, Docs, Doctor, Flash log, Roadmap. Nothing was deleted.
+* **Units**: one line of guidance, the Next bar, the four steps, and two buttons (Check all, Flash). Package and build details, single steps and the run output are folded away until wanted.
+* **Presets**: the number tiles are gone; the Designer's top row lost its duplicate New menu (the gallery starts new designs).
+* **Engine v2, first step** (firmware, both units, 127 of 127 checks): `engine_t` gained `id` and `version`; `SR` can be set by the build (`-DSR=48000.0f`), default unchanged. `core/one_render` takes a sample rate; SFA ONE holds its tuning within a few cents and its level within 0.6 dB at 48 kHz.
+
 ## 2026-11-10 (deep build): energy, commands, gallery
 
 * **Visual**: a glow backdrop, gradient header and rail with an icon per page, lit surfaces, gradient action buttons, glowing state dots, a pulsing Ready to flash badge. Same system on every page; the Light switch tones it down.

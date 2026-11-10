@@ -23,27 +23,16 @@
 <div class="shell">
   <nav class="rail" aria-label="Tools">
     <div class="grp">Workshop</div>
-    <a href="#units" data-p="units">Units <small>flash</small></a>
-    <a href="#analyzer" data-p="analyzer">Analyzer <small>ears</small></a>
-    <a href="#samplelab" data-p="samplelab">Sample Lab <small>chop</small></a>
-    <a href="#presets" data-p="presets">Presets <small>tags</small></a>
-    <a href="#patterns" data-p="patterns">Patterns <small>sketch</small></a>
-    <a href="#toolbox" data-p="toolbox">Toolbox <small>calc</small></a>
-    <a href="#agents" data-p="agents">Agents <small>help</small></a>
+    <a href="#units" data-p="units">Units</a>
+    <a href="#analyzer" data-p="analyzer">Analyzer</a>
+    <a href="#samplelab" data-p="samplelab">Sample Lab</a>
+    <a href="#presets" data-p="presets">Presets</a>
     <div class="grp">Prototype</div>
-    <a href="#direction" data-p="direction">Direction <small>brief</small></a>
-    <a href="#designer" data-p="designer">Designer <small>shape</small></a>
-    <a href="#planner" data-p="planner">Planner <small>specs</small></a>
-    <a href="#decisions" data-p="decisions">Decisions <small>log</small></a>
-    <a href="#engines" data-p="engines">Engine map <small>scope</small></a>
-    <a href="#arch" data-p="arch">Architecture <small>design</small></a>
-    <a href="#compare" data-p="compare">Compare <small>board</small></a>
-    <a href="#prototype" data-p="prototype">Research <small>parts</small></a>
-    <div class="grp">System</div>
-    <a href="#docs" data-p="docs">Docs <small>changelog</small></a>
-    <a href="#doctor" data-p="doctor">Doctor</a>
-    <a href="#log" data-p="log">Flash log</a>
-    <a href="#roadmap" data-p="roadmap">Roadmap</a>
+    <a href="#designer" data-p="designer">Designer</a>
+    <a href="#planner" data-p="planner">Planner</a>
+    <a href="#agents" data-p="agents">Agents</a>
+    <span class="sp"></span>
+    <a href="#more" data-p="more" class="quiet">More</a>
   </nav>
   <main id="main"></main>
 </div>
@@ -73,24 +62,25 @@ async function run(cmd, unit, args) {
   busy = false; updOut(); await refresh(); if (page() === "units") { await checkUsb(); renderUnits(true); } setBusy(false);
 }
 function setBusy(b) { document.querySelectorAll("[data-run]").forEach(x => x.disabled = b); }
-function updOut() { const p = $("#outPre"); if (!p) return; $("#outTitle").textContent = (busy ? "running: " : "last run: ") + outTitle; p.textContent = outText || "Nothing run yet. Pick a button on a unit."; p.scrollTop = p.scrollHeight; }
+function updOut() { const p = $("#outPre"); if (!p) return; $("#outTitle").textContent = (busy ? "running: " : "last run: ") + outTitle; p.textContent = outText || "Nothing run yet."; p.scrollTop = p.scrollHeight; const w = $("#termWrap"); if (w && busy) w.open = true; }
 
 const page = () => (location.hash || "#units").slice(1) || "units";
 function route() {
   const p = page(); let grp = "", name = "";
   document.querySelectorAll("nav.rail > *").forEach(a => { if (a.classList.contains("grp")) { if (!name) grp = a.textContent; } else if (a.dataset.p === p || (p === "layouts" && a.dataset.p === "designer")) { name = [...a.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join("").trim(); a.classList.add("on"); } else a.classList.remove("on"); });
-  { const c = $("#crumb"); if (c) c.innerHTML = name ? esc(grp) + " <i>/</i> <b>" + esc(name) + "</b>" : ""; document.title = (name ? name + " \u00b7 " : "") + "SFA Console"; }
-  ({ units: viewUnits, analyzer: viewAnalyzer, samplelab: viewLab, planner: viewPlanner, decisions: viewDecisions, arch: viewArch, docs: viewDocs, engines: viewEngines, presets: viewPresets, compare: viewCompare, prototype: viewProto, doctor: viewDoctor, log: viewLog, roadmap: viewRoadmap }[p] || (window.WS && WS[p]) || viewUnits)();
+  if (!name && p !== "units") { const m = document.querySelector('nav.rail a[data-p="more"]'); if (m) m.classList.add("on"); const hit = MORE.find(x => x[0] === p); grp = "More"; name = hit ? hit[1] : ""; }
+  { const c = $("#crumb"); if (p === "more") grp = ""; if (c) c.innerHTML = name ? (grp ? esc(grp) + " <i>/</i> " : "") + "<b>" + esc(name) + "</b>" : ""; document.title = (name ? name + " \u00b7 " : "") + "SFA Console"; }
+  ({ units: viewUnits, analyzer: viewAnalyzer, samplelab: viewLab, more: viewMore, planner: viewPlanner, decisions: viewDecisions, arch: viewArch, docs: viewDocs, engines: viewEngines, presets: viewPresets, compare: viewCompare, prototype: viewProto, doctor: viewDoctor, log: viewLog, roadmap: viewRoadmap }[p] || (window.WS && WS[p]) || viewUnits)();
 }
 window.addEventListener("hashchange", route);
 /* nav icons: one small geometric glyph per page */
-const ICONS = { units: '<rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M6 1.5v2.5M10 1.5v2.5M6 12v2.5M10 12v2.5M1.5 6h2.5M1.5 10h2.5M12 6h2.5M12 10h2.5"/>', analyzer: '<path d="M2 9V7M5 12V4M8 14V2M11 11V5M14 9V7"/>', samplelab: '<path d="M1.5 11c1-4 2-6 3-6s1.5 6 3 6 2-8 3-8 1.5 5 4 5"/><path d="M8 1.5v13" stroke-dasharray="2 2"/>', presets: '<path d="M2 2h5.5L14 8.5 8.5 14 2 7.5z"/><circle cx="5.2" cy="5.2" r="1"/>', patterns: '<rect x="2" y="2" width="4" height="4" rx="1"/><rect x="10" y="2" width="4" height="4" rx="1"/><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/>', toolbox: '<path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="11" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/>', agents: '<path d="M2.5 3h11v7.5H8L4.5 13.5v-3h-2z"/>', direction: '<circle cx="8" cy="8" r="6"/><path d="M10.5 5.5 9 9l-3.5 1.5L7 7z"/>', designer: '<path d="M2 14 14 2M2 14v-4M2 14h4"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1"/>', planner: '<path d="M5.5 4H14M5.5 8H14M5.5 12H14"/><circle cx="2.5" cy="4" r=".9" fill="currentColor"/><circle cx="2.5" cy="8" r=".9" fill="currentColor"/><circle cx="2.5" cy="12" r=".9" fill="currentColor"/>', decisions: '<circle cx="8" cy="8" r="6"/><path d="m5.2 8.2 2 2 3.6-4"/>', engines: '<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><path d="M11.5 9v5M9 11.5h5"/>', arch: '<path d="m8 2 6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3"/>', compare: '<rect x="2" y="3" width="5" height="10" rx="1"/><rect x="9" y="3" width="5" height="10" rx="1"/>', prototype: '<circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/>', docs: '<path d="M4 2h5.5L13 5.5V14H4zM9.5 2v3.5H13M6.5 8.5h4M6.5 11h4"/>', doctor: '<path d="M1.5 8h3l1.5-4 3 8 1.5-4h4"/>', log: '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>', roadmap: '<path d="M3.5 14V2.5M3.5 3h8l-2 2.75 2 2.75h-8"/>' };
+const ICONS = { more: '<circle cx="3" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="13" cy="8" r="1.3" fill="currentColor"/>', units: '<rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M6 1.5v2.5M10 1.5v2.5M6 12v2.5M10 12v2.5M1.5 6h2.5M1.5 10h2.5M12 6h2.5M12 10h2.5"/>', analyzer: '<path d="M2 9V7M5 12V4M8 14V2M11 11V5M14 9V7"/>', samplelab: '<path d="M1.5 11c1-4 2-6 3-6s1.5 6 3 6 2-8 3-8 1.5 5 4 5"/><path d="M8 1.5v13" stroke-dasharray="2 2"/>', presets: '<path d="M2 2h5.5L14 8.5 8.5 14 2 7.5z"/><circle cx="5.2" cy="5.2" r="1"/>', patterns: '<rect x="2" y="2" width="4" height="4" rx="1"/><rect x="10" y="2" width="4" height="4" rx="1"/><rect x="2" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/>', toolbox: '<path d="M2 4h12M2 8h12M2 12h12"/><circle cx="5" cy="4" r="1.6" fill="currentColor"/><circle cx="11" cy="8" r="1.6" fill="currentColor"/><circle cx="7" cy="12" r="1.6" fill="currentColor"/>', agents: '<path d="M2.5 3h11v7.5H8L4.5 13.5v-3h-2z"/>', direction: '<circle cx="8" cy="8" r="6"/><path d="M10.5 5.5 9 9l-3.5 1.5L7 7z"/>', designer: '<path d="M2 14 14 2M2 14v-4M2 14h4"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1"/>', planner: '<path d="M5.5 4H14M5.5 8H14M5.5 12H14"/><circle cx="2.5" cy="4" r=".9" fill="currentColor"/><circle cx="2.5" cy="8" r=".9" fill="currentColor"/><circle cx="2.5" cy="12" r=".9" fill="currentColor"/>', decisions: '<circle cx="8" cy="8" r="6"/><path d="m5.2 8.2 2 2 3.6-4"/>', engines: '<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><path d="M11.5 9v5M9 11.5h5"/>', arch: '<path d="m8 2 6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3"/>', compare: '<rect x="2" y="3" width="5" height="10" rx="1"/><rect x="9" y="3" width="5" height="10" rx="1"/>', prototype: '<circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/>', docs: '<path d="M4 2h5.5L13 5.5V14H4zM9.5 2v3.5H13M6.5 8.5h4M6.5 11h4"/>', doctor: '<path d="M1.5 8h3l1.5-4 3 8 1.5-4h4"/>', log: '<circle cx="8" cy="8" r="6"/><path d="M8 4.5V8l2.5 1.5"/>', roadmap: '<path d="M3.5 14V2.5M3.5 3h8l-2 2.75 2 2.75h-8"/>' };
 document.querySelectorAll("nav.rail a").forEach(a => { if (ICONS[a.dataset.p]) a.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 16 16" aria-hidden="true">' + ICONS[a.dataset.p] + "</svg>"); });
 
 /* ---- units ---- */
 function pills(files) { const c = { clean: 0, watch: 0, flag: 0 }; files.forEach(f => c[f.verdict] = (c[f.verdict] || 0) + 1); return ["clean", "watch", "flag"].filter(k => c[k]).map(k => '<span class="pill ' + k + '">' + c[k] + " " + k + "</span>").join(" ") || '<span class="pill none">no files</span>'; }
 function viewUnits() {
-  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Each unit is a firmware on its own FM-1. Work left to right: simulate, measure, put one unit on USB, flash, log it. The flash button checks USB first and will not go ahead with zero or two units.</p><div class="usb" id="usb"><b>On USB</b><span id="usbTxt" style="flex:1;min-width:200px">not checked</span><button id="usbBtn" class="sm">Check again</button></div><div class="cards" id="cards"></div><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div>';
+  $("#main").innerHTML = '<h1>Units</h1><p class="lede">Check, then flash one FM-1 at a time.</p><div class="usb" id="usb"><b>On USB</b><span id="usbTxt" style="flex:1;min-width:200px">not checked</span><button id="usbBtn" class="sm">Check again</button></div><div class="cards" id="cards"></div><details class="termwrap" id="termWrap"><summary>Output of the last run</summary><div class="term"><header><span id="outTitle">output</span></header><pre id="outPre"></pre></div></details>';
   renderUnits(); updOut(); $("#usbBtn").onclick = () => checkUsb().then(renderUnitSteps); checkUsb().then(renderUnitSteps);
 }
 let usb = null;
@@ -130,10 +120,9 @@ function renderUnits() {
     const tot = usb && usb.found ? usb.found.length : -1, justFlashed = lastRun && lastRun.unit === u.id && lastRun.cmd === "up" && !lastRun.args.includes("--no-flash") && lastRun.code === 0;
     const nx = busy ? ["", "Working…", "A run is in progress. Its output is below.", ""] : justFlashed ? ["okn", "Next", "Play the unit, then log the flash below.", ""] : !u.sim || !files.length ? ["", "Next", "Run the checks: it builds the simulator, renders and measures.", '<button class="primary sm" data-run data-c="up" data-a="--no-flash">Check all</button>'] : flag ? ["hotn", "Fix first", "A render is flagged. Look at it before anything is flashed.", '<a href="#analyzer" data-an="' + u.id + '"><button class="sm">Open the Analyzer</button></a>'] : tot > 1 ? ["hotn", "Unplug", tot + " FM-1s are on USB. Leave only the one you want to flash.", '<button class="sm" data-usb>Check again</button>'] : tot === 0 ? ["", "Next", "Plug in this unit (and only this unit), then check USB.", '<button class="sm" data-usb>Check USB</button>'] : tot === 1 && !onU ? ["hotn", "Careful", "The FM-1 on USB runs another firmware. Flashing will replace it with " + u.name + ".", '<button class="hot sm" data-run data-flash="' + u.id + '">Flash anyway…</button>'] : onU ? ["okn", "Ready", "Checked and alone on USB. Close the mirror tabs and flash.", '<button class="hot sm" data-run data-flash="' + u.id + '">Flash…</button>'] : ["", "Next", "Checked. USB could not be read from here; the installer checks when you flash.", ""];
     const nextBar = '<div class="next ' + nx[0] + '"><span>' + nx[1] + "</span><b>" + nx[2] + "</b>" + nx[3] + "</div>";
-    return '<section class="card" data-u="' + u.id + '"><div><span class="eyebrow" style="color:var(--dim)">' + esc(u.hardware) + '</span><h2>' + esc(u.name) + '<span class="pill ' + stt[0] + '">' + stt[1] + '</span></h2></div>' + nextBar + '<div class="chips">' + u.engines.map(e => '<span class="chip">' + esc(e) + "</span>").join("") + "</div>" + unitSteps(u) +
-      "<dl><dt>Package</dt><dd>" + (u.package ? esc(u.package.name) + " · " + esc(u.package.at) : "none built here") + "</dd>" +
-      "<dt>Renders</dt><dd>" + (r ? esc(r.stamp) + " &nbsp; " + pills(files) : "none yet") + "</dd><dt>Latest build</dt><dd>" + (n ? esc(n.date) + " · " + esc(n.build) + '<br><span class="hint">' + esc(n.what) + "</span>" : "not in the flash log") + "</dd></dl>" +
-      '<div class="actions"><button class="primary" data-run data-c="up" data-a="--no-flash" title="' + NOTE.up + '">Check all</button><button class="ghost" data-run data-c="sim" title="' + NOTE.sim + '">Sim</button><button class="ghost" data-run data-c="render" title="' + NOTE.render + '">Render</button><button class="ghost" data-run data-c="report" title="' + NOTE.report + '">Report</button><a href="#analyzer" data-an="' + u.id + '"><button class="ghost">Analyzer</button></a><span class="sp"></span><button class="hot" data-run data-flash="' + u.id + '">Flash…</button></div><div data-confirm></div>' + after +
+    return '<section class="card" data-u="' + u.id + '"><div><span class="eyebrow" style="color:var(--dim)">' + esc(u.hardware) + '</span><h2>' + esc(u.name) + '<span class="pill ' + stt[0] + '">' + stt[1] + '</span></h2></div>' + nextBar + unitSteps(u) +
+      '<div class="actions"><button class="primary" data-run data-c="up" data-a="--no-flash" title="' + NOTE.up + '">Check all</button><a href="#analyzer" data-an="' + u.id + '"><button>Open in Analyzer</button></a><span class="sp"></span><button class="hot" data-run data-flash="' + u.id + '">Flash…</button></div><div data-confirm></div>' + after +
+      '<details><summary>Details and single steps</summary><div class="chips" style="margin-bottom:10px">' + u.engines.map(e => '<span class="chip">' + esc(e) + "</span>").join("") + '</div><dl style="border-top:0;padding-top:0"><dt>Package</dt><dd>' + (u.package ? esc(u.package.name) + " · " + esc(u.package.at) : "none built here") + "</dd><dt>Renders</dt><dd>" + (r ? esc(r.stamp) + " &nbsp; " + pills(files) : "none yet") + "</dd><dt>Latest build</dt><dd>" + (n ? esc(n.date) + " · " + esc(n.build) + '<br><span class="hint">' + esc(n.what) + "</span>" : "not in the flash log") + '</dd></dl><div class="actions" style="margin-top:12px"><button class="sm" data-run data-c="sim" title="' + NOTE.sim + '">Sim</button><button class="sm" data-run data-c="render" title="' + NOTE.render + '">Render</button><button class="sm" data-run data-c="report" title="' + NOTE.report + '">Report</button></div></details>' +
       (files.length ? '<details><summary>Latest renders (' + files.length + ')</summary><div class="tw"><table><tr><th>file</th><th>TP</th><th>LUFS</th><th>clicks</th><th></th></tr>' + files.map(f => "<tr><td>" + esc(f.file) + "</td><td>" + f1(f.tp) + "</td><td>" + f1(f.lufs) + "</td><td>" + f.clicks + '</td><td><span class="pill ' + f.verdict + '">' + f.verdict + "</span></td></tr>").join("") + "</table></div></details>" : "") + "</section>";
   }).join("");
   setBusy(busy);
@@ -307,7 +296,7 @@ function drawEngines() {
 let PR = null, prF = { unit: "all", engine: "all", tag: "all", q: "", sort: "source" };
 const PTAGS = ["fav", "keeper", "rework", "drop", "box-ready", "needs-sample"];
 async function viewPresets() {
-  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Presets and Kits</h1>' + saveBar + '</div><p class="lede">Every preset and kit name found in the ECB and Alien Stack engine sources. Tag them and note what is worth carrying to the new box. Tags are saved with the plan; the firmware is not touched.</p><div id="prBox">Loading...</div>';
+  $("#main").innerHTML = '<div class="row"><h1 style="margin:0 12px 0 0">Presets and Kits</h1>' + saveBar + '</div><p class="lede">Rate and tag every ECB and Alien Stack preset. The keepers become the factory set for the box.</p><div id="prBox">Loading...</div>';
   await loadAll(); try { PR = PR || await (await api("/api/presets")).json(); } catch (e) { $("#prBox").textContent = "Could not read the engine sources: " + e.message; return; }
   drawPresets();
 }
@@ -316,7 +305,7 @@ function drawPresets() {
   const tg = x => pget(["presets", x.k, "tags"], []), sel = all.filter(x => (prF.unit === "all" || x.u === prF.unit) && (prF.engine === "all" || x.e === prF.engine) && (prF.tag === "all" || tg(x).includes(prF.tag) || (prF.tag === "untagged" && !tg(x).length)) && (!prF.q || x.n.toLowerCase().includes(prF.q.toLowerCase())));
   const engines = [...new Set(all.map(x => x.e))], count = t => all.filter(x => tg(x).includes(t)).length;
   const opt = (v, list) => ["all"].concat(list).map(o => "<option" + (o === v ? " selected" : "") + ">" + o + "</option>").join("");
-  $("#prBox").innerHTML = '<div class="kpis">' + kpi("Found", all.length) + PTAGS.slice(0, 3).map(t => kpi(t, count(t))).join("") + kpi("Untagged", all.filter(x => !tg(x).length).length) + "</div>" +
+  $("#prBox").innerHTML =
     '<div class="chips" style="margin-bottom:14px">' + Object.keys(PR).map(u => Object.keys(PR[u]).map(en => '<button class="sm' + (prF.unit === u && prF.engine === en ? " on" : "") + '" data-eng="' + u + "|" + en + '">' + (u === "as" ? "AS" : "ECB") + " " + en + " · " + PR[u][en].length + "</button>").join("")).join("") + '<button class="sm" data-eng="all|all">all</button></div>' +
     '<div class="row" style="margin-bottom:10px"><select id="fU">' + opt(prF.unit, Object.keys(PR)) + '</select><select id="fE">' + opt(prF.engine, engines) + '</select><select id="fT">' + opt(prF.tag, PTAGS.concat("untagged")) + '</select><input id="fQ" placeholder="search by name" value="' + esc(prF.q) + '" style="min-width:160px"><select id="fS" title="Sort">' + [["source", "source order"], ["name", "by name"], ["rating", "by rating"]].map(o => '<option value="' + o[0] + '"' + (o[0] === prF.sort ? " selected" : "") + ">" + o[1] + "</option>").join("") + "</select>" + '<span style="color:var(--dim)">' + sel.length + " shown</span><span class=\"sp\"></span><select id=\"blkT\">" + PTAGS.map(t => "<option>" + t + "</option>").join("") + "</select><button id=\"blkA\" title=\"Add this tag to every preset shown\">Tag shown</button><button id=\"blkC\" title=\"Remove all tags from every preset shown\">Clear shown</button><button id=\"pxE\">Export tags</button><button id=\"pxI\">Import</button><input type=\"file\" id=\"pxF\" accept=\".json,application/json\" hidden></div>" +
     '<div class="card tw ed" style="padding:0"><table><tr><th style="text-align:left">Name</th><th>Unit</th><th>Engine</th><th style="text-align:left">Rating</th><th style="text-align:left">Tags</th><th style="text-align:left">Note for the new box</th></tr>' + (prF.sort === "name" ? sel.slice().sort((a, b) => a.n.localeCompare(b.n)) : prF.sort === "rating" ? sel.slice().sort((a, b) => (+pget(["presets", b.k, "stars"], 0)) - (+pget(["presets", a.k, "stars"], 0))) : sel).slice(0, 300).map(x => '<tr><td style="text-align:left">' + esc(x.n) + "</td><td>" + (x.u === "as" ? "AS" : "ECB") + "</td><td>" + esc(x.e) + '</td><td style="text-align:left"><span class="stars">' + [1, 2, 3, 4, 5].map(n => '<button class="' + (n <= +pget(["presets", x.k, "stars"], 0) ? "lit" : "") + '" data-star2="' + dk([x.k, n]) + '" aria-label="' + n + ' stars">\u2605</button>').join("") + '</span></td><td style="text-align:left;white-space:nowrap">' + PTAGS.map(t => '<button data-pt2="' + dk([x.k, t]) + '" class="' + (tg(x).includes(t) ? "on" : "") + '" style="padding:1px 6px;font-size:11px">' + t + "</button>").join(" ") + '</td><td style="min-width:200px">' + ctl(["presets", x.k, "note"], "", "text") + "</td></tr>").join("") + "</table></div>" + (sel.length > 300 ? '<p style="color:var(--dim)">Showing the first 300; narrow the filter.</p>' : "") +
@@ -444,6 +433,11 @@ async function viewLog() {
   $("#main").innerHTML = '<h1>Flash log</h1><p class="lede">docs/notes.md, newest at the bottom.</p><pre class="log" id="logBox">Loading...</pre>';
   try { const t = await (await api("/api/log")).text(); const b = $("#logBox"); b.textContent = t.split("\n").slice(-120).join("\n"); b.scrollTop = b.scrollHeight; } catch (e) { $("#logBox").textContent = e.message; }
 }
+/* everything that is not daily work lives behind one door */
+const MORE = [["patterns", "Patterns", "A step sketchbook and arrangement lane."], ["toolbox", "Toolbox", "Tempo, notes, bank, level, card and battery calculators."], ["direction", "Direction", "The prototype brief: controls, screen, I/O, parts search, open questions."], ["decisions", "Decisions", "What is locked, proposed and open."], ["engines", "Engine map", "Which engines go in the box and what is left to build."], ["arch", "Architecture", "How one engine runs on the sim, the FM-1 and the box."], ["compare", "Compare", "The FM-1, two other boxes and our goal, side by side."], ["prototype", "Research", "The first parts list, platforms and costs."], ["docs", "Docs", "The repo's documents and the changelog."], ["doctor", "Doctor", "What this machine can and cannot do."], ["log", "Flash log", "Every flash on record."], ["roadmap", "Roadmap", "Done, next, later."]];
+function viewMore() {
+  $("#main").innerHTML = '<h1>More</h1><p class="lede">Reference and planning pages that are not part of the daily loop.</p><div class="plan">' + MORE.map(m => '<a class="card morecard" href="#' + m[0] + '"><h2><span style="display:flex;gap:10px;align-items:center"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[m[0]] || "") + "</svg>" + m[1] + "</span></h2><p>" + m[2] + "</p></a>").join("") + "</div>";
+}
 function viewRoadmap() {
   const items = [
     ["Done", "Units", "Simulate, measure, check USB, flash one unit, log it: a four-step strip per firmware."],
@@ -456,7 +450,7 @@ function viewRoadmap() {
     ["Done", "Prototype Designer", "Drag-and-drop layout to scale, front and side views, styles and materials, saved designs, compare, 1:1 print."],
     ["Done", "Agents", "Prototype, Sound, Hardware, Workflow: a built-in review each, and chat with an API key."],
     ["Done", "Online mode", "The planning pages behind a password on a host; run, flash and USB stay local. Not deployed yet."],
-    ["Next", "Engine v2 and packs", "Engine id and version, sample rate as a build flag, tools/sfa pack, the simulator loads a pack."],
+    ["Next", "Engine v2 and packs", "Started: every engine has an id and a version, and the sample rate can be set at build time. Still to do: tools/sfa pack, and a simulator that loads a pack."],
     ["Next", "Paper prototype", "Print the designs at 1:1, measure the FM-1, choose a key pitch and a layout, lock them in Decisions."],
     ["Next", "Dev kit bring-up", "One engine on a Daisy Seed with the screen and four pads; the same test script on host and board."],
     ["Next", "Preset audition", "Render each preset from the Presets page and hear it there, with its level and spectrum."],

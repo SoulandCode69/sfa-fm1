@@ -73,7 +73,7 @@ function agReview(who) {
   return out;
 }
 WS.agents = async function () {
-  $("#main").innerHTML = '<h1>Agents</h1><p class="lede">Four helpers that read the workshop: your designs, the plan, the parts findings, the latest renders and the repo. Each gives a review you can act on now, and answers questions when the console has an API key.</p><div id="agBox">Loading...</div>';
+  $("#main").innerHTML = '<h1>Agents</h1><p class="lede">Four helpers that read your designs, plan, renders and repo. Each gives a review, and answers commands.</p><div id="agBox">Loading...</div>';
   await loadAll(); try { AG.info = await (await api("/api/agents")).json(); } catch (e) { AG.info = { llm: false }; }
   if (!usb) { try { await checkUsb(); } catch (e) {} }
   agDraw();

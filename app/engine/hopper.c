@@ -451,4 +451,4 @@ static const char *f_text(uint8_t page, uint32_t p, char *buf)
     return 0;
 }
 static const char *const TITLES[5] = {"CUT", "PLAYBACK", "SHAPE", "SLICE", "CHOP MODE"};
-const engine_t hopper = {"HOPPER", f_init, f_note, f_render, f_panic, 5, {NAMES1, NAMES2, NAMES3, NAMES4, NAMES5}, {par1, par2, par3, par4, par5}, f_text, TITLES};
+const engine_t hopper = {"HOPPER", f_init, f_note, f_render, f_panic, 5, {NAMES1, NAMES2, NAMES3, NAMES4, NAMES5}, {par1, par2, par3, par4, par5}, f_text, TITLES, "hopper", 1};

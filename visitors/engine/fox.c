@@ -251,4 +251,4 @@ static const char *f_text(uint8_t page, uint32_t p, char *buf)
     if (page == 0u && p == 3u && par1[3] == 0u) return "OFF";
     return 0;
 }
-const engine_t fox = {"REPTILES", f_init, f_note, f_render, f_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, f_text, TITLES};
+const engine_t fox = {"REPTILES", f_init, f_note, f_render, f_panic, 3, {NAMES1, NAMES2, NAMES3, 0, 0}, {par1, par2, par3, 0, 0}, f_text, TITLES, "reptiles", 1};

@@ -4,7 +4,9 @@
 #pragma once
 #include <stdint.h>
 
+#ifndef SR                      /* the build may set it: -DSR=48000.0f for a 48 kHz target. The FM-1 and its simulator run at 44.1 kHz. */
 #define SR 44100.0f
+#endif
 #define NPARAM 4                          /* one page: K1..K4 */
 
 #define NPAGES 5
@@ -20,6 +22,8 @@ struct engine {
     uint8_t *params[NPAGES];              /* each page's NPARAM values 0..127 (the app saves them) */
     const char *(*param_text)(uint8_t page, uint32_t p, char *buf);   /* a value shown as words, or 0 */
     const char *const *titles;            /* each page's title (or 0) */
+    const char *id;                       /* engine v2: the stable name packs use ("otter"); never shown, never renamed */
+    uint16_t version;                     /* engine v2: bumps when a parameter's meaning changes, so an old preset is not misread */
 };
 
 /* a trapezoidal state-variable filter (Simper): stable at any cutoff and resonance. Coefficients per block,
