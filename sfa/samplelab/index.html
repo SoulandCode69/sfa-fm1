@@ -128,7 +128,8 @@ body > header .mark span { font-family: var(--body); letter-spacing: .24em; }
   <button id="bStop">Stop</button>
   <button id="bKit" title="Plays every kept slice in order, as the unit will hold them">Play kit</button>
   <label class="readout"><input type="checkbox" id="cLoop"> loop slice</label>
-  <label class="readout"><input type="checkbox" id="cUnit" checked> hear it as the unit will (22.05 kHz, 16 bit)</label>
+  <label class="readout"><input type="checkbox" id="cUnit" checked> <span id="unitLbl">hear it as the unit will (22.05 kHz, 16 bit)</span></label>
+  <label class="readout">for <select id="sProfile" title="Where the kit is going"><option value="fm1">FM-1 bank</option><option value="proto">Prototype (48 kHz)</option></select></label>
   <span class="sp"></span>
   <span class="readout" id="rdBank"></span>
 </header>
@@ -178,8 +179,10 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const say = t => { $("#status").textContent = t; };
-const RATE = 22050, MAXN = 92000, REGION = 46 * 4096 - 64, MAXS = 16;
-const bankSamples = n => Math.floor((REGION - 8 - 20 * Math.max(1, n)) / 2);       /* PCM samples the bank holds for n samples: the packer's budget */
+let RATE = 22050, MAXN = 92000, PROFILE = "fm1"; const REGION = 46 * 4096 - 64, MAXS = 16;
+/* two targets: the FM-1's bank (22.05 kHz, about 4.2 s in all) and the prototype's card (48 kHz, a 10 minute working budget) */
+function setProfile(p) { PROFILE = p === "proto" ? "proto" : "fm1"; RATE = PROFILE === "proto" ? 48000 : 22050; MAXN = PROFILE === "proto" ? 48000 * 30 : 92000; const l = document.querySelector("#unitLbl"); if (l) l.textContent = PROFILE === "proto" ? "hear it as the box will (48 kHz, 16 bit)" : "hear it as the unit will (22.05 kHz, 16 bit)"; }
+const bankSamples = n => PROFILE === "proto" ? 48000 * 600 : Math.floor((REGION - 8 - 20 * Math.max(1, n)) / 2);       /* PCM samples the bank holds for n samples: the packer's budget */
 const fmtT = s => s < 1 ? (s * 1000).toFixed(0) + " ms" : s.toFixed(2) + " s";
 
 /* ---------- reading audio: our own WAV parser, the browser's decoder for everything else ---------- */
@@ -285,7 +288,7 @@ function resample(x, sr, to) {
 function makeSample(s, sl, trim) {
   let a = sl.a, b = sl.b;
   if (trim) { const th = 0.0015; while (a < b - 2 && Math.abs(s.x[a]) < th) a++; while (b > a + 2 && Math.abs(s.x[b - 1]) < th) b--; }
-  let y = resample(s.x.subarray(a, b), s.sr, RATE);
+  let y = resample(s.x.subarray(a, b), s.sr * Math.pow(2, (+sl.p.tune || 0) / 12), RATE);   /* tune: semitones up or down, by resampling */
   if (sl.p.rev) y.reverse();
   const fi = Math.min(y.length >> 1, Math.round(RATE * 0.0015)), fo = Math.min(y.length >> 1, Math.round(RATE * (+$("#fTail").value || 6) / 1000));
   for (let i = 0; i < fi; i++) y[i] *= i / fi; for (let i = 0; i < fo; i++) y[y.length - 1 - i] *= i / fo;
@@ -377,15 +380,15 @@ function renderSlices() {
   const cols = ["--c1", "--c2", "--accent"]; let used = 0;
   $("#budget").className = "budget" + (over ? " over" : "");
   $("#budget").innerHTML = pl.smp.map((m, i) => { const wd = m.pcm.length / pl.cap * 100; used += wd; return '<i style="width:' + wd.toFixed(2) + '%;background:' + (i % 2 ? "var(--c2)" : "var(--c1)") + ';opacity:' + (over ? .55 : .85) + '"></i>'; }).join("");
-  $("#budgetTxt").innerHTML = "<b class=\"" + (over ? "wn" : "ok") + "\">" + (pl.total / RATE).toFixed(2) + " s</b> of " + (pl.cap / RATE).toFixed(2) + " s in the bank (" + (pl.total * 2 / 1024).toFixed(0) + " of " + (pl.cap * 2 / 1024).toFixed(0) + " KB)" + (over ? ' \u00B7 <span class="wn">over by ' + ((pl.total - pl.cap) / RATE).toFixed(2) + " s: the export trims the longest slices' tails to fit. Untick slices to keep the rest whole.</span>" : "") + (pl.cut ? ' \u00B7 <span class="wn">' + pl.cut + " slice(s) past 16 are left out</span>" : "");
+  $("#budgetTxt").innerHTML = "<b class=\"" + (over ? "wn" : "ok") + "\">" + (pl.total / RATE).toFixed(2) + " s</b> of " + (pl.cap / RATE).toFixed(2) + " s in the bank (" + (pl.total * 2 / 1024).toFixed(0) + " of " + (pl.cap * 2 / 1024).toFixed(0) + " KB)" + (PROFILE === "proto" ? " \u00B7 a 10 minute working budget for the card, not a hard limit" : "") + (over ? ' \u00B7 <span class="wn">over by ' + ((pl.total - pl.cap) / RATE).toFixed(2) + " s: the export trims the longest slices' tails to fit. Untick slices to keep the rest whole.</span>" : "") + (pl.cut ? ' \u00B7 <span class="wn">' + pl.cut + " slice(s) past 16 are left out</span>" : "");
   $("#rdSlices").textContent = keepAll.length + " slices, " + keepAll.filter(q => q.p.keep).length + " kept";
   $("#rdBank").innerHTML = "bank <b>" + (pl.total / RATE).toFixed(2) + " / " + (pl.cap / RATE).toFixed(2) + " s</b>";
   const keys = "1234567890qwerty"; let n = 0;
-  $("#tbl").innerHTML = "<thead><tr><th>Key</th><th>Name</th><th>Start</th><th>Length</th><th>Out</th><th>Keep</th><th>Rev</th><th></th></tr></thead><tbody>" + keepAll.map(q => {
+  $("#tbl").innerHTML = "<thead><tr><th>Key</th><th>Name</th><th>Start</th><th>Length</th><th>Out</th><th>Keep</th><th>Rev</th><th>Tune</th><th></th></tr></thead><tbody>" + keepAll.map(q => {
     const idx = q.p.keep ? n++ : -1, len = idx >= 0 && idx < pl.smp.length ? pl.smp[idx].pcm.length / RATE : 0;
-    return '<tr data-s="' + q.i + '" class="' + (q.i === S.sel ? "act" : "") + '"><td><span class="key">' + (keys[q.i] || "") + '</span></td><td><input type="text" maxlength="9" data-name="' + q.i + '" value="' + esc(q.p.name) + '" placeholder="' + (idx >= 0 ? "S" + String(idx + 1).padStart(2, "0") : "") + '" aria-label="Name"></td><td>' + (q.a / s.sr).toFixed(3) + "</td><td>" + ((q.b - q.a) / s.sr).toFixed(3) + "</td><td>" + (idx >= 0 ? len.toFixed(3) : "-") + '</td><td><input type="checkbox" data-keep="' + q.i + '" ' + (q.p.keep ? "checked" : "") + ' aria-label="Keep"></td><td><input type="checkbox" data-rev="' + q.i + '" ' + (q.p.rev ? "checked" : "") + ' aria-label="Reverse"></td><td><button data-play="' + q.i + '">Play</button></td></tr>';
+    return '<tr data-s="' + q.i + '" class="' + (q.i === S.sel ? "act" : "") + '"><td><span class="key">' + (keys[q.i] || "") + '</span></td><td><input type="text" maxlength="9" data-name="' + q.i + '" value="' + esc(q.p.name) + '" placeholder="' + (idx >= 0 ? "S" + String(idx + 1).padStart(2, "0") : "") + '" aria-label="Name"></td><td>' + (q.a / s.sr).toFixed(3) + "</td><td>" + ((q.b - q.a) / s.sr).toFixed(3) + "</td><td>" + (idx >= 0 ? len.toFixed(3) : "-") + '</td><td><input type="checkbox" data-keep="' + q.i + '" ' + (q.p.keep ? "checked" : "") + ' aria-label="Keep"></td><td><input type="checkbox" data-rev="' + q.i + '" ' + (q.p.rev ? "checked" : "") + ' aria-label="Reverse"></td><td><input type="number" data-tune="' + q.i + '" value="' + (+q.p.tune || 0) + '" min="-24" max="24" step="1" style="width:62px" aria-label="Tune in semitones"></td><td><button data-play="' + q.i + '">Play</button></td></tr>';
   }).join("") + "</tbody>";
-  $("#sendBox").style.display = serverUp ? "flex" : "none";
+  $("#sendBox").style.display = serverUp && PROFILE === "fm1" ? "flex" : "none";
 }
 function render() { renderSrcs(); const s = cur(); $("#tName").textContent = s ? s.name : "Waveform"; renderSlices(); requestAnimationFrame(drawWave); }
 
@@ -445,7 +448,7 @@ function buildKit() {
     files.push({ name: fn, data: wavBytes(m.pcm) }); meta.push({ file: fn, seconds: +(m.pcm.length / RATE).toFixed(3), from: +(m.q.a / s.sr).toFixed(4), to: +(m.q.b / s.sr).toFixed(4), reversed: !!m.q.p.rev });
   });
   files.push({ name: "kit.json", data: new TextEncoder().encode(JSON.stringify({ kit, source: s.name, rate: RATE, bits: 16, channels: 1, bankSeconds: +(pl.total / RATE).toFixed(3), samples: meta }, null, 1)) });
-  files.push({ name: "manifest.json", data: new TextEncoder().encode(JSON.stringify({ schema: "sfa-pack/1", name: kit, created: new Date().toISOString().slice(0, 10), licence: "", notes: "Sample Lab kit from " + s.name + ". Target profile fm1: 22.05 kHz mono 16-bit.", profile: "fm1", samples: meta.map(m => m.file) }, null, 1)) });
+  files.push({ name: "manifest.json", data: new TextEncoder().encode(JSON.stringify({ schema: "sfa-pack/1", name: kit, created: new Date().toISOString().slice(0, 10), licence: "", notes: "Sample Lab kit from " + s.name + ". Target profile " + PROFILE + ": " + RATE / 1000 + " kHz mono 16-bit.", profile: PROFILE, rate: RATE, samples: meta.map(m => m.file) }, null, 1)) });
   return { kit, blob: zipBlob(files), pl };
 }
 function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
@@ -469,12 +472,13 @@ $("#bChop").onclick = () => { if (cur()) { autoChop(cur()); render(); } };
 $("#bClear").onclick = () => { const s = cur(); if (s) { s.marks = []; s.props = [{ name: "", keep: true, rev: false }]; render(); say("Cuts cleared."); } };
 $("#cZero").onchange = $("#cTrim").onchange = () => { if (cur()) { if ($("#cZero").checked) autoChop(cur(), true); render(); } };
 $("#bPlaySrc").onclick = playSource; $("#bStop").onclick = stopAll; $("#bKit").onclick = playKit;
+$("#sProfile").onchange = e => { setProfile(e.target.value); stopAll(); render(); say(PROFILE === "proto" ? "Prototype profile: 48 kHz, up to 30 s a sample. Export gives a kit for the card; nothing is sent to an FM-1." : "FM-1 profile: 22.05 kHz, about 4.2 s in the whole bank."); };
 $("#bUndo").onclick = () => undo(-1); $("#bRedo").onclick = () => undo(1); $("#fTail").onchange = () => render();
 $("#bGuess").onclick = () => { const s = cur(); if (!s) return; const seen = {}; slices(s).forEach(q => { const g = guessName(s, q); seen[g] = (seen[g] || 0) + 1; q.p.name = (g + (seen[g] > 1 ? seen[g] : "")).slice(0, 9); }); render(); say("Names guessed from the sound. Check them: it is a guess."); };
 $("#bKeepAll").onclick = () => { const s = cur(); if (s) { s.props.forEach(p => p.keep = true); render(); } }; $("#bKeepNone").onclick = () => { const s = cur(); if (s) { s.props.forEach(p => p.keep = false); render(); } };
 $("#bZoomOut").onclick = () => { S.view = null; drawWave(); };
 $("#tbl").addEventListener("click", e => { const p = e.target.closest("[data-play]"), r = e.target.closest("tr[data-s]"); if (p) playSlice(+p.dataset.play); else if (r && !e.target.closest("input")) { S.sel = +r.dataset.s; renderSlices(); drawWave(); } });
-$("#tbl").addEventListener("change", e => { const s = cur(), t = e.target; if (!s) return; const i = t.dataset.keep ?? t.dataset.rev ?? t.dataset.name; if (i === undefined) return; if (t.dataset.keep !== undefined) s.props[+i].keep = t.checked; else if (t.dataset.rev !== undefined) s.props[+i].rev = t.checked; else s.props[+i].name = t.value; render(); });
+$("#tbl").addEventListener("change", e => { const s = cur(), t = e.target; if (!s) return; const i = t.dataset.keep ?? t.dataset.rev ?? t.dataset.tune ?? t.dataset.name; if (i === undefined) return; if (t.dataset.tune !== undefined) s.props[+i].tune = clamp(Math.round(+t.value || 0), -24, 24); else if (t.dataset.keep !== undefined) s.props[+i].keep = t.checked; else if (t.dataset.rev !== undefined) s.props[+i].rev = t.checked; else s.props[+i].name = t.value; render(); });
 $("#bZip").onclick = () => { const k = buildKit(); if (!k) return; download(k.blob, k.kit + ".zip"); say("Saved " + k.kit + ".zip: " + k.pl.smp.length + " samples, " + (k.pl.total / RATE).toFixed(2) + " s."); };
 document.querySelectorAll("[data-send]").forEach(b => b.onclick = async () => {
   const k = buildKit(); if (!k) return; b.disabled = true; say("Sending " + k.kit + " to " + b.dataset.send + "...");
@@ -510,7 +514,7 @@ document.addEventListener("keydown", e => {
 });
 new ResizeObserver(() => requestAnimationFrame(drawWave)).observe(document.body);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
-window.LAB = { S, makeSample, plan, fitPlan, buildKit, detectTransients, autoChop, resample, zipBlob, addFiles, bankSamples, wavBytes };
+window.LAB = { setProfile, get rate() { return RATE; }, S, makeSample, plan, fitPlan, buildKit, detectTransients, autoChop, resample, zipBlob, addFiles, bankSamples, wavBytes };
 renderChop(); render();
 if (location.protocol.startsWith("http")) fetch("/api/state", { headers: {} }).then(r => { serverUp = r.ok; renderSlices(); }).catch(() => {});
 </script>

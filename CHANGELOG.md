@@ -2,6 +2,16 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10 (deep build): energy, commands, gallery
+
+* **Visual**: a glow backdrop, gradient header and rail with an icon per page, lit surfaces, gradient action buttons, glowing state dots, a pulsing Ready to flash badge. Same system on every page; the Light switch tones it down.
+* **Units**: a Next bar on each card says the one thing to do now (check, fix, plug in, unplug, flash, log) with the button for it.
+* **Agents**: slash commands that answer from your own data with no key or network: `/help`, `/review`, `/next`, `/size`, `/compare`, `/pins`, `/battery`, `/cost`, `/levels`, `/engine`, `/checklist`. Engine notes on the Sound agent (what the DSP pass did, what to try next). The Prototype agent's top findings also show inside the Designer.
+* **Designer**: a Designs gallery with thumbnails; two more concepts (Slab, an industrial deck; Bridge, pads along the rear edge), six in all; align left / centre / right / rear / front; labels and lock on parts; import a design file.
+* **Sample Lab**: a Prototype profile (48 kHz, up to 30 s a sample) beside the FM-1 one, and per-slice tune in semitones.
+* **Analyzer**: Session report, a Markdown summary of every loaded file with flags, level outliers per group and the A/B deltas.
+* **Presets**: 1 to 5 star ratings, sort by name or rating, and a Shortlist for the box (keeper, box-ready or four stars and up) with export.
+
 ## 2026-11-10 (late night): violet identity
 
 * **Colour**: the main accent is now electric violet (actions, selection, the active page), on the same dark base. Magenta is the pop, kept for Flash and the pattern steps; cyan for links, info and the current page in the header. Lime is gone.

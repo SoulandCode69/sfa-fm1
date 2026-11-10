@@ -178,6 +178,7 @@ body > header .mark span { font-family: var(--body); letter-spacing: .24em; }
   <button id="bAB" title="Compare two files; keys A and B switch the one you hear and see">A/B</button>
   <button id="bCsv" title="Download the comparison table">CSV</button>
   <button id="bCopy" title="Copy a text report of the active file">Copy report</button>
+  <button id="bSess" title="A report of every loaded file: verdicts, flags and level outliers, as Markdown">Session report</button>
 </header>
 
 <div class="hist" id="hist" hidden></div>
@@ -850,6 +851,24 @@ function report() {
     "Stereo: correlation " + m.st.corr.toFixed(2) + " (worst " + m.st.corrMin.toFixed(2) + "), side energy " + (m.st.width * 100).toFixed(0) + " %", "Tone: centroid " + m.centroid.toFixed(0) + " Hz, " + (m.hf * 100).toFixed(1) + " % above 5 kHz, 95 % rolloff " + m.rolloff.toFixed(0) + " Hz",
     "Clicks: " + (m.clickEv.length ? m.clickEv.map(e => e.t.toFixed(3) + "s").join(", ") : "none")].join("\n");
 }
+/* every loaded file in one Markdown report: verdicts, what was flagged, and which files sit far from their group's level */
+function sessionReport() {
+  const fs = S.files.filter(f => f.m); if (!fs.length) return "";
+  const cnt = { clean: 0, watch: 0, flag: 0 }; fs.forEach(f => cnt[f.m.verdict]++);
+  const groups = {}; fs.forEach(f => (groups[f.group || "files"] = groups[f.group || "files"] || []).push(f));
+  const med = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? (b[(b.length - 1) >> 1] + b[b.length >> 1]) / 2 : NaN; };
+  let out = ["# SFA Analyzer session", "", new Date().toISOString().slice(0, 16).replace("T", " ") + " \u00b7 " + fs.length + " files \u00b7 " + cnt.flag + " flag, " + cnt.watch + " watch, " + cnt.clean + " clean", ""];
+  const probs = fs.filter(f => f.m.verdict !== "clean");
+  out.push("## Needs attention", ""); out.push(probs.length ? probs.map(f => "- **" + f.name + "** (" + f.m.verdict + "): " + f.m.why.filter(w => w[0]).map(w => w[1]).join("; ") + (f.m.clickEv.length ? " at " + f.m.clickEv.slice(0, 6).map(e => e.t.toFixed(3) + " s").join(", ") : "")).join("\n") : "Nothing flagged or to watch.", "");
+  const outl = [];
+  for (const g in groups) { const lu = groups[g].map(f => f.m.loud.I).filter(v => v !== null && isFinite(v) && v > -60), m0 = med(lu); groups[g].forEach(f => { const v = f.m.loud.I; if (lu.length >= 3 && v !== null && isFinite(v) && v > -60 && Math.abs(v - m0) > 6) outl.push("- **" + f.name + "** is " + Math.abs(v - m0).toFixed(1) + " LU " + (v > m0 ? "louder" : "quieter") + " than the middle of " + g + " (" + fmt(v) + " against " + fmt(m0) + " LUFS)"); }); }
+  out.push("## Level outliers", "", outl.length ? outl.join("\n") : "No file is more than 6 LU from the middle of its group.", "", "Short hits read quieter than sustained notes at the same peak, so judge these by ear before changing anything.", "");
+  if (S.ab) { const A = S.files[S.ab.a], B = S.files[S.ab.b]; if (A && B && A.m && B.m) out.push("## A/B", "", "A: " + A.name + " \u00b7 B: " + B.name, "", "| | A | B | B - A |", "|---|---|---|---|", "| LUFS | " + fmt(A.m.loud.I) + " | " + fmt(B.m.loud.I) + " | " + fmt(B.m.loud.I - A.m.loud.I) + " |", "| True peak | " + fmt(A.m.tpDb) + " | " + fmt(B.m.tpDb) + " | " + fmt(B.m.tpDb - A.m.tpDb) + " |", "| Centroid Hz | " + A.m.centroid.toFixed(0) + " | " + B.m.centroid.toFixed(0) + " | " + (B.m.centroid - A.m.centroid).toFixed(0) + " |", ""); }
+  out.push("## All files", "", "| File | Group | Length | True peak | LUFS | Crest | Clicks | Verdict |", "|---|---|---|---|---|---|---|---|");
+  fs.forEach(f => out.push("| " + f.name + " | " + (f.group || "") + " | " + fmtT(f.dur) + " | " + fmt(f.m.tpDb) + " | " + fmt(f.m.loud.I) + " | " + fmt(f.m.crest) + " | " + f.m.clickEv.length + " | " + f.m.verdict + " |"));
+  return out.join("\n") + "\n";
+}
+$("#bSess").onclick = async () => { const t = sessionReport(); if (!t) { say("Load some files first."); return; } saveText("sfa-session.md", t, "text/markdown"); try { await navigator.clipboard.writeText(t); say("Session report saved and copied."); } catch (e) { say("Session report saved to your downloads folder."); } };
 function saveText(name, text, mime) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 $("#bCsv").onclick = () => { saveText("sfa-analysis.csv", csv(), "text/csv"); say("CSV saved to your downloads folder."); };
 $("#bCopy").onclick = async () => { const t = report(); try { await navigator.clipboard.writeText(t); say("Report copied."); } catch (e) { say(t.split("\n")[2] || "Could not copy."); } };
@@ -867,7 +886,7 @@ document.addEventListener("keydown", e => {
 });
 new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }).observe(document.body);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
-window.SFA = { abOpen, abPairs, abGain, S, parseWav, welch, loudness, truePeak, findClicks, analyze, addBuffer, loadManifest, report, csv, RULES };   /* a handle for tests and for scripts */
+window.SFA = { sessionReport, abOpen, abPairs, abGain, S, parseWav, welch, loudness, truePeak, findClicks, analyze, addBuffer, loadManifest, report, csv, RULES };   /* a handle for tests and for scripts */
 
 /* ---------- start: a manifest from ?manifest=..., or the default one beside this page when served over http ---------- */
 (async () => {

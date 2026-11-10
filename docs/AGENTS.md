@@ -40,6 +40,7 @@ The console's Agents page has four: **Prototype** (form, feel, identity), **Soun
 
 * **Review**: fixed rules in `sfa/hub/agents.js` over your own data (designs, plan, render verdicts, parts findings, git
   status). No network, always available, and it says what it is.
+* **Commands**: anything starting with `/` (`/help` lists them) is answered in the page by `agCommand` in `sfa/hub/agents.js`, from the same data. No key, no network.
 * **Chat**: `POST /api/agent` in `tools/sfa.py` sends the question plus a text summary of the same data (`agent_context`) to
   the Anthropic API. It is on only when the console was started with `ANTHROPIC_API_KEY`; the key never reaches the page.
   The model is `SFA_AGENT_MODEL` (default in `tools/sfa.py`).
