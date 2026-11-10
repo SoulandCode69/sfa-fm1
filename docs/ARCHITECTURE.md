@@ -111,7 +111,7 @@ What stays identical across all three: the engine source, the parameter model, t
 
 ## 6. What this means for the prototype's form factor
 
-These follow from the design and should be treated as requirements until someone argues otherwise.
+These follow from the design and should be treated as requirements until someone argues otherwise. The form-factor brief itself (comfortable keys, pads and keys, colour screen, its own layout) is in [PROTOTYPE.md](PROTOTYPE.md).
 
 1. **A card slot the user can reach.** If sharing is copying files, the microSD slot must be on the outside, not under the lid.
 2. **Four encoders match four parameters per page.** The planner already has four encoders, and `NPARAM = 4`. Keep both.

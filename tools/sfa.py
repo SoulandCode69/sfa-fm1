@@ -407,6 +407,17 @@ def save_favs(body):
 DOC_DIRS = [("README.md", "README.md"), ("CHANGELOG.md", "CHANGELOG.md")] + [("docs/" + f.name, f.name) for f in sorted((ROOT / "docs").glob("*.md"))] + [("hardware/prototype/README.md", "Prototype research")]
 def doc_index(): return [{"id": p, "title": t} for p, t in DOC_DIRS if (ROOT / p).is_file()]
 
+def append_flash(body):
+    """Adds one row to the console's own table at the end of docs/notes.md (same five columns the units page reads)."""
+    d = json.loads(body); uid = d.get("unit"); build = int(d.get("build", 0)); note = re.sub(r"[|\r\n]+", " ", str(d.get("note", "")))[:300].strip()
+    if uid not in UNITS or not 1 <= build <= 9999: raise ValueError("unit or build number not valid")
+    f = ROOT / "docs" / "notes.md"; txt = f.read_text() if f.exists() else ""
+    head = "## Console flash log"
+    if head not in txt: txt = txt.rstrip("\n") + f"\n\n{head}\n\nRows added by the console's Log this flash button.\n\n| date | unit | build | identity | notes |\n|---|---|---|---|---|\n"
+    label = {"ecb": "ECB", "as": "ALIEN"}.get(uid, uid.upper())
+    txt = txt.rstrip("\n") + f"\n| {time.strftime('%Y-%m-%d')} | {UNITS[uid]['name']} | {label} Build {build} | console | {note or 'flashed from the console'} |\n"
+    f.write_text(txt)
+
 def make_handler(port):
     import http.server, threading, mimetypes
     lock = threading.Lock(); hosts = {f"localhost:{port}", f"127.0.0.1:{port}"}
@@ -423,6 +434,13 @@ def make_handler(port):
             from urllib.parse import urlparse, parse_qs, unquote
             u = urlparse(s.path); q = parse_qs(u.query)
             if u.path == "/": return s._send(200, HUB.read_bytes(), "text/html; charset=utf-8")
+            if u.path.startswith("/hub/"):
+                name = u.path[5:]; ok = {"hub.css": "text/css; charset=utf-8", "workshop.js": "text/javascript; charset=utf-8"}
+                if name not in ok: return s._send(404, "not found", "text/plain")
+                return s._send(200, (ROOT / "sfa" / "hub" / name).read_bytes(), ok[name])
+            if u.path in ("/api/direction", "/api/parts"):
+                f = ROOT / "hardware" / "prototype" / ("direction.json" if u.path.endswith("direction") else "parts-research.json")
+                return s._send(200 if f.exists() else 404, f.read_bytes() if f.exists() else b"{}")
             if u.path == "/samplelab/": return s._send(200, SAMPLELAB.read_bytes(), "text/html; charset=utf-8")
             if u.path == "/analyzer/": return s._send(200, ANALYZER.read_bytes(), "text/html; charset=utf-8")
             if u.path in ("/site", "/site/"): return s._send(200, (ROOT / "site" / "index.html").read_bytes(), "text/html; charset=utf-8")
@@ -468,6 +486,10 @@ def make_handler(port):
                 except Exception as e: return s._send(400, f"kit rejected: {e}", "text/plain")
                 msg = (text.splitlines()[-1] if text else "") + (f"\nBank written to {UNITS[uid]['dir']}/samples.bin; the old one is in assets/lab/_backups. Flash {UNITS[uid]['name']} to write it to the unit." if good else "\npacking failed")
                 return s._send(200 if good else 500, msg, "text/plain")
+            if u.path == "/api/flashlog":
+                try: append_flash(s.rfile.read(min(int(s.headers.get("Content-Length", "0")), 4000)))
+                except Exception as e: return s._send(400, f"rejected: {e}", "text/plain")
+                return s._send(200, "logged", "text/plain")
             if u.path == "/api/favs":
                 try: save_favs(s.rfile.read(min(int(s.headers.get("Content-Length", "0")), 100_001)))
                 except Exception as e: return s._send(400, f"rejected: {e}", "text/plain")
@@ -518,7 +540,7 @@ def save_kit_zip(data, kit):
     import zipfile, io
     if len(data) > 6_000_000: raise ValueError("kit is too big")
     kit = re.sub(r"[^A-Za-z0-9_-]", "", kit)[:32] or "KIT"; dest = LAB / kit
-    z = zipfile.ZipFile(io.BytesIO(data)); members = [i for i in z.infolist() if re.fullmatch(r"\d\d_[A-Za-z0-9_-]{1,9}\.wav|kit\.json", i.filename)]
+    z = zipfile.ZipFile(io.BytesIO(data)); members = [i for i in z.infolist() if re.fullmatch(r"\d\d_[A-Za-z0-9_-]{1,9}\.wav|kit\.json|manifest\.json", i.filename)]
     if not any(i.filename.endswith(".wav") for i in members) or len(members) > 20 or any(i.file_size > 400_000 for i in members): raise ValueError("not a Sample Lab kit")
     if dest.exists(): [f.unlink() for f in dest.glob("*.wav")]
     dest.mkdir(parents=True, exist_ok=True)

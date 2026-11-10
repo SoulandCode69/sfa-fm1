@@ -1,0 +1,106 @@
+{
+ "updated": "2026-11-10",
+ "title": "SFA prototype: form factor direction",
+ "note": "These are goals and working assumptions, set on 2026-11-10. Nothing here has been built or measured yet. Sizes come from the layout calculator; prices live in the parts pages.",
+ "brief": [
+  {"h": "A bit bigger than the FM-1", "p": "Size follows the keys, not the other way round. The body is as wide as a comfortable two-octave keybed plus a margin, and no wider.", "status": "locked"},
+  {"h": "Comfortable keys", "p": "The FM-1 keys are too small to play. Target a key pitch a hand can land on without looking: clearly larger than the FM-1, at or near slim-key size. Velocity sensitive.", "status": "locked"},
+  {"h": "Pads and keys, both", "p": "Sixteen velocity pads for drums, slices and steps, and a keybed for melody and bass. Neither replaces the other.", "status": "locked"},
+  {"h": "A colour screen", "p": "Big enough to browse names, show four parameters at once, a step grid and a waveform. Not a status strip.", "status": "locked"},
+  {"h": "Its own look", "p": "Not a square 4x4 pad block under a screen. The pads sit in a row or in two wings, the screen and encoders are placed for the hands that are on the keys.", "status": "locked"},
+  {"h": "Portable, but playability first", "p": "It goes in a bag and runs on a battery, but when size and playability pull against each other, playability wins.", "status": "locked"}
+ ],
+ "controls": [
+  {"what": "Keys", "count": "25 (two octaves, C to C)", "why": "Enough for bass lines and chords with octave shift; 37 makes the body too long for a bag.", "open": "Key pitch: see the layout calculator"},
+  {"what": "Pads", "count": "16, velocity sensitive", "why": "Sixteen steps, sixteen slices, sixteen drum voices: the number every part of the firmware already uses.", "open": "FSR or switch-plus-velocity; RGB backlight or single colour"},
+  {"what": "Encoders", "count": "4, endless, with push", "why": "The engines already have four parameters per page (NPARAM = 4).", "open": "Detented or smooth"},
+  {"what": "Buttons", "count": "about 12", "why": "Play, stop, record, shift, pattern, song, engine select (5), page. Shift doubles each.", "open": "Exact list after the first paper prototype"},
+  {"what": "Touch strip or wheel", "count": "0 or 1", "why": "Pitch bend / mod under the left hand is expected next to a keybed.", "open": "Worth the space and cost?"},
+  {"what": "Volume", "count": "1 knob", "why": "A real pot, always reachable.", "open": ""}
+ ],
+ "screen": {
+  "summary": "A 3.5 inch class colour IPS panel, 480 x 320, is the working choice: the smallest size that shows a 16-step grid and four parameter read-outs without scrolling.",
+  "must_show": [
+   {"view": "Engine page", "needs": "engine and preset name (12 characters), four parameters with names, values and bars, page indicator", "min": "320 x 240"},
+   {"view": "Preset and pack browser", "needs": "a list of 6 to 8 names with the current one marked, tags or pack name", "min": "320 x 240; 480 x 320 is comfortable"},
+   {"view": "Step sequencer", "needs": "16 steps x up to 8 visible tracks, play position, per-step velocity", "min": "480 x 320 for 8 tracks"},
+   {"view": "Sample chop", "needs": "a waveform with slice markers, zoom, start / end read-out", "min": "480 wide for usable markers"},
+   {"view": "Mixer", "needs": "level, pan, send and a meter per engine", "min": "320 x 240"},
+   {"view": "Song", "needs": "slots, repeats, scenes", "min": "320 x 240"},
+   {"view": "Status line, always", "needs": "tempo, play state, pattern, battery, card", "min": "one 16 px row"}
+  ],
+  "requirements": [
+   "Readable at arm's length and off-axis: IPS, not TN.",
+   "At least 30 frames a second for meters and the play position; the panel interface must allow it (a wide SPI or a parallel bus, to be measured on the dev kit).",
+   "Touch is not required. Every action must work from pads, keys, encoders and buttons.",
+   "A frame buffer of 480 x 320 x 16 bit is 300 KB: it fits the Daisy's external RAM, not the MCU's internal RAM alone."
+  ]
+ },
+ "sound": {
+  "engines": [
+   "The same engine sources that run on the FM-1, rebuilt at 48 kHz (see Architecture).",
+   "First on the box: SFA ONE (core/), then Otter, Cat and Fox. The Engine map holds the list.",
+   "At least five engines loaded at once, as now; target 8 to 16 synth voices in total."
+  ],
+  "sampler": [
+   "Samples on microSD: minutes, not the FM-1's 4.2 seconds.",
+   "48 kHz, 16 bit, stereo or mono; 16 sample voices.",
+   "Chop on the box (transient, grid, manual) with the screen's waveform view; the Sample Lab does the same on the desktop.",
+   "Record from line in, and resample the box's own output."
+  ],
+  "sequencer": [
+   "16 pads = 16 steps; patterns of 16 to 64 steps.",
+   "Per-step velocity and parameter locks (the part neither firmware has yet).",
+   "Song mode as in ECB and Alien Stack today: slots, repeats, a scene per slot.",
+   "Real-time record from pads and keys, with quantise.",
+   "MIDI clock in and out."
+  ]
+ },
+ "io": [
+  {"k": "Audio out", "v": "Stereo line out on two 6.35 mm jacks or one 3.5 mm TRS (open), plus a 3.5 mm headphone out with its own level", "note": "48 kHz, 24-bit codec"},
+  {"k": "Audio in", "v": "Stereo line in, 3.5 mm TRS, for sampling", "note": "A built-in mic is a maybe"},
+  {"k": "MIDI", "v": "TRS-A in and out, 3.5 mm", "note": "DIN via adapter cable"},
+  {"k": "USB-C", "v": "Power and charge, class-compliant MIDI device, and the card as a drive for packs", "note": "Audio over USB is a stretch goal; what the MCU can do at once is an open question"},
+  {"k": "Storage", "v": "microSD, reachable from outside", "note": "Packs are folders; sharing is copying a file"},
+  {"k": "Power", "v": "USB-C 5 V in; one Li-ion cell inside", "note": "Runs while charging"},
+  {"k": "Battery", "v": "Target 6 hours of playing", "note": "Capacity follows from measured draw on the dev kit, not from a guess"},
+  {"k": "Sync", "v": "MIDI clock first; analogue sync out is a maybe", "note": ""}
+ ],
+ "improvements": [
+  {"fm1": "Keys too small to play accurately", "box": "Comfortable, velocity-sensitive keys sized by the layout calculator"},
+  {"fm1": "No pads: keys double as triggers", "box": "16 velocity pads next to the keys"},
+  {"fm1": "Small screen, one thing at a time", "box": "3.5 inch class colour screen: lists, grids and waveforms"},
+  {"fm1": "About 4.2 s of sample memory, 22.05 kHz mono", "box": "microSD, 48 kHz, stereo"},
+  {"fm1": "Presets compiled into the firmware", "box": "Presets, kits and patterns as files on the card"},
+  {"fm1": "USB MIDI only", "box": "TRS MIDI in and out as well"},
+  {"fm1": "Every change needs a rebuild and a flash", "box": "Copy a pack to the card"},
+  {"fm1": "No line input", "box": "Stereo line in for sampling"}
+ ],
+ "parts_direction": [
+  {"part": "Brain (prototype)", "dir": "Daisy Seed: STM32H750, codec and external RAM on one board", "state": "proposed"},
+  {"part": "Brain (product)", "dir": "Our own STM32H750-class board with external RAM and a codec", "state": "proposed"},
+  {"part": "Keybed", "dir": "A bought-in 25-key velocity keybed. For the first prototype, the keybed out of a cheap controller is the fastest route", "state": "open"},
+  {"part": "Pads", "dir": "Silicone pads over force-sensing resistors, scanned through an analogue mux", "state": "open"},
+  {"part": "Screen", "dir": "3.5 inch IPS, 480 x 320, SPI or parallel", "state": "proposed"},
+  {"part": "Encoders", "dir": "Four EC11-class encoders with push", "state": "proposed"},
+  {"part": "Power", "dir": "Single Li-ion cell, USB-C charger with power path, 3.3 V and 5 V rails", "state": "open"},
+  {"part": "Enclosure", "dir": "3D-printed shell for prototypes; injection-moulded or bent-metal plus moulded ends for a product", "state": "open"}
+ ],
+ "pipeline": [
+  {"h": "Design in the console", "p": "Write or change an engine in C. Chop samples in the Sample Lab, sketch patterns, tag presets. Everything lives in the repo.", "where": "Desktop"},
+  {"h": "Prove it in the simulator", "p": "tools/sfa sim runs the real engine code on the desktop. Render, measure in the Analyzer, compare A/B. Nothing moves on until the renders are clean.", "where": "Desktop"},
+  {"h": "Flash the FM-1", "p": "tools/sfa up builds the same source for the FM-1 and flashes one unit. Samples go as the bank file; presets are compiled in today.", "where": "FM-1"},
+  {"h": "Pack it", "p": "Presets, kits, samples and patterns are written as a pack (.sfapack): plain files, no code. The same pack is read by the simulator and, later, by the box.", "where": "Files"},
+  {"h": "Run it on the box", "p": "The same engine source is built for the prototype at 48 kHz. Packs are copied to the microSD card. The same test script renders on host and board, and the two renders are compared.", "where": "Prototype"}
+ ],
+ "open_questions": [
+  {"id": "f-keypitch", "q": "What key pitch is comfortable enough?", "why": "It sets the width of the whole instrument.", "how": "Measure the FM-1 and two keyboards you like playing; print key-width strips from the layout calculator and try them."},
+  {"id": "f-layout", "q": "Which layout: Step Row, Butterfly or Terrace?", "why": "It fixes the board outline and where every part goes.", "how": "Print the three at 1:1 from the Layouts page, tape them to card, play air-patterns on them for a day."},
+  {"id": "f-keybed", "q": "Buy a keybed, reuse one, or make keys from switches?", "why": "The keybed is likely the hardest part to source in small numbers.", "how": "Parts research; open up one cheap 25-key controller."},
+  {"id": "f-pads", "q": "FSR pads or simple switches with velocity from timing?", "why": "Feel and cost.", "how": "Build a 4-pad FSR test strip on the dev kit."},
+  {"id": "f-screenbus", "q": "Does a 480 x 320 panel reach 30 fps on the pins the Daisy Seed has free?", "why": "Decides SPI versus parallel and whether the Seed is enough for the prototype.", "how": "Wire one panel to the dev kit and time a full-frame update."},
+  {"id": "f-usb", "q": "Can USB do MIDI, card-as-drive and charging at once on this MCU?", "why": "Pack exchange without an app depends on it.", "how": "Read the USB stack notes, then test a composite device."},
+  {"id": "f-price", "q": "Does keys + pads + colour screen + battery fit $150 to $250?", "why": "It is more hardware than the first parts list assumed.", "how": "Re-cost the parts list with real quotes; see Research."},
+  {"id": "f-power", "q": "What does it actually draw?", "why": "Battery size, weight and heat follow from this.", "how": "Measure the dev kit with screen and pads lit."}
+ ]
+}

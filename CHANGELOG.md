@@ -2,6 +2,17 @@
 
 Newest first. Firmware builds are also logged, with the flash, in `docs/notes.md`.
 
+## 2026-11-10: the workshop build
+
+* **Look**: a bright, high-contrast theme on every page (light by default, dark by switch), new navigation in three groups: Workshop, Prototype, System.
+* **Units**: a four-step strip per firmware (simulate, measure, on USB, flashed), a flash checklist that will not go ahead with zero or two units, and a Log this flash button that writes to `docs/notes.md`.
+* **Analyzer**: a 30 ms crossfade on A/B switches, verdict filters and a next-problem jump (N), a what-to-do line under each flag.
+* **Sample Lab**: undo and redo, name guessing, slice nudge and join from the keyboard, loop audition, play the whole kit, tail fade choice, a pack manifest in the zip, clearer send-to-unit feedback.
+* **Presets**: engine chips with counts, a favourite tag, bulk tag and clear.
+* **Patterns** (new): a step sketchbook with a click preview, an arrangement lane, export and import as `sfa-pattern/1`.
+* **Toolbox** (new): tempo and delay times with tap, note to pitch, the FM-1 bank budget, level matching, card space, battery life.
+* **Prototype**: Direction (brief, controls, screen, sound, I/O, parts search, pipeline, open questions) and Layouts (Step Row, Butterfly, Terrace, drawn to scale with a 1:1 print). Decisions, Compare, Planner defaults and the Roadmap updated. See `docs/PROTOTYPE.md`.
+
 ## 2026-11-09 (evening): DSP pass on ECB and Alien Stack
 
 Found with the audit renders (every Otter, Fox and Greys preset, played twice each) and fixed in both firmwares:

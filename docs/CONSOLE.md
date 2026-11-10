@@ -18,18 +18,29 @@ one is a few lines in `units.json`. Everything in the console reads that file, s
 
 ## What exists
 
-* **SFA Analyzer** (`sfa/analyzer/index.html`): one file, no install, our own code. Spectrum, spectrogram, peak / true peak / RMS,
-  BS.1770 loudness, stereo, click finder, A/B with loudness matching and a difference plot, a compare table with CSV export,
-  render history and favourites (from the console).
-* **SFA Sample Lab** (`sfa/samplelab/index.html`): chop by transients, equal parts, beat grid or silence; preview as the unit
-  hears it; export a kit zip or send it to a unit's bank (`tools/sfa pack`, with a backup of the old bank).
-* **`tools/sfa`**: doctor, units, sim, render, report, analyze, flash, up, ports, pack, publish, console.
-* **SFA Console** (`tools/sfa console`, localhost:8590): Units (sim, render, report, check, flash with a one-FM-1-on-USB check),
-  Analyzer and Sample Lab embedded, and the hardware pages: Planner, Decisions, Engine map, Architecture, Presets, Compare, Research.
-  Docs and changelog, the doctor, the flash log and the roadmap sit under System. It listens on 127.0.0.1 only, checks the Host
-  header, and accepts actions only with a custom header, from a fixed list of commands. Plan edits save to `hardware/prototype/plan.json`.
-* **Site** (`site/`): a static public page, previewed at `/site/`.
-* **The simulator**: the real firmware compiled for the host, driven by scripts, with WAV capture and screenshots.
+The console (`tools/sfa console`, localhost:8590) has three groups.
+
+**Workshop**
+* **Units**: per firmware, a strip of four steps (simulate, measure, on USB, flashed), Check all, Sim, Render, Report, and a
+  Flash button that checks USB first, shows a checklist, and refuses with zero or two FM-1s. After a flash, Log this flash adds
+  a row to `docs/notes.md`.
+* **SFA Analyzer** (`sfa/analyzer/index.html`, also works on its own): spectrum, spectrogram, true peak, BS.1770 loudness,
+  stereo, click finder, A/B with loudness matching and a crossfade, a difference plot, render history, favourites, verdict
+  filters, a what-to-do line under each flag.
+* **SFA Sample Lab** (`sfa/samplelab/index.html`, also works on its own): chop by transients, equal parts, beat grid or
+  silence; nudge, join, undo; guess names; preview as the unit hears it; play the kit; export a zip (with a pack manifest) or
+  send it to a unit's bank.
+* **Presets**: every preset and kit name from both firmwares, with tags, notes, bulk tagging, export and import.
+* **Patterns**: a step sketchbook and arrangement lane; exports `sfa-pattern/1`.
+* **Toolbox**: tempo, notes, the FM-1 bank, level matching, card space, battery.
+
+**Prototype**: Direction, Layouts, Planner, Decisions, Engine map, Architecture, Compare, Research. Edits save to
+`hardware/prototype/plan.json`.
+
+**System**: Docs and changelog, Doctor, Flash log, Roadmap.
+
+The server listens on 127.0.0.1 only, checks the Host header, and accepts actions only with a custom header, from a fixed
+list of commands. Page code is in `sfa/hub/` (`index.html`, `workshop.js`, `hub.css`).
 
 ## Next, in order
 

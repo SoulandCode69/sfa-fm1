@@ -1,20 +1,289 @@
 {
- "updated": "2026-11-09",
+ "updated": "2026-11-10",
  "note": "Only cells marked 'checked' were read from a vendor or review page on the date above. 'ours' is from this repo. '?' means not looked up yet. Fill the gaps before using any of this in a decision.",
- "columns": ["FM-1 (M-VAVE)", "Teenage Engineering EP-133 KO II", "Chompi (Analogue Haven)", "SFA prototype (goal)"],
+ "columns": [
+  "FM-1 (M-VAVE)",
+  "Teenage Engineering EP-133 KO II",
+  "Chompi (Analogue Haven)",
+  "SFA prototype (goal)"
+ ],
  "rows": [
-  {"label": "Price", "cells": [["about $70 (street, from the hardware spec)", "estimate"], ["GBP 299 at launch (MusicRadar)", "checked"], ["$599 (Analogue Haven)", "checked"], ["$150-250 retail, BOM under $80", "goal"]]},
-  {"label": "Screen", "cells": [["small colour TFT, 240x240 class", "ours"], ["?", "?"], ["none", "checked"], ["see Planner: colour LCD or OLED, undecided", "goal"]]},
-  {"label": "Sample storage", "cells": [["about 4.2 s total, 16 samples, 22.05 kHz mono", "ours"], ["999 slots, 64 MB", "checked"], ["microSD, about 6 hours", "checked"], ["microSD, minutes to hours, 44.1/48 kHz stereo", "goal"]]},
-  {"label": "Sample rate", "cells": [["22.05 kHz, 16-bit", "ours"], ["36 or 46.875 kHz, 16-bit (the page says both)", "checked"], ["48 kHz stereo I/O", "checked"], ["48 kHz", "goal"]]},
-  {"label": "Sequencer", "cells": [["our own: 4-slot song, patterns per engine", "ours"], ["9 projects, 4 groups x 99 patterns, 12 tracks", "checked"], ["?", "?"], ["pattern + song, per-step parameter locks (to design)", "goal"]]},
-  {"label": "Polyphony", "cells": [["Otter 4 voices; drum voices per pad", "ours"], ["12 mono or 6 stereo", "checked"], ["?", "?"], ["8-16 synth voices plus 16 sample voices", "goal"]]},
-  {"label": "Audio I/O", "cells": [["USB audio out, headphone out", "ours"], ["stereo in and out, built-in mic and speaker", "checked"], ["stereo in/out, built-in mic", "checked"], ["stereo in/out, headphones, optional mic", "goal"]]},
-  {"label": "MIDI", "cells": [["USB MIDI", "ours"], ["TRS-A in/out, USB-C device, sync in/out", "checked"], ["USB-C MIDI", "checked"], ["TRS-A in/out + USB-C device and host", "goal"]]},
-  {"label": "Power", "cells": [["USB", "ours"], ["4 x AAA or USB-C", "checked"], ["?", "?"], ["Li-ion cell + USB-C charge, 6 h target", "goal"]]},
-  {"label": "Custom firmware", "cells": [["yes, via fm1-base (our route)", "ours"], ["no", "estimate"], ["?", "?"], ["open from day one", "goal"]]}
+  {
+   "label": "Price",
+   "cells": [
+    [
+     "about $70 (street, from the hardware spec)",
+     "estimate"
+    ],
+    [
+     "GBP 299 at launch (MusicRadar)",
+     "checked"
+    ],
+    [
+     "$599 (Analogue Haven)",
+     "checked"
+    ],
+    [
+     "$150-250 retail; BOM ceiling under review (research estimate $100-130)",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Keys",
+   "cells": [
+    [
+     "small keys, too small to play comfortably",
+     "ours"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "two-octave keyboard on MX-style switches",
+     "checked"
+    ],
+    [
+     "25 comfortable, velocity-sensitive keys",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Pads",
+   "cells": [
+    [
+     "none: the keys double as triggers",
+     "ours"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "16 velocity pads, not in a 4x4 block",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Size",
+   "cells": [
+    [
+     "pocket size (measure yours on the Layouts page)",
+     "ours"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "about 300-360 x 190-200 mm, from the layout calculator",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Screen",
+   "cells": [
+    [
+     "small colour TFT, 240x240 class",
+     "ours"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "none",
+     "checked"
+    ],
+    [
+     "3.5 in colour IPS, 480 x 320 (proposed)",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Sample storage",
+   "cells": [
+    [
+     "about 4.2 s total, 16 samples, 22.05 kHz mono",
+     "ours"
+    ],
+    [
+     "999 slots, 64 MB",
+     "checked"
+    ],
+    [
+     "microSD, about 6 hours",
+     "checked"
+    ],
+    [
+     "microSD, minutes to hours, 44.1/48 kHz stereo",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Sample rate",
+   "cells": [
+    [
+     "22.05 kHz, 16-bit",
+     "ours"
+    ],
+    [
+     "36 or 46.875 kHz, 16-bit (the page says both)",
+     "checked"
+    ],
+    [
+     "48 kHz stereo I/O",
+     "checked"
+    ],
+    [
+     "48 kHz",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Sequencer",
+   "cells": [
+    [
+     "our own: 4-slot song, patterns per engine",
+     "ours"
+    ],
+    [
+     "9 projects, 4 groups x 99 patterns, 12 tracks",
+     "checked"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "pattern + song, per-step parameter locks (to design)",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Polyphony",
+   "cells": [
+    [
+     "Otter 4 voices; drum voices per pad",
+     "ours"
+    ],
+    [
+     "12 mono or 6 stereo",
+     "checked"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "8-16 synth voices plus 16 sample voices",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Audio I/O",
+   "cells": [
+    [
+     "USB audio out, headphone out",
+     "ours"
+    ],
+    [
+     "stereo in and out, built-in mic and speaker",
+     "checked"
+    ],
+    [
+     "stereo in/out, built-in mic",
+     "checked"
+    ],
+    [
+     "stereo in/out, headphones, optional mic",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "MIDI",
+   "cells": [
+    [
+     "USB MIDI",
+     "ours"
+    ],
+    [
+     "TRS-A in/out, USB-C device, sync in/out",
+     "checked"
+    ],
+    [
+     "USB-C MIDI",
+     "checked"
+    ],
+    [
+     "TRS-A in/out + USB-C device and host",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Power",
+   "cells": [
+    [
+     "USB",
+     "ours"
+    ],
+    [
+     "4 x AAA or USB-C",
+     "checked"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "Li-ion cell + USB-C charge, 6 h target",
+     "goal"
+    ]
+   ]
+  },
+  {
+   "label": "Custom firmware",
+   "cells": [
+    [
+     "yes, via fm1-base (our route)",
+     "ours"
+    ],
+    [
+     "no",
+     "estimate"
+    ],
+    [
+     "?",
+     "?"
+    ],
+    [
+     "open from day one",
+     "goal"
+    ]
+   ]
+  }
  ],
  "wants": [
+  "Keys a hand can actually play, and pads as well as keys: the FM-1 has neither.",
   "Sample time that is measured in minutes, not seconds (the FM-1 holds about 4 s).",
   "Stereo 48 kHz samples and a clean output path.",
   "A real MIDI port (TRS-A) as well as USB, plus a sync option.",
@@ -23,7 +292,13 @@
   "A BOM that leaves room for a $150-250 price; Chompi at $599 shows the ceiling, the FM-1 at about $70 shows the floor."
  ],
  "sources": [
-  {"name": "MusicRadar, EP-133 KO II", "url": "https://www.musicradar.com/news/teenage-engineering-ep-133-ko-2"},
-  {"name": "Analogue Haven, Chompi", "url": "https://www.analoguehaven.com/"}
+  {
+   "name": "MusicRadar, EP-133 KO II",
+   "url": "https://www.musicradar.com/news/teenage-engineering-ep-133-ko-2"
+  },
+  {
+   "name": "Analogue Haven, Chompi",
+   "url": "https://www.analoguehaven.com/"
+  }
  ]
 }

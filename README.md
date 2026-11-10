@@ -41,7 +41,7 @@ site/             the static public page
 
 ## Docs
 
-[WORKFLOW](docs/WORKFLOW.md) · [CONSOLE](docs/CONSOLE.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [FORMATS](docs/FORMATS.md) ·
+[WORKFLOW](docs/WORKFLOW.md) · [CONSOLE](docs/CONSOLE.md) · [PROTOTYPE](docs/PROTOTYPE.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [FORMATS](docs/FORMATS.md) ·
 [AGENTS](docs/AGENTS.md) · [SAMPLES](docs/SAMPLES.md) · [flash log](docs/notes.md) · [CHANGELOG](CHANGELOG.md) · [rules](CLAUDE.md)
 
 ## Licence

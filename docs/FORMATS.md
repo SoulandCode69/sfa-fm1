@@ -74,5 +74,5 @@ Names are `NN_NAME.wav`, `NN` the slot, `NAME` up to 9 characters on the FM-1.
 
 ## Status
 
-Draft. The console's Presets page exports and imports tags and notes as `sfa-presets/1` (a flat file, not this format) as a
+Draft. The Sample Lab zip already carries a `manifest.json` (`sfa-pack/1`, profile `fm1`) next to its WAVs, and the Patterns page exports `sfa-pattern/1`. The console's Presets page exports and imports tags and notes as `sfa-presets/1` (a flat file, not this format) as a
 stand-in; the real `tools/sfa pack` and the engine-side loaders are step 3 and 4 in `ARCHITECTURE.md`.

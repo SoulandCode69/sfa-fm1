@@ -20,10 +20,10 @@ console and tools, and the plan for our own groovebox (`hardware/`).
 |---|---|
 | `app/`, `visitors/` | the two firmwares: `engine/`, `tests/`, `app.c` |
 | `core/` | portable SFA ONE engine (the hardware track) |
-| `sfa/` | console pages: `hub/`, `analyzer/`, `samplelab/`, and `units.json` (the registry) |
+| `sfa/` | console pages: `hub/` (`index.html`, `workshop.js`, `hub.css`), `analyzer/`, `samplelab/`, and `units.json` (the registry) |
 | `tools/` | `sfa` (the command), `go.sh`, `audit.py`, `release.py`, `sfa_sample.py`, `repo_check.py` |
-| `hardware/prototype/` | research (`spec.json`), `compare.json`, `plan.json` (edited in the console) |
-| `docs/` | WORKFLOW, CONSOLE, ARCHITECTURE, FORMATS, AGENTS, SAMPLES, notes (flash log) |
+| `hardware/prototype/` | `direction.json` (the brief), `spec.json` and `parts-research.json` (research), `compare.json`, `plan.json` (edited in the console) |
+| `docs/` | WORKFLOW, CONSOLE, PROTOTYPE, ARCHITECTURE, FORMATS, AGENTS, SAMPLES, notes (flash log) |
 | `site/` | the static public page |
 
 ## Commands

@@ -9,17 +9,17 @@
 <style>
 /* Layout: source list left, the waveform with its cut markers in the middle, the slice table and the bank budget below it. */
 :root {
-  --bg: #f1eef3; --panel: #ffffff; --panel2: #e8e4ec; --rule: #cfc8d8; --fg: #1a1620; --dim: #6a6277;
-  --accent: #d1174a; --accent-fg: #ffffff; --good: #1f8a52; --warn: #b9770e; --bad: #c4162f;
-  --plot: #fbf9fc; --grid: #ddd6e4; --wave: #3b3447; --c1: #d1174a; --c2: #0f9c8c;
+  --bg: #f4f6fb; --panel: #ffffff; --panel2: #eef1f7; --rule: #dce1ec; --fg: #0e1220; --dim: #586078;
+  --accent: #e11d55; --accent-fg: #ffffff; --good: #0a8a58; --warn: #b26700; --bad: #d02626;
+  --plot: #ffffff; --grid: #e3e7f0; --wave: #2a3147; --c1: #e11d55; --c2: #2456e6;
   --display: "Syne", "Arial Black", system-ui, sans-serif; --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+@media (prefers-color-scheme: dark) { :root[data-theme="auto"] {
+  --bg: #0e1016; --panel: #171a23; --panel2: #1f2330; --rule: #2a3040; --fg: #eceff7; --dim: #9aa2b6;
   --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; --c1: #ff3d6e; --c2: #38d6c4; color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --bg: #0d0c11; --panel: #16141c; --panel2: #1f1c27; --rule: #2d2938; --fg: #ebe6f0; --dim: #9b93aa;
+  --bg: #0e1016; --panel: #171a23; --panel2: #1f2330; --rule: #2a3040; --fg: #eceff7; --dim: #9aa2b6;
   --accent: #ff3d6e; --accent-fg: #14060b; --good: #4fd08a; --warn: #ffb347; --bad: #ff5a6e;
   --plot: #0f0d14; --grid: #25212e; --wave: #cfc6dc; --c1: #ff3d6e; --c2: #38d6c4; color-scheme: dark; }
 * { box-sizing: border-box; }
@@ -79,6 +79,21 @@ td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: 
 .bad { color: var(--bad); } .ok { color: var(--good); } .wn { color: var(--warn); }
 @media (max-width: 800px) { .shell { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* 2026-11-10: the console's bright look. White work surfaces, rounder controls, filled state pills. */
+:root { --soft-good: #e0f5ea; --soft-warn: #fdf0d9; --soft-bad: #fde6e6; --blue: #2456e6; --shadow: 0 1px 2px rgba(16,24,48,.06), 0 4px 14px rgba(16,24,48,.05); }
+:root[data-theme="dark"] { --soft-good: #10301f; --soft-warn: #35270d; --soft-bad: #3a1616; --blue: #7da2ff; --shadow: none; }
+body { -webkit-font-smoothing: antialiased; }
+button { background: var(--panel); border-radius: 8px; padding: 6px 12px; font-weight: 500; transition: background .12s, border-color .12s; }
+button:hover:not(:disabled) { border-color: var(--fg); background: var(--panel2); }
+button.primary { box-shadow: 0 1px 2px rgba(225,29,85,.35); } button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); border-color: var(--accent); }
+button.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+select, input[type=text], input[type=number] { background: var(--panel); border-radius: 8px; }
+.card { border-radius: 12px; box-shadow: var(--shadow); }
+.pill { border: 0; border-radius: 999px; padding: 4px 7px; font-weight: 600; }
+.pill.clean { background: var(--soft-good); } .pill.watch { background: var(--soft-warn); } .pill.flag { background: var(--soft-bad); } .pill.busy { background: var(--panel2); }
+.drop { border-radius: 12px; background: var(--panel); }
+:is(button, select, input, [tabindex]):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,6 +106,8 @@ td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: 
   <input type="file" id="fIn" accept=".wav,.mp3,.flac,.ogg,.m4a,.aif,.aiff,.opus,audio/*" multiple hidden>
   <button id="bPlaySrc" title="Space">Play source</button>
   <button id="bStop">Stop</button>
+  <button id="bKit" title="Plays every kept slice in order, as the unit will hold them">Play kit</button>
+  <label class="readout"><input type="checkbox" id="cLoop"> loop slice</label>
   <label class="readout"><input type="checkbox" id="cUnit" checked> hear it as the unit will (22.05 kHz, 16 bit)</label>
   <span class="sp"></span>
   <span class="readout" id="rdBank"></span>
@@ -104,9 +121,9 @@ td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: 
   </aside>
 
   <main class="main">
-    <div class="card"><h3><span id="tName">Waveform</span><span class="tools"><span class="readout" id="rdCursor"></span><button id="bZoomOut">Fit</button></span></h3>
+    <div class="card"><h3><span id="tName">Waveform</span><span class="tools"><span class="readout" id="rdCursor"></span><button id="bUndo" title="Ctrl+Z">Undo</button><button id="bRedo" title="Ctrl+Y">Redo</button><button id="bZoomOut">Fit</button></span></h3>
       <div class="plot" id="pWave"><canvas></canvas></div>
-      <p class="note">Click to add a cut. Drag a cut to move it. Double-click a cut to remove it. Wheel zooms, shift + wheel pans. Click a slice in the table or press <span class="key">1</span>-<span class="key">9</span> <span class="key">0</span> <span class="key">Q</span>-<span class="key">Y</span> to hear it.</p></div>
+      <p class="note">Click to add a cut. Drag a cut to move it. Double-click a cut to remove it. With a slice selected, <span class="key">[</span> <span class="key">]</span> nudge its start by 1 ms (shift: 10 ms) and <span class="key">Del</span> joins it to the one before. <span class="key">Ctrl</span>+<span class="key">Z</span> undoes. Wheel zooms, shift + wheel pans. Click a slice in the table or press <span class="key">1</span>-<span class="key">9</span> <span class="key">0</span> <span class="key">Q</span>-<span class="key">Y</span> to hear it.</p></div>
 
     <div class="card"><h3><span>Auto-chop</span><span class="tools"><button id="bClear">Clear cuts</button></span></h3>
       <div class="modes" id="modes"><button data-m="transient" class="on">Transients</button><button data-m="equal">Equal</button><button data-m="grid">Beat grid</button><button data-m="silence">Silence</button></div>
@@ -114,7 +131,7 @@ td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: 
       <div class="tools" style="margin-top:10px"><label class="readout"><input type="checkbox" id="cZero" checked> snap cuts to zero crossings</label><label class="readout"><input type="checkbox" id="cTrim" checked> trim silence off each slice</label><button class="primary" id="bChop">Chop</button></div>
     </div>
 
-    <div class="card"><h3><span>Slices</span><span class="tools"><span class="readout" id="rdSlices"></span></span></h3>
+    <div class="card"><h3><span>Slices</span><span class="tools"><span class="readout" id="rdSlices"></span><button id="bGuess" title="Names each slice KICK, SNARE, HAT, PERC or LOOP from how it sounds. A guess: check them.">Guess names</button><button id="bKeepAll">Keep all</button><button id="bKeepNone">Keep none</button><label class="readout">tail fade <select id="fTail"><option value="6">6 ms</option><option value="20">20 ms</option><option value="60">60 ms</option></select></label></span></h3>
       <div class="budget" id="budget" title="The unit's sample bank: 184 KB shared by every slice"></div>
       <div class="readout" id="budgetTxt" style="margin:6px 0 8px"></div>
       <div class="tw"><table id="tbl"></table></div>
@@ -134,6 +151,8 @@ td input[type=text] { width: 9.5ch; font: 500 12px var(--mono); text-transform: 
 
 <script>
 "use strict";
+/* theme: light unless the console (or ?theme=dark) says dark */
+(function () { const set = t => t === "dark" ? document.documentElement.setAttribute("data-theme", "dark") : document.documentElement.removeAttribute("data-theme"); try { set(new URLSearchParams(location.search).get("theme") || localStorage.getItem("sfa-theme") || "light"); } catch (e) {} addEventListener("message", e => { if (e.origin === location.origin && e.data && e.data.sfaTheme) { set(e.data.sfaTheme); dispatchEvent(new Event("resize")); } }); })();
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -248,7 +267,7 @@ function makeSample(s, sl, trim) {
   if (trim) { const th = 0.0015; while (a < b - 2 && Math.abs(s.x[a]) < th) a++; while (b > a + 2 && Math.abs(s.x[b - 1]) < th) b--; }
   let y = resample(s.x.subarray(a, b), s.sr, RATE);
   if (sl.p.rev) y.reverse();
-  const fi = Math.min(y.length >> 1, Math.round(RATE * 0.0015)), fo = Math.min(y.length >> 1, Math.round(RATE * 0.006));
+  const fi = Math.min(y.length >> 1, Math.round(RATE * 0.0015)), fo = Math.min(y.length >> 1, Math.round(RATE * (+$("#fTail").value || 6) / 1000));
   for (let i = 0; i < fi; i++) y[i] *= i / fi; for (let i = 0; i < fo; i++) y[y.length - 1 - i] *= i / fo;
   let pk = 0; for (let i = 0; i < y.length; i++) pk = Math.max(pk, Math.abs(y[i]));
   const g = pk > 0 ? 0.891 / pk : 0; const out = new Int16Array(Math.min(y.length, MAXN));
@@ -314,8 +333,26 @@ function renderChop() {
   $("#chopCtl").querySelectorAll("input").forEach(el => el.oninput = () => { S.p[el.dataset.k] = +el.value; const c = CTL[S.mode]().find(q => q[1] === el.dataset.k); $("#v_" + el.dataset.k).textContent = c[5](+el.value); if (cur()) { autoChop(cur(), true); render(); } });
 }
 let planCache = null;
+/* undo: every change to the cuts or the slice settings of a source is remembered */
+const snapOf = s => JSON.stringify({ m: s.marks, p: s.props });
+function track(s) { s.hist = s.hist || []; s.redo = s.redo || []; const j = snapOf(s); if (s.hist[s.hist.length - 1] !== j) { s.hist.push(j); if (s.hist.length > 80) s.hist.shift(); if (!s._undoing) s.redo.length = 0; } }
+function undo(dir) {
+  const s = cur(); if (!s || !s.hist) return; const from = dir > 0 ? s.redo : s.hist, to = dir > 0 ? s.hist : s.redo;
+  if (dir > 0) { if (!from.length) return; const j = from.pop(); to.push(j); apply(j); } else { if (from.length < 2) return; to.push(from.pop()); apply(from[from.length - 1]); }
+  function apply(j) { const d = JSON.parse(j); s.marks = d.m; s.props = d.p; s._undoing = true; S.sel = -1; render(); s._undoing = false; }
+}
+/* a rough name for a slice from its length and how bright it is */
+function guessName(s, q) {
+  const a = q.a, b = Math.min(q.b, q.a + Math.round(s.sr * 0.25)), n = b - a; if (n < 64) return "PERC";
+  if ((q.b - q.a) / s.sr > 1.2) return "LOOP";
+  let zc = 0, e = 0, lo = 0, y = 0; const k = 1 - Math.exp(-2 * Math.PI * 200 / s.sr);
+  for (let i = a + 1; i < b; i++) { if ((s.x[i] >= 0) !== (s.x[i - 1] >= 0)) zc++; y += (s.x[i] - y) * k; lo += y * y; e += s.x[i] * s.x[i]; }
+  const z = zc / n * s.sr / 2, lowShare = e > 0 ? lo / e : 0;
+  return lowShare > 0.6 && z < 200 ? "KICK" : lowShare > 0.6 && z < 500 ? "LOW" : z > 5000 ? "HAT" : z > 900 ? "SNARE" : lowShare > 0.35 ? "TOM" : "PERC";
+}
 function renderSlices() {
   const s = cur(); if (!s) { $("#tbl").innerHTML = ""; $("#budget").innerHTML = ""; $("#budgetTxt").textContent = ""; $("#rdSlices").textContent = ""; $("#rdBank").textContent = ""; return; }
+  track(s);
   const pl = planCache = plan(s), over = pl.total > pl.cap, keepAll = slices(s);
   const cols = ["--c1", "--c2", "--accent"]; let used = 0;
   $("#budget").className = "budget" + (over ? " over" : "");
@@ -335,18 +372,25 @@ function render() { renderSrcs(); const s = cur(); $("#tName").textContent = s ?
 /* ---------- playback ---------- */
 function ac() { if (!S.ctx) S.ctx = new (window.AudioContext || window.webkitAudioContext)(); if (S.ctx.state === "suspended") S.ctx.resume(); return S.ctx; }
 function stopAll() { if (S.node) { try { S.node.onended = null; S.node.stop(); } catch (e) {} S.node = null; } S.play = null; drawWave(); }
-function playBuf(buf, s, startPos, secs) {
-  stopAll(); const ctx = ac(), src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination); const t0 = ctx.currentTime; src.start(); S.node = src;
+function playBuf(buf, s, startPos, secs, loop) {
+  stopAll(); const ctx = ac(), src = ctx.createBufferSource(); src.buffer = buf; src.loop = !!loop; src.connect(ctx.destination); const t0 = ctx.currentTime; src.start(); S.node = src;
   S.play = { s, pos: startPos }; const rate = buf.sampleRate / s.sr;
   src.onended = () => { if (S.node === src) { S.node = null; S.play = null; drawWave(); } };
-  (function tick() { if (!S.play || S.node !== src) return; S.play.pos = startPos + (ctx.currentTime - t0) * s.sr; drawWave(); requestAnimationFrame(tick); })();
+  (function tick() { if (!S.play || S.node !== src) return; S.play.pos = startPos + ((ctx.currentTime - t0) % (loop ? buf.duration : 1e9)) * s.sr; drawWave(); requestAnimationFrame(tick); })();
 }
 function playSlice(i) {
   const s = cur(); if (!s) return; const sl = slices(s)[i]; if (!sl) return; S.sel = i;
   if ($("#cUnit").checked) {
-    const m = makeSample(s, sl, $("#cTrim").checked), ctx = ac(), b = ctx.createBuffer(1, Math.max(1, m.length), RATE), d = b.getChannelData(0); for (let k = 0; k < m.length; k++) d[k] = m[k] / 32768; playBuf(b, s, sl.a, m.length / RATE);
-  } else { const ctx = ac(), b = ctx.createBuffer(1, sl.b - sl.a, s.sr); b.copyToChannel(s.x.subarray(sl.a, sl.b), 0); playBuf(b, s, sl.a); }
+    const m = makeSample(s, sl, $("#cTrim").checked), ctx = ac(), b = ctx.createBuffer(1, Math.max(1, m.length), RATE), d = b.getChannelData(0); for (let k = 0; k < m.length; k++) d[k] = m[k] / 32768; playBuf(b, s, sl.a, m.length / RATE, $("#cLoop").checked);
+  } else { const ctx = ac(), b = ctx.createBuffer(1, sl.b - sl.a, s.sr); b.copyToChannel(s.x.subarray(sl.a, sl.b), 0); playBuf(b, s, sl.a, 0, $("#cLoop").checked); }
   renderSlices();
+}
+function playKit() {
+  const s = cur(); if (!s) return; const pl = fitPlan(plan(s)); if (!pl.smp.length) { say("No slices are kept."); return; }
+  const gap = Math.round(RATE * 0.12), tot = pl.smp.reduce((t, m) => t + m.pcm.length + gap, 0), ctx = ac(), b = ctx.createBuffer(1, tot, RATE), d = b.getChannelData(0); let o = 0;
+  pl.smp.forEach(m => { for (let k = 0; k < m.pcm.length; k++) d[o + k] = m.pcm[k] / 32768; o += m.pcm.length + gap; });
+  stopAll(); const src = ctx.createBufferSource(); src.buffer = b; src.connect(ctx.destination); src.start(); S.node = src; src.onended = () => { if (S.node === src) S.node = null; };
+  say("Playing the kit: " + pl.smp.length + " samples, exactly as they will be packed.");
 }
 function playSource() { const s = cur(); if (!s) return; const ctx = ac(), b = ctx.createBuffer(1, s.n, s.sr); b.copyToChannel(s.x, 0); playBuf(b, s, 0); }
 
@@ -381,6 +425,7 @@ function buildKit() {
     files.push({ name: fn, data: wavBytes(m.pcm) }); meta.push({ file: fn, seconds: +(m.pcm.length / RATE).toFixed(3), from: +(m.q.a / s.sr).toFixed(4), to: +(m.q.b / s.sr).toFixed(4), reversed: !!m.q.p.rev });
   });
   files.push({ name: "kit.json", data: new TextEncoder().encode(JSON.stringify({ kit, source: s.name, rate: RATE, bits: 16, channels: 1, bankSeconds: +(pl.total / RATE).toFixed(3), samples: meta }, null, 1)) });
+  files.push({ name: "manifest.json", data: new TextEncoder().encode(JSON.stringify({ schema: "sfa-pack/1", name: kit, created: new Date().toISOString().slice(0, 10), licence: "", notes: "Sample Lab kit from " + s.name + ". Target profile fm1: 22.05 kHz mono 16-bit.", profile: "fm1", samples: meta.map(m => m.file) }, null, 1)) });
   return { kit, blob: zipBlob(files), pl };
 }
 function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); }
@@ -403,14 +448,17 @@ $("#modes").addEventListener("click", e => { const b = e.target.closest("button"
 $("#bChop").onclick = () => { if (cur()) { autoChop(cur()); render(); } };
 $("#bClear").onclick = () => { const s = cur(); if (s) { s.marks = []; s.props = [{ name: "", keep: true, rev: false }]; render(); say("Cuts cleared."); } };
 $("#cZero").onchange = $("#cTrim").onchange = () => { if (cur()) { if ($("#cZero").checked) autoChop(cur(), true); render(); } };
-$("#bPlaySrc").onclick = playSource; $("#bStop").onclick = stopAll;
+$("#bPlaySrc").onclick = playSource; $("#bStop").onclick = stopAll; $("#bKit").onclick = playKit;
+$("#bUndo").onclick = () => undo(-1); $("#bRedo").onclick = () => undo(1); $("#fTail").onchange = () => render();
+$("#bGuess").onclick = () => { const s = cur(); if (!s) return; const seen = {}; slices(s).forEach(q => { const g = guessName(s, q); seen[g] = (seen[g] || 0) + 1; q.p.name = (g + (seen[g] > 1 ? seen[g] : "")).slice(0, 9); }); render(); say("Names guessed from the sound. Check them: it is a guess."); };
+$("#bKeepAll").onclick = () => { const s = cur(); if (s) { s.props.forEach(p => p.keep = true); render(); } }; $("#bKeepNone").onclick = () => { const s = cur(); if (s) { s.props.forEach(p => p.keep = false); render(); } };
 $("#bZoomOut").onclick = () => { S.view = null; drawWave(); };
 $("#tbl").addEventListener("click", e => { const p = e.target.closest("[data-play]"), r = e.target.closest("tr[data-s]"); if (p) playSlice(+p.dataset.play); else if (r && !e.target.closest("input")) { S.sel = +r.dataset.s; renderSlices(); drawWave(); } });
 $("#tbl").addEventListener("change", e => { const s = cur(), t = e.target; if (!s) return; const i = t.dataset.keep ?? t.dataset.rev ?? t.dataset.name; if (i === undefined) return; if (t.dataset.keep !== undefined) s.props[+i].keep = t.checked; else if (t.dataset.rev !== undefined) s.props[+i].rev = t.checked; else s.props[+i].name = t.value; render(); });
 $("#bZip").onclick = () => { const k = buildKit(); if (!k) return; download(k.blob, k.kit + ".zip"); say("Saved " + k.kit + ".zip: " + k.pl.smp.length + " samples, " + (k.pl.total / RATE).toFixed(2) + " s."); };
 document.querySelectorAll("[data-send]").forEach(b => b.onclick = async () => {
   const k = buildKit(); if (!k) return; b.disabled = true; say("Sending " + k.kit + " to " + b.dataset.send + "...");
-  try { const r = await fetch("/api/kit?name=" + encodeURIComponent(k.kit) + "&unit=" + b.dataset.send, { method: "POST", headers: { "X-SFA": "1" }, body: k.blob }); say((await r.text()).split("\n").filter(Boolean).slice(-2).join(" ")); } catch (e) { say("Could not send: " + e.message); }
+  try { const r = await fetch("/api/kit?name=" + encodeURIComponent(k.kit) + "&unit=" + b.dataset.send, { method: "POST", headers: { "X-SFA": "1" }, body: k.blob }); const t = await r.text(); say(r.ok ? k.kit + " is now the " + (b.dataset.send === "as" ? "Alien Stack" : "Earth Creature Beats") + " sample bank (" + k.pl.smp.length + " samples; the old bank was backed up in assets/lab/_backups). It reaches the unit on the next flash from the Units page." : "Not packed: " + t.split("\n").filter(Boolean).slice(-2).join(" ")); } catch (e) { say("Could not send: " + e.message); }
   b.disabled = false;
 });
 /* the waveform: add, drag, remove cuts; wheel zoom */
@@ -433,6 +481,11 @@ document.querySelectorAll("[data-send]").forEach(b => b.onclick = async () => {
 document.addEventListener("keydown", e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && e.target.type !== "checkbox" && e.target.type !== "range") return;
   if (e.code === "Space") { e.preventDefault(); S.node ? stopAll() : playSource(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(e.shiftKey ? 1 : -1); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); undo(1); return; }
+  { const s = cur();                                                    /* the selected slice: [ and ] move its start cut, Delete joins it to the one before */
+    if (s && S.sel > 0 && (e.key === "[" || e.key === "]")) { const i = S.sel - 1, d = Math.round(s.sr * (e.shiftKey ? 0.01 : 0.001)) * (e.key === "[" ? -1 : 1); s.marks[i] = clamp(s.marks[i] + d, (s.marks[i - 1] || 0) + 8, (s.marks[i + 1] || s.n) - 8); render(); return; }
+    if (s && S.sel > 0 && (e.key === "Delete" || e.key === "Backspace")) { e.preventDefault(); s.marks.splice(S.sel - 1, 1); s.props.splice(S.sel, 1); S.sel--; render(); return; } }
   const k = "1234567890qwerty".indexOf(e.key.toLowerCase()); if (k >= 0 && !e.ctrlKey && !e.metaKey && !e.altKey) playSlice(k);
 });
 new ResizeObserver(() => requestAnimationFrame(drawWave)).observe(document.body);
